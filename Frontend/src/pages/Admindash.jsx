@@ -8,6 +8,7 @@ import AllWorkers from './admin/AllWorkers';
 import AddWorker from './admin/AddWorker';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../components/Footer';
+import AllUsers from './admin/AllUsers';
 
 const Admin = () => {
     const [activeTab, setActiveTab] = useState('Dashboard');
@@ -107,6 +108,10 @@ const Admin = () => {
                         />
                     )}
 
+                    {(activeTab === 'Users' || activeTab === 'Registered Users') && (
+                        <AllUsers />
+                    )}
+
                     {activeTab !== 'Dashboard' &&
                         activeTab !== 'Panchayat Desk' &&
                         activeTab !== 'Panchayat Desk > Panchayt Info' &&
@@ -120,7 +125,9 @@ const Admin = () => {
                         activeTab !== 'Worker Desk > Worker Details' &&
                         activeTab !== 'Worker Details' &&
                         activeTab !== 'Worker Desk > Create Worker Login' &&
-                        activeTab !== 'Create Worker Login' && (
+                        activeTab !== 'Create Worker Login' &&
+                        activeTab !== 'Users' &&
+                        activeTab !== 'Registered Users' && (
                             <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
                                 <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
                                     {activeTab}

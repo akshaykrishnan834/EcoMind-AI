@@ -38,6 +38,11 @@ const AdminSidebar = ({ activeItem = 'Dashboard', setActiveItem, onLogout, isOpe
       icon: HardHat,
       hasSubmenu: true,
       subItems: ['Worker Details', 'Create Worker Login']
+    },
+    {
+      id: 'Users',
+      label: 'Users',
+      icon: Users
     }
   ];
 

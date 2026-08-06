@@ -28,5 +28,10 @@ namespace EcoMind.API.Repositories
         {
             await _users.InsertOneAsync(user);
         }
+
+        public async Task DeleteAsync(string id)
+        {
+            await _users.DeleteOneAsync(x => x.Id == id);
+        }
     }
 }
