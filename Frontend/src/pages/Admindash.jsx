@@ -7,7 +7,7 @@ import PanchayatInfo from './admin/panchaytinfo';
 import AllWorkers from './admin/AllWorkers';
 import AddWorker from './admin/AddWorker';
 import { useNavigate } from 'react-router-dom';
-import Footer from '../components/Footer';
+
 import AllUsers from './admin/AllUsers';
 
 const Admin = () => {
