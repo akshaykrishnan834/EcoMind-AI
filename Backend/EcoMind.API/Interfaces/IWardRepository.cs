@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Models;
+using EcoMind.API.Models;
 
 namespace EcoMind.API.Interfaces
 {
@@ -9,5 +9,7 @@ namespace EcoMind.API.Interfaces
         Task<List<Ward>> GetAllWardsAsync();
 
         Task<Ward?> GetWardByIdAsync(string wardId);
+
+        Task DeleteWardsByPanchayatNameAsync(string panchayatName);
     }
 }

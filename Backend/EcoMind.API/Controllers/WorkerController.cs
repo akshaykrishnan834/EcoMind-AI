@@ -1,4 +1,4 @@
-﻿using EcoMind.API.DTOs;
+using EcoMind.API.DTOs;
 using EcoMind.API.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,9 +18,14 @@ namespace EcoMind.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateWorker(CreateWorkerDto dto)
         {
-            await _workerService.CreateWorkerAsync(dto);
+            var result = await _workerService.CreateWorkerAsync(dto);
 
-            return Ok("Worker Created Successfully");
+            if (result.Contains("already exists"))
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(new { message = result });
         }
 
         [HttpGet]

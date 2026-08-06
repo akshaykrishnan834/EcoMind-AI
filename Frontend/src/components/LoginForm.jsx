@@ -74,6 +74,10 @@ export const LoginForm = ({ onSwitchToSignUp, onOpenForgotPassword, onSubmitLogi
 
       const userRole = (response.role || "").toLowerCase();
       localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('user', JSON.stringify(response));
+      if (response.fullName) {
+        localStorage.setItem('userName', response.fullName);
+      }
 
       if (userRole === "citizen") {
         navigate("/citizen");
@@ -213,7 +217,6 @@ export const LoginForm = ({ onSwitchToSignUp, onOpenForgotPassword, onSubmitLogi
                 <button
                   type="button"
                   onClick={onOpenForgotPassword}
-                  className="text-xs font-semibold text-[#0f5b37] hover:underline focus:outline-none"
                 >
                   Forgot Password?
                 </button>

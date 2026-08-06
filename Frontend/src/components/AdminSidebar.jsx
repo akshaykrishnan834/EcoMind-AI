@@ -30,9 +30,15 @@ const AdminSidebar = ({ activeItem = 'Dashboard', setActiveItem, onLogout, isOpe
       label: 'Panchayat Desk',
       icon: MapPin,
       hasSubmenu: true,
-      subItems: ['Panchayt Info', 'All Wards',]
+      subItems: ['Panchayt Info', 'All Wards']
     },
-
+    {
+      id: 'Worker Desk',
+      label: 'Worker Desk',
+      icon: HardHat,
+      hasSubmenu: true,
+      subItems: ['Worker Details', 'Create Worker Login']
+    }
   ];
 
   const handleItemClick = (item) => {

@@ -207,6 +207,13 @@
           "numberOfWards": {
             "type": "integer",
             "format": "int32"
+          },
+          "wards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateWardDto"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false

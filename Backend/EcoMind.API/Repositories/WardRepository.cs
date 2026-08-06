@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Services;
+using EcoMind.API.Services;
 using EcoMind.API.Interfaces;
 using EcoMind.API.Models;
 using MongoDB.Driver;
@@ -27,6 +27,11 @@ namespace EcoMind.API.Repositories
         public async Task<Ward?> GetWardByIdAsync(string wardId)
         {
             return await _wards.Find(x => x.WardId == wardId).FirstOrDefaultAsync();
+        }
+
+        public async Task DeleteWardsByPanchayatNameAsync(string panchayatName)
+        {
+            await _wards.DeleteManyAsync(x => x.PanchayatName.ToLower() == panchayatName.ToLower());
         }
     }
 }

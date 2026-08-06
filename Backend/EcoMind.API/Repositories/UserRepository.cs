@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Interfaces;
+using EcoMind.API.Interfaces;
 using EcoMind.API.Models;
 using EcoMind.API.Services;
 using MongoDB.Driver;

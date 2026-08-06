@@ -47,3 +47,4 @@ namespace EcoMind.API.Controllers
         }
     }
 }
+

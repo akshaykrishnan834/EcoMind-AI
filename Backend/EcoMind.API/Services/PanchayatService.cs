@@ -19,33 +19,64 @@ namespace EcoMind.API.Services
 
         public async Task CreatePanchayatAsync(CreatePanchayatDto dto)
         {
-            // Create Panchayat
+            var existingPanchayat = await _panchayatRepository.GetPanchayatAsync();
+
             var panchayat = new Panchayat
             {
-                PanchayatId = "P001",
+                Id = existingPanchayat?.Id,
+                PanchayatId = existingPanchayat?.PanchayatId ?? "P001",
                 PanchayatName = dto.PanchayatName,
                 District = dto.District,
                 NumberOfWards = dto.NumberOfWards,
                 State = "Kerala",
                 Status = "Active",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = existingPanchayat?.CreatedAt ?? DateTime.UtcNow
             };
 
-            // Save Panchayat
-            await _panchayatRepository.CreatePanchayatAsync(panchayat);
-
-            // Automatically Create Wards
-            for (int i = 1; i <= dto.NumberOfWards; i++)
+            if (existingPanchayat != null)
             {
-                var ward = new Ward
-                {
-                    WardId = $"W{i:D3}",
-                    WardName = $"Ward {i}",
-                    PanchayatName = dto.PanchayatName,
-                    Status = "Active"
-                };
+                await _panchayatRepository.UpdatePanchayatAsync(panchayat);
+            }
+            else
+            {
+                await _panchayatRepository.CreatePanchayatAsync(panchayat);
+            }
 
-                await _wardRepository.CreateWardAsync(ward);
+            // Remove old wards for this Panchayat to avoid duplicate accumulations
+            await _wardRepository.DeleteWardsByPanchayatNameAsync(dto.PanchayatName);
+
+            // Create Wards (custom if provided, otherwise auto-generated)
+            if (dto.Wards != null && dto.Wards.Count > 0)
+            {
+                int index = 1;
+                foreach (var wardDto in dto.Wards)
+                {
+                    var ward = new Ward
+                    {
+                        WardId = string.IsNullOrWhiteSpace(wardDto.WardId) ? $"W{index:D3}" : wardDto.WardId,
+                        WardName = string.IsNullOrWhiteSpace(wardDto.WardName) ? $"Ward {index}" : wardDto.WardName,
+                        PanchayatName = dto.PanchayatName,
+                        Status = string.IsNullOrWhiteSpace(wardDto.Status) ? "Active" : wardDto.Status
+                    };
+
+                    await _wardRepository.CreateWardAsync(ward);
+                    index++;
+                }
+            }
+            else
+            {
+                for (int i = 1; i <= dto.NumberOfWards; i++)
+                {
+                    var ward = new Ward
+                    {
+                        WardId = $"W{i:D3}",
+                        WardName = $"Ward {i}",
+                        PanchayatName = dto.PanchayatName,
+                        Status = "Active"
+                    };
+
+                    await _wardRepository.CreateWardAsync(ward);
+                }
             }
         }
 

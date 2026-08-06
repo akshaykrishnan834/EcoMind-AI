@@ -39,4 +39,9 @@ C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\EcoMind.API.pdb
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\EcoMind.API.genruntimeconfig.cache
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\ref\EcoMind.API.dll
-C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\EcoMind.API.sourcelink.json
+C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
+C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\MailKit.dll
+C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\MimeKit.dll
+C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\System.Security.Cryptography.Pkcs.dll
+C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll

@@ -1,4 +1,6 @@
-﻿namespace EcoMind.API.DTOs
+using System.Collections.Generic;
+
+namespace EcoMind.API.DTOs
 {
     public class CreatePanchayatDto
     {
@@ -7,5 +9,7 @@
         public string District { get; set; } = string.Empty;
 
         public int NumberOfWards { get; set; }
+
+        public List<CreateWardDto>? Wards { get; set; }
     }
 }

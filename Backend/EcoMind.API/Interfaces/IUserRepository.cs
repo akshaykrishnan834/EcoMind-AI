@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Models;
+using EcoMind.API.Models;
 
 namespace EcoMind.API.Interfaces
 {

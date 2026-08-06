@@ -1,18 +1,76 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import Header from '../components/Header';
+import WorkerSidebar from '../components/WorkerSidebar';
+import Footer from '../components/Footer';
+import { useNavigate } from 'react-router-dom';
 
-const Worker = () => {
+const WorkerDashboard = () => {
+    const [activeTab, setActiveTab] = useState('Dashboard');
+    const navigate = useNavigate();
+
+    // Protect route & prevent back-button access after logout
+    useEffect(() => {
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        if (!isLoggedIn) {
+            navigate('/', { replace: true });
+            return;
+        }
+
+        const handlePopState = () => {
+            const stillLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            if (!stillLoggedIn) {
+                window.history.pushState(null, '', window.location.href);
+                navigate('/', { replace: true });
+            }
+        };
+
+        window.history.pushState(null, '', window.location.href);
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [navigate]);
+
+    const handleLogout = () => {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userName');
+        sessionStorage.clear();
+        navigate('/', { replace: true });
+    };
+
     return (
-        <div className="min-h-screen bg-emerald-50 flex items-center justify-center">
-            <div className="bg-white shadow-lg rounded-xl p-10 w-full max-w-3xl text-center">
-                <h1 className="text-4xl font-bold text-emerald-700">
-                    Haritha Karma Sena Worker Dashboard
-                </h1>
-                <p className="mt-4 text-gray-600">
-                    Welcome to EcoMind AI Worker Portal
-                </p>
+        <div className="min-h-screen bg-[#f4f9f5] flex flex-col font-sans">
+            {/* Top Header */}
+            <Header />
+
+            {/* Main Content Layout with Sidebar */}
+            <div className="flex-1 flex">
+                <WorkerSidebar
+                    activeItem={activeTab}
+                    setActiveItem={setActiveTab}
+                    onLogout={handleLogout}
+                />
+
+                {/* Main Workspace */}
+                <main className="flex-1 p-8 bg-[#f3f7f5]">
+                    <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
+                        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
+                            {activeTab}
+                        </h1>
+                        <p className="text-sm text-gray-500 mt-2">
+                            Welcome to the Haritha Karma Sena Worker Portal. View assigned collection schedules, ward details, and task management options here.
+                        </p>
+                    </div>
+                </main>
             </div>
+
+            {/* Footer */}
+            <Footer />
         </div>
     );
 };
 
-export default Worker;
+export default WorkerDashboard;
