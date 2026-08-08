@@ -12,7 +12,17 @@ import AllUsers from './admin/AllUsers';
 
 const Admin = () => {
     const [activeTab, setActiveTab] = useState('Dashboard');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const navigate = useNavigate();
+
+    const handleToggleSidebar = () => {
+        if (window.innerWidth < 1024) {
+            setIsMobileSidebarOpen((prev) => !prev);
+        } else {
+            setIsSidebarCollapsed((prev) => !prev);
+        }
+    };
 
     // Protect route & prevent back-button access after logout
     useEffect(() => {
@@ -63,6 +73,10 @@ const Admin = () => {
                     activeItem={activeTab}
                     setActiveItem={setActiveTab}
                     onLogout={handleLogout}
+                    isCollapsed={isSidebarCollapsed}
+                    onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    isOpen={isMobileSidebarOpen}
+                    onClose={() => setIsMobileSidebarOpen(false)}
                 />
 
                 {/* Workspace Content Area */}
@@ -70,7 +84,7 @@ const Admin = () => {
                     {activeTab === 'Dashboard' && (
                         <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
                             <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
-                                {activeTab}
+                                Welcome to Dashboard
                             </h1>
                             <p className="text-sm text-gray-500 mt-2">
                                 Select any menu item from the sidebar to manage EcoMind AI system settings and operations.

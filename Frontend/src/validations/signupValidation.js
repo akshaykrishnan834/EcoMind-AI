@@ -29,12 +29,19 @@ export const validateField = (name, value, formData) => {
             return "";
 
         case "phone":
-            if (!value.trim()) {
-                return "Phone Number is required.";
+        case "phoneNumber":
+            if (!value || !value.trim()) {
+                return "Phone number is required.";
             }
 
-            if (!/^[6-9]\d{9}$/.test(value)) {
-                return "Enter a valid 10-digit mobile number.";
+            const cleanPhone = value.replace(/\D/g, "");
+
+            if (!/^[6-9]/.test(cleanPhone)) {
+                return "Phone number must start with 6, 7, 8, or 9.";
+            }
+
+            if (cleanPhone.length !== 10) {
+                return "Phone number must contain exactly 10 digits.";
             }
 
             return "";

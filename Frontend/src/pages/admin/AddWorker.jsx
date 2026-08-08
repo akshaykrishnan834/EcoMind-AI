@@ -54,8 +54,12 @@ const AddWorker = ({ onBack, onWorkerAdded }) => {
       if (!value.trim()) error = "Email address is required";
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) error = "Enter a valid email address";
     } else if (name === "phoneNumber") {
-      if (!value.trim()) error = "Phone number is required";
-      else if (!/^\d{10}$/.test(value.trim())) error = "Phone number must be exactly 10 digits";
+      if (!value || !value.trim()) error = "Phone number is required";
+      else {
+        const cleanPhone = value.replace(/\D/g, "");
+        if (!/^[6-9]/.test(cleanPhone)) error = "Phone number must start with 6, 7, 8, or 9";
+        else if (cleanPhone.length !== 10) error = "Phone number must contain exactly 10 digits";
+      }
     } else if (name === "wardId") {
       if (!value) error = "Please select an assigned Ward";
     } else if (name === "password") {
@@ -66,7 +70,10 @@ const AddWorker = ({ onBack, onWorkerAdded }) => {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    let { name, value } = e.target;
+    if (name === "phoneNumber") {
+      value = value.replace(/\D/g, "").slice(0, 10);
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
 
     const error = validateField(name, value);

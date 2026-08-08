@@ -45,3 +45,4 @@ C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\MimeKit.dll
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\System.Security.Cryptography.Pkcs.dll
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll
+C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

@@ -6,7 +6,17 @@ import { useNavigate } from 'react-router-dom';
 
 const WorkerDashboard = () => {
     const [activeTab, setActiveTab] = useState('Dashboard');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const navigate = useNavigate();
+
+    const handleToggleSidebar = () => {
+        if (window.innerWidth < 1024) {
+            setIsMobileSidebarOpen((prev) => !prev);
+        } else {
+            setIsSidebarCollapsed((prev) => !prev);
+        }
+    };
 
     // Protect route & prevent back-button access after logout
     useEffect(() => {
@@ -52,13 +62,17 @@ const WorkerDashboard = () => {
                     activeItem={activeTab}
                     setActiveItem={setActiveTab}
                     onLogout={handleLogout}
+                    isCollapsed={isSidebarCollapsed}
+                    onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    isOpen={isMobileSidebarOpen}
+                    onClose={() => setIsMobileSidebarOpen(false)}
                 />
 
                 {/* Main Workspace */}
                 <main className="flex-1 p-8 bg-[#f3f7f5]">
                     <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
                         <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
-                            {activeTab}
+                            {activeTab === 'Dashboard' ? 'Welcome to Dashboard' : activeTab}
                         </h1>
                         <p className="text-sm text-gray-500 mt-2">
                             Welcome to the Haritha Karma Sena Worker Portal. View assigned collection schedules, ward details, and task management options here.

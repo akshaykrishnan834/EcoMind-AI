@@ -25,7 +25,12 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const fieldValue = type === 'checkbox' ? checked : value;
+    let fieldValue = type === 'checkbox' ? checked : value;
+
+    if (name === 'phone') {
+      // Strip any non-numeric characters automatically and cap at 10 digits
+      fieldValue = value.replace(/\D/g, '').slice(0, 10);
+    }
 
     const updatedForm = {
       ...formData,
@@ -104,6 +109,11 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
       setErrors({});
       setTouched({});
       setIsSubmitted(false);
+
+      // Directly switch to Login view after successful registration
+      if (onSwitchToLogin) {
+        onSwitchToLogin();
+      }
 
     } catch (error) {
       console.log("Full Error:", error);
@@ -230,7 +240,8 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       value={formData.phone}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Enter your phone number"
+                      maxLength={10}
+                      placeholder="10-digit mobile number (e.g. 9876543210)"
                       className={`w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-colors ${
                         getFieldError('phone') ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-emerald-600'
                       }`}
