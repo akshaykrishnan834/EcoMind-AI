@@ -11,3 +11,8 @@ export const createWorker = async (workerData) => {
   const response = await axios.post(API_URL, workerData);
   return response.data;
 };
+
+export const updateWorker = async (workerData) => {
+  const response = await axios.put(API_URL, workerData);
+  return response.data;
+};

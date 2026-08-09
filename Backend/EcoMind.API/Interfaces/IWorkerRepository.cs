@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Models;
+using EcoMind.API.Models;
 
 namespace EcoMind.API.Interfaces
 {
@@ -9,5 +9,7 @@ namespace EcoMind.API.Interfaces
         Task<List<Worker>> GetAllWorkersAsync();
 
         Task<Worker?> GetWorkerByEmailAsync(string email);
+
+        Task UpdateWorkerAsync(Worker worker);
     }
 }

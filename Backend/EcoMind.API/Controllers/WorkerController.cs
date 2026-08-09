@@ -35,5 +35,18 @@ namespace EcoMind.API.Controllers
 
             return Ok(workers);
         }
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateWorker(UpdateWorkerDto dto)
+        {
+            var result = await _workerService.UpdateWorkerAsync(dto);
+
+            if (result != "Worker Updated Successfully")
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(new { message = result });
+        }
     }
 }

@@ -8,8 +8,12 @@ namespace EcoMind.API.Interfaces
 
         Task<User?> GetByEmailAsync(string email);
 
+        Task<User?> GetByPhoneNumberAsync(string phoneNumber);
+
         Task CreateAsync(User user);
 
         Task DeleteAsync(string id);
+
+        Task UpdateAsync(User user);
     }
 }

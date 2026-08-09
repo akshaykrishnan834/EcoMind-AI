@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import CitizenSidebar from '../components/CitizenSidebar';
+import CitizenProfile from '../components/CitizenProfile';
 import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,15 +70,19 @@ const CitizenDashboard = () => {
                 />
 
                 {/* Main Workspace */}
-                <main className="flex-1 p-8 bg-[#f3f7f5]">
-                    <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
-                        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
-                            {activeTab === 'Dashboard' ? 'Welcome to Dashboard' : activeTab}
-                        </h1>
-                        <p className="text-sm text-gray-500 mt-2">
-                            Welcome to your EcoMind AI Citizen Portal. Manage your waste management requests, services, and profile settings here.
-                        </p>
-                    </div>
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-[#f3f7f5] overflow-x-hidden">
+                    {activeTab === 'Profile' ? (
+                        <CitizenProfile />
+                    ) : (
+                        <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
+                            <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
+                                {activeTab === 'Dashboard' ? 'Welcome to Dashboard' : activeTab}
+                            </h1>
+                            <p className="text-sm text-gray-500 mt-2">
+                                Welcome to your EcoMind AI Citizen Portal. Manage your waste management requests, services, and profile settings here.
+                            </p>
+                        </div>
+                    )}
                 </main>
             </div>
 

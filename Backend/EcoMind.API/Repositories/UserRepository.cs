@@ -21,7 +21,14 @@ namespace EcoMind.API.Repositories
 
         public async Task<User?> GetByEmailAsync(string email)
         {
-            return await _users.Find(x => x.Email == email).FirstOrDefaultAsync();
+            var cleanEmail = email?.Trim().ToLowerInvariant() ?? "";
+            return await _users.Find(x => x.Email.ToLower() == cleanEmail).FirstOrDefaultAsync();
+        }
+
+        public async Task<User?> GetByPhoneNumberAsync(string phoneNumber)
+        {
+            var cleanPhone = phoneNumber?.Trim() ?? "";
+            return await _users.Find(x => x.PhoneNumber == cleanPhone).FirstOrDefaultAsync();
         }
 
         public async Task CreateAsync(User user)
@@ -32,6 +39,11 @@ namespace EcoMind.API.Repositories
         public async Task DeleteAsync(string id)
         {
             await _users.DeleteOneAsync(x => x.Id == id);
+        }
+
+        public async Task UpdateAsync(User user)
+        {
+            await _users.ReplaceOneAsync(x => x.Id == user.Id, user);
         }
     }
 }

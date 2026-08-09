@@ -51,29 +51,7 @@ export function App() {
             {/* Top Header */}
             <Header />
 
-            {/* Interactive Screen View Switcher Toolbar */}
-            <div className="w-full bg-emerald-100/50 border-b border-emerald-200/60 py-2.5 px-4 flex justify-center items-center gap-3">
-              <div className="inline-flex rounded-full bg-white p-1 shadow-sm border border-emerald-200">
-                <button
-                  onClick={() => setCurrentView('login')}
-                  className={`px-5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${currentView === 'login'
-                      ? 'bg-[#0f5b37] text-white shadow-sm'
-                      : 'text-gray-600 hover:text-emerald-800'
-                    }`}
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => setCurrentView('signup')}
-                  className={`px-5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${currentView === 'signup'
-                      ? 'bg-[#0f5b37] text-white shadow-sm'
-                      : 'text-gray-600 hover:text-emerald-800'
-                    }`}
-                >
-                  Register
-                </button>
-              </div>
-            </div>
+
 
             {/* Main Content Body */}
             <main className="flex-1 flex flex-col justify-center">

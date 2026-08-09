@@ -119,7 +119,16 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
       console.log("Full Error:", error);
 
       if (error.response) {
-        alert(typeof error.response.data === 'string' ? error.response.data : 'Registration failed.');
+        const errorMsg = typeof error.response.data === 'string' ? error.response.data : 'Registration failed.';
+        if (errorMsg.toLowerCase().includes('phone')) {
+          setErrors((prev) => ({ ...prev, phone: errorMsg }));
+          setTouched((prev) => ({ ...prev, phone: true }));
+        } else if (errorMsg.toLowerCase().includes('email')) {
+          setErrors((prev) => ({ ...prev, email: errorMsg }));
+          setTouched((prev) => ({ ...prev, email: true }));
+        } else {
+          alert(errorMsg);
+        }
       } else if (error.request) {
         alert("Unable to reach backend API server. Please ensure backend is running.");
       } else {

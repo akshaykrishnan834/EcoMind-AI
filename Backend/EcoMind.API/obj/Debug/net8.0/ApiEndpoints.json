@@ -32,6 +32,48 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "EcoMind.API.Controllers.CitizenController",
+    "Method": "CreateCitizen",
+    "RelativePath": "api/Citizen",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EcoMind.API.DTOs.CreateCitizenDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.CitizenController",
+    "Method": "GetAllCitizens",
+    "RelativePath": "api/Citizen",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.CitizenController",
+    "Method": "GetCitizenByEmail",
+    "RelativePath": "api/Citizen/{email}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "email",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "EcoMind.API.Controllers.PanchayatController",
     "Method": "Create",
     "RelativePath": "api/Panchayat",
@@ -78,6 +120,38 @@
       {
         "Name": "id",
         "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.UserController",
+    "Method": "GetUserByEmail",
+    "RelativePath": "api/User/by-email/{email}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "email",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.UserController",
+    "Method": "UpdateProfile",
+    "RelativePath": "api/User/profile",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EcoMind.API.DTOs.UpdateProfileDto",
         "IsRequired": true
       }
     ],
@@ -133,6 +207,22 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.WorkerController",
+    "Method": "UpdateWorker",
+    "RelativePath": "api/Worker",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EcoMind.API.DTOs.UpdateWorkerDto",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   }
 ]

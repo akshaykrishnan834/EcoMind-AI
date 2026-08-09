@@ -26,6 +26,15 @@ namespace EcoMind.API.Services
                 return "Email already exists in user accounts.";
             }
 
+            if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
+            {
+                var existingPhoneUser = await _userRepository.GetByPhoneNumberAsync(dto.PhoneNumber);
+                if (existingPhoneUser != null)
+                {
+                    return "Phone number already exists in user accounts.";
+                }
+            }
+
             var existingWorker = await _workerRepository.GetWorkerByEmailAsync(dto.Email);
             if (existingWorker != null)
             {
@@ -66,6 +75,51 @@ namespace EcoMind.API.Services
         public async Task<List<Worker>> GetAllWorkersAsync()
         {
             return await _workerRepository.GetAllWorkersAsync();
+        }
+
+        public async Task<string> UpdateWorkerAsync(UpdateWorkerDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Id))
+            {
+                return "Invalid worker ID.";
+            }
+
+            var workers = await _workerRepository.GetAllWorkersAsync();
+            var worker = workers.FirstOrDefault(w => w.Id == dto.Id);
+            if (worker == null)
+            {
+                return "Worker record not found.";
+            }
+
+            string cleanPhone = dto.PhoneNumber?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(cleanPhone) || cleanPhone.Length != 10 || !System.Text.RegularExpressions.Regex.IsMatch(cleanPhone, "^[6-9][0-9]{9}$"))
+            {
+                return "Phone number must contain exactly 10 digits starting with 6, 7, 8, or 9.";
+            }
+
+            var existingUserWithPhone = await _userRepository.GetByPhoneNumberAsync(cleanPhone);
+            var user = await _userRepository.GetByEmailAsync(worker.Email);
+
+            if (existingUserWithPhone != null && (user == null || existingUserWithPhone.Id != user.Id))
+            {
+                return "Phone number is already registered to another account.";
+            }
+
+            worker.FullName = string.IsNullOrWhiteSpace(dto.FullName) ? worker.FullName : dto.FullName.Trim();
+            worker.PhoneNumber = cleanPhone;
+            worker.WardId = dto.WardId ?? worker.WardId;
+            worker.Status = string.IsNullOrWhiteSpace(dto.Status) ? worker.Status : dto.Status.Trim();
+
+            await _workerRepository.UpdateWorkerAsync(worker);
+
+            if (user != null)
+            {
+                user.FullName = worker.FullName;
+                user.PhoneNumber = cleanPhone;
+                await _userRepository.UpdateAsync(user);
+            }
+
+            return "Worker Updated Successfully";
         }
     }
 }

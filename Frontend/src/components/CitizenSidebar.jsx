@@ -30,6 +30,7 @@ const CitizenSidebar = ({
 
     const menuItems = [
         { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
+
     ];
 
     const handleItemClick = (item) => {
@@ -56,24 +57,27 @@ const CitizenSidebar = ({
 
             {/* Sidebar Drawer */}
             <aside
-                className={`relative ${
-                    isCollapsed ? 'w-20' : 'w-64'
-                } bg-white text-gray-800 flex flex-col justify-between border-r border-emerald-100/80 shadow-xs shrink-0 min-h-[calc(100vh-80px)] transition-all duration-300 ease-in-out ${
-                    isOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden lg:flex'
-                }`}
+                className={`relative ${isCollapsed ? 'w-20' : 'w-64'
+                    } bg-white text-gray-800 flex flex-col justify-between border-r border-emerald-100/80 shadow-xs shrink-0 min-h-[calc(100vh-80px)] transition-all duration-300 ease-in-out ${isOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden lg:flex'
+                    }`}
             >
                 {/* Top Header & Profile Section */}
                 <div className="p-4 border-b border-emerald-100/80 bg-emerald-50/50">
                     <div className="flex items-center justify-between gap-2">
-                        {/* Citizen Profile */}
-                        <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
-                            <div className="w-10 h-10 rounded-full bg-[#0a4d2c] flex items-center justify-center shadow-md text-white font-bold text-base shrink-0">
+                        {/* Citizen Profile (Clickable to view Profile) */}
+                        <div
+                            onClick={() => setActiveItem && setActiveItem('Profile')}
+                            className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'gap-3'
+                                } cursor-pointer hover:bg-emerald-100/70 p-1.5 -m-1.5 rounded-xl transition-all group`}
+                            title="Click to view & edit Profile"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-[#0a4d2c] flex items-center justify-center shadow-md text-white font-bold text-base shrink-0 group-hover:scale-105 transition-transform">
                                 {userName[0] ? userName[0].toUpperCase() : <User className="w-5 h-5 text-white" />}
                             </div>
 
                             {!isCollapsed && (
                                 <div className="overflow-hidden transition-all duration-200">
-                                    <p className="text-xs font-bold text-gray-900 truncate max-w-[140px]">
+                                    <p className="text-xs font-bold text-gray-900 truncate max-w-[140px] group-hover:text-[#0a4d2c] transition-colors">
                                         {userName}
                                     </p>
                                     <h2 className="text-[11px] uppercase tracking-wider text-[#0a4d2c] font-bold truncate">
@@ -128,21 +132,18 @@ const CitizenSidebar = ({
                             <div key={item.id} className="relative group">
                                 <button
                                     onClick={() => handleItemClick(item)}
-                                    className={`w-full flex items-center ${
-                                        isCollapsed
+                                    className={`w-full flex items-center ${isCollapsed
                                             ? 'justify-center px-3 py-3 rounded-2xl'
                                             : 'justify-between pl-4 pr-3 py-2.5 rounded-r-full'
-                                    } text-xs font-semibold transition-all duration-200 cursor-pointer ${
-                                        isActive
+                                        } text-xs font-semibold transition-all duration-200 cursor-pointer ${isActive
                                             ? 'bg-[#0a4d2c] text-white shadow-sm'
                                             : 'text-gray-700 hover:bg-emerald-100/70 hover:text-[#0a4d2c]'
-                                    }`}
+                                        }`}
                                 >
                                     <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3.5'}`}>
                                         <Icon
-                                            className={`w-4 h-4 shrink-0 ${
-                                                isActive ? 'text-emerald-300' : 'text-emerald-700 group-hover:text-[#0a4d2c]'
-                                            }`}
+                                            className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-300' : 'text-emerald-700 group-hover:text-[#0a4d2c]'
+                                                }`}
                                         />
                                         {!isCollapsed && <span className="truncate">{item.label}</span>}
                                     </div>
@@ -172,11 +173,10 @@ const CitizenSidebar = ({
                                             <button
                                                 key={idx}
                                                 onClick={() => setActiveItem && setActiveItem(`${item.id} > ${sub}`)}
-                                                className={`w-full text-left py-1.5 px-3 rounded-r-full text-[11px] font-medium transition-all ${
-                                                    activeItem === `${item.id} > ${sub}` || activeItem === sub
+                                                className={`w-full text-left py-1.5 px-3 rounded-r-full text-[11px] font-medium transition-all ${activeItem === `${item.id} > ${sub}` || activeItem === sub
                                                         ? 'bg-emerald-100 text-[#0a4d2c] font-bold'
                                                         : 'text-gray-600 hover:text-[#0a4d2c] hover:bg-emerald-50'
-                                                }`}
+                                                    }`}
                                             >
                                                 • {sub}
                                             </button>
@@ -191,11 +191,10 @@ const CitizenSidebar = ({
                     <div className="relative group pt-4">
                         <button
                             onClick={onLogout}
-                            className={`w-full flex items-center ${
-                                isCollapsed
+                            className={`w-full flex items-center ${isCollapsed
                                     ? 'justify-center py-3 px-2 rounded-2xl'
                                     : 'justify-center gap-2 py-2.5 px-4 rounded-r-full'
-                            } bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-xs font-bold text-[#0a4d2c] transition-all cursor-pointer shadow-2xs group`}
+                                } bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-xs font-bold text-[#0a4d2c] transition-all cursor-pointer shadow-2xs group`}
                         >
                             <LogOut className="w-4 h-4 text-emerald-700 group-hover:text-[#0a4d2c] transition-colors shrink-0" />
                             {!isCollapsed && <span>Log Out</span>}

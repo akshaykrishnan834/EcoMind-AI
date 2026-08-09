@@ -8,5 +8,7 @@ namespace EcoMind.API.Interfaces
         Task<string> CreateWorkerAsync(CreateWorkerDto dto);
 
         Task<List<Worker>> GetAllWorkersAsync();
+
+        Task<string> UpdateWorkerAsync(UpdateWorkerDto dto);
     }
 }

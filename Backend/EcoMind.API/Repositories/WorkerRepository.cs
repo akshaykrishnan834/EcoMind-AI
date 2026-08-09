@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Interfaces;
+using EcoMind.API.Interfaces;
 using EcoMind.API.Models;
 using EcoMind.API.Services;
 using MongoDB.Driver;
@@ -27,6 +27,11 @@ namespace EcoMind.API.Repositories
         public async Task<Worker?> GetWorkerByEmailAsync(string email)
         {
             return await _workers.Find(x => x.Email == email).FirstOrDefaultAsync();
+        }
+
+        public async Task UpdateWorkerAsync(Worker worker)
+        {
+            await _workers.ReplaceOneAsync(x => x.Id == worker.Id, worker);
         }
     }
 }
