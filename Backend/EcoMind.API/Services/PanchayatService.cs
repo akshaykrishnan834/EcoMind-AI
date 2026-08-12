@@ -23,7 +23,7 @@ namespace EcoMind.API.Services
 
             var panchayat = new Panchayat
             {
-                Id = existingPanchayat?.Id,
+                Id = existingPanchayat?.Id ?? string.Empty,
                 PanchayatId = existingPanchayat?.PanchayatId ?? "P001",
                 PanchayatName = dto.PanchayatName,
                 District = dto.District,
@@ -83,6 +83,11 @@ namespace EcoMind.API.Services
         public async Task<Panchayat?> GetPanchayatAsync()
         {
             return await _panchayatRepository.GetPanchayatAsync();
+        }
+
+        public async Task<List<Panchayat>> GetAllPanchayatsAsync()
+        {
+            return await _panchayatRepository.GetAllPanchayatsAsync();
         }
     }
 }

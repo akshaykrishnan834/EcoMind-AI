@@ -19,6 +19,8 @@ namespace EcoMind.API.Models
 
         public string Role { get; set; } = "Citizen";
 
+        public string Status { get; set; } = "Active";
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

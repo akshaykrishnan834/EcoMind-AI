@@ -8,5 +8,7 @@ namespace EcoMind.API.Interfaces
         Task<string> RegisterAsync(RegisterDto registerDto);
 
         Task<User?> LoginAsync(LoginDto loginDto);
+
+        Task<string> ChangePasswordAsync(ChangePasswordDto dto);
     }
 }

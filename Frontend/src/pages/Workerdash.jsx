@@ -7,7 +7,15 @@ import { User, Mail, Phone, ShieldCheck, Building2, CheckCircle2, MapPin, BadgeC
 import { getUserByEmail, updateUserProfile } from '../services/userService';
 
 const WorkerDashboard = () => {
-    const [activeTab, setActiveTab] = useState('Dashboard');
+    const [activeTab, setActiveTabState] = useState(() => {
+        return sessionStorage.getItem('workerActiveTab') || 'Dashboard';
+    });
+
+    const setActiveTab = (tab) => {
+        setActiveTabState(tab);
+        sessionStorage.setItem('workerActiveTab', tab);
+    };
+
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const navigate = useNavigate();

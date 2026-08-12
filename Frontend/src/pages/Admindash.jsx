@@ -11,7 +11,15 @@ import Footer from '../components/Footer';
 import AllUsers from './admin/AllUsers';
 
 const Admin = () => {
-    const [activeTab, setActiveTab] = useState('Dashboard');
+    const [activeTab, setActiveTabState] = useState(() => {
+        return sessionStorage.getItem('adminActiveTab') || 'Dashboard';
+    });
+
+    const setActiveTab = (tab) => {
+        setActiveTabState(tab);
+        sessionStorage.setItem('adminActiveTab', tab);
+    };
+
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const navigate = useNavigate();

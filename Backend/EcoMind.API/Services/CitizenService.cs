@@ -45,7 +45,57 @@ namespace EcoMind.API.Services
 
         public async Task<Citizen?> GetCitizenByEmailAsync(string email)
         {
-            return await _citizenRepository.GetCitizenByEmailAsync(email);
+            var citizen = await _citizenRepository.GetCitizenByEmailAsync(email);
+            var user = await _userRepository.GetByEmailAsync(email);
+
+            if (citizen != null)
+            {
+                if (user != null)
+                {
+                    bool needsUpdate = false;
+
+                    if (string.IsNullOrWhiteSpace(citizen.PhoneNumber) && !string.IsNullOrWhiteSpace(user.PhoneNumber))
+                    {
+                        citizen.PhoneNumber = user.PhoneNumber;
+                        needsUpdate = true;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(citizen.FullName) && !string.IsNullOrWhiteSpace(user.FullName))
+                    {
+                        citizen.FullName = user.FullName;
+                        needsUpdate = true;
+                    }
+
+                    if (needsUpdate)
+                    {
+                        await _citizenRepository.UpdateCitizenAsync(citizen);
+                    }
+                }
+                return citizen;
+            }
+
+            // Fallback: If Citizen document doesn't exist yet but User document exists, create Citizen profile
+            if (user != null && string.Equals(user.Role, "Citizen", StringComparison.OrdinalIgnoreCase))
+            {
+                var newCitizen = new Citizen
+                {
+                    CitizenId = "CIT" + Random.Shared.Next(1000, 9999),
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Address = string.Empty,
+                    WardId = string.Empty,
+                    PanchayatName = string.Empty,
+                    Status = "Active",
+                    ProfileCompleted = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _citizenRepository.CreateCitizenAsync(newCitizen);
+                return newCitizen;
+            }
+
+            return null;
         }
 
         public async Task<List<Citizen>> GetAllCitizensAsync()

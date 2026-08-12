@@ -48,6 +48,7 @@ namespace EcoMind.API.Services
                 PhoneNumber = registerDto.PhoneNumber,
                 Password = hashedPassword,
                 Role = role,
+                Status = "Active",
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -66,7 +67,6 @@ namespace EcoMind.API.Services
                         FullName = registerDto.FullName,
                         Email = registerDto.Email,
                         PhoneNumber = registerDto.PhoneNumber,
-                        Password = hashedPassword,
                         Address = string.Empty,
                         WardId = string.Empty,
                         PanchayatName = string.Empty,
@@ -99,6 +99,36 @@ namespace EcoMind.API.Services
             }
 
             return user;
+        }
+
+        public async Task<string> ChangePasswordAsync(ChangePasswordDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.CurrentPassword) || string.IsNullOrWhiteSpace(dto.NewPassword))
+            {
+                return "All password fields are required.";
+            }
+
+            var user = await _userRepository.GetByEmailAsync(dto.Email);
+            if (user == null)
+            {
+                return "User account not found.";
+            }
+
+            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.Password);
+            if (!isPasswordValid)
+            {
+                return "Current password is incorrect.";
+            }
+
+            if (dto.NewPassword.Length < 6)
+            {
+                return "New password must be at least 6 characters long.";
+            }
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _userRepository.UpdateAsync(user);
+
+            return "Password updated successfully.";
         }
     }
 }

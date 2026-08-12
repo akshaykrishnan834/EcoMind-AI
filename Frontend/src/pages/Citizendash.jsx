@@ -6,7 +6,15 @@ import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
 
 const CitizenDashboard = () => {
-    const [activeTab, setActiveTab] = useState('Dashboard');
+    const [activeTab, setActiveTabState] = useState(() => {
+        return sessionStorage.getItem('citizenActiveTab') || 'Dashboard';
+    });
+
+    const setActiveTab = (tab) => {
+        setActiveTabState(tab);
+        sessionStorage.setItem('citizenActiveTab', tab);
+    };
+
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const navigate = useNavigate();

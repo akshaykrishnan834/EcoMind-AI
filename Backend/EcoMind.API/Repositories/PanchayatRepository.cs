@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Interfaces;
+using EcoMind.API.Interfaces;
 using EcoMind.API.Models;
 using EcoMind.API.Services;
 using MongoDB.Driver;
@@ -22,6 +22,11 @@ namespace EcoMind.API.Repositories
         public async Task<Panchayat?> GetPanchayatAsync()
         {
             return await _panchayats.Find(_ => true).FirstOrDefaultAsync();
+        }
+
+        public async Task<List<Panchayat>> GetAllPanchayatsAsync()
+        {
+            return await _panchayats.Find(_ => true).ToListAsync();
         }
 
         public async Task UpdatePanchayatAsync(Panchayat panchayat)

@@ -1,4 +1,4 @@
-﻿using EcoMind.API.DTOs;
+using EcoMind.API.DTOs;
 using EcoMind.API.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,7 +25,7 @@ namespace EcoMind.API.Controllers
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            var result = await _panchayatService.GetPanchayatAsync();
+            var result = await _panchayatService.GetAllPanchayatsAsync();
             return Ok(result);
         }
     }

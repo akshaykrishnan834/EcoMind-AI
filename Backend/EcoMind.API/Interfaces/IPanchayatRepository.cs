@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Models;
+using EcoMind.API.Models;
 
 namespace EcoMind.API.Interfaces
 {
@@ -7,6 +7,8 @@ namespace EcoMind.API.Interfaces
         Task CreatePanchayatAsync(Panchayat panchayat);
 
         Task<Panchayat?> GetPanchayatAsync();
+
+        Task<List<Panchayat>> GetAllPanchayatsAsync();
 
         Task UpdatePanchayatAsync(Panchayat panchayat);
     }

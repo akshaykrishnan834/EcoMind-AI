@@ -1,4 +1,4 @@
-﻿using EcoMind.API.DTOs;
+using EcoMind.API.DTOs;
 using EcoMind.API.Models;
 
 namespace EcoMind.API.Interfaces
@@ -8,5 +8,7 @@ namespace EcoMind.API.Interfaces
         Task CreatePanchayatAsync(CreatePanchayatDto dto);
 
         Task<Panchayat?> GetPanchayatAsync();
+
+        Task<List<Panchayat>> GetAllPanchayatsAsync();
     }
 }
