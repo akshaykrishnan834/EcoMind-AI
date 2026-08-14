@@ -1,4 +1,4 @@
-﻿namespace EcoMind.API.DTOs
+namespace EcoMind.API.DTOs
 {
     public class CreateCitizenDto
     {
@@ -8,7 +8,11 @@
 
         public string PhoneNumber { get; set; } = string.Empty;
 
+        public string HouseName { get; set; } = string.Empty;
+
         public string Address { get; set; } = string.Empty;
+
+        public string HouseNumber { get; set; } = string.Empty;
 
         public string WardId { get; set; } = string.Empty;
 

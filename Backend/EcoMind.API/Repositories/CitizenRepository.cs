@@ -11,7 +11,8 @@ namespace EcoMind.API.Repositories
 
         public CitizenRepository(MongoDbService mongoDbService)
         {
-            _citizens = mongoDbService.Database.GetCollection<Citizen>("Citizens");
+            _citizens = mongoDbService.Database
+                .GetCollection<Citizen>("Citizens");
         }
 
         public async Task CreateCitizenAsync(Citizen citizen)
@@ -33,9 +34,46 @@ namespace EcoMind.API.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Citizen>> GetCitizensByWardAsync(string wardId)
+        {
+            if (string.IsNullOrWhiteSpace(wardId))
+            {
+                return new List<Citizen>();
+            }
+
+            var cleanWard = wardId.Trim().ToLower();
+            return await _citizens
+                .Find(x => x.WardId != null && x.WardId.ToLower() == cleanWard)
+                .ToListAsync();
+        }
+
         public async Task UpdateCitizenAsync(Citizen citizen)
         {
-            await _citizens.ReplaceOneAsync(x => x.Id == citizen.Id, citizen);
+            await _citizens.ReplaceOneAsync(
+                x => x.Id == citizen.Id,
+                citizen);
+        }
+
+        public async Task<bool> UpdateLocationAsync(
+            string citizenId,
+            string address,
+            double latitude,
+            double longitude)
+        {
+            var filter = Builders<Citizen>.Filter.Eq(
+                x => x.CitizenId,
+                citizenId);
+
+            var update = Builders<Citizen>.Update
+                .Set(x => x.Address, address)
+                .Set(x => x.Latitude, latitude)
+                .Set(x => x.Longitude, longitude);
+
+            var result = await _citizens.UpdateOneAsync(
+                filter,
+                update);
+
+            return result.MatchedCount > 0;
         }
     }
 }

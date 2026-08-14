@@ -34,6 +34,13 @@ namespace EcoMind.API.Controllers
             return Ok(citizens);
         }
 
+        [HttpGet("ward/{wardId}")]
+        public async Task<IActionResult> GetCitizensByWard(string wardId)
+        {
+            var citizens = await _citizenService.GetCitizensByWardAsync(wardId);
+            return Ok(citizens);
+        }
+
         [HttpGet("{email}")]
         public async Task<IActionResult> GetCitizenByEmail(string email)
         {
@@ -60,6 +67,41 @@ namespace EcoMind.API.Controllers
             return Ok(new
             {
                 message = result
+            });
+        }
+        [HttpPut("{citizenId}/location")]
+        public async Task<IActionResult> UpdateLocation(
+    string citizenId,
+    UpdateCitizenLocationDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Address))
+            {
+                return BadRequest("Address is required.");
+            }
+
+            if (dto.Latitude < -90 || dto.Latitude > 90)
+            {
+                return BadRequest("Invalid latitude.");
+            }
+
+            if (dto.Longitude < -180 || dto.Longitude > 180)
+            {
+                return BadRequest("Invalid longitude.");
+            }
+
+            var updated =
+                await _citizenService.UpdateLocationAsync(
+                    citizenId,
+                    dto);
+
+            if (!updated)
+            {
+                return NotFound("Citizen not found.");
+            }
+
+            return Ok(new
+            {
+                message = "Location updated successfully."
             });
         }
     }

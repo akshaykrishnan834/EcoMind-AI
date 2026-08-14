@@ -192,6 +192,47 @@
         }
       }
     },
+    "/api/Citizen/{citizenId}/location": {
+      "put": {
+        "tags": [
+          "Citizen"
+        ],
+        "parameters": [
+          {
+            "name": "citizenId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCitizenLocationDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCitizenLocationDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCitizenLocationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Panchayat": {
       "post": {
         "tags": [
@@ -471,6 +512,10 @@
             "type": "string",
             "nullable": true
           },
+          "houseNumber": {
+            "type": "string",
+            "nullable": true
+          },
           "wardId": {
             "type": "string",
             "nullable": true
@@ -614,6 +659,20 @@
             "type": "string",
             "nullable": true
           },
+          "houseNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
           "wardId": {
             "type": "string",
             "nullable": true
@@ -621,6 +680,24 @@
           "panchayatName": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateCitizenLocationDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double"
           }
         },
         "additionalProperties": false

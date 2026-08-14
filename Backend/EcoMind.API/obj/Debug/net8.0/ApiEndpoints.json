@@ -75,6 +75,27 @@
   },
   {
     "ContainingType": "EcoMind.API.Controllers.CitizenController",
+    "Method": "UpdateLocation",
+    "RelativePath": "api/Citizen/{citizenId}/location",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "citizenId",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "EcoMind.API.DTOs.UpdateCitizenLocationDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.CitizenController",
     "Method": "GetCitizenByEmail",
     "RelativePath": "api/Citizen/{email}",
     "HttpMethod": "GET",

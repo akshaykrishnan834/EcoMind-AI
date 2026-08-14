@@ -7,7 +7,8 @@ import {
   ChevronDown,
   Menu,
   X,
-  User
+  User,
+  Users
 } from 'lucide-react';
 
 const WorkerSidebar = ({
@@ -30,7 +31,7 @@ const WorkerSidebar = ({
 
   const menuItems = [
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
-
+    { id: 'Assigned Citizens', label: 'Ward Citizens', icon: Users },
   ];
 
   const handleItemClick = (item) => {

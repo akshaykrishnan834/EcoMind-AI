@@ -11,6 +11,12 @@ namespace EcoMind.API.Interfaces
 
         Task<List<Citizen>> GetAllCitizensAsync();
 
+        Task<List<Citizen>> GetCitizensByWardAsync(string wardId);
+
         Task<string> UpdateCitizenAsync(UpdateCitizenDto dto);
+
+        Task<bool> UpdateLocationAsync(
+            string citizenId,
+            UpdateCitizenLocationDto dto);
     }
 }

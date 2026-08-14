@@ -7,7 +7,8 @@ import {
     ChevronDown,
     Menu,
     X,
-    User
+    User,
+    MapPin
 } from 'lucide-react';
 
 const CitizenSidebar = ({
@@ -30,7 +31,6 @@ const CitizenSidebar = ({
 
     const menuItems = [
         { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
-
     ];
 
     const handleItemClick = (item) => {
@@ -133,8 +133,8 @@ const CitizenSidebar = ({
                                 <button
                                     onClick={() => handleItemClick(item)}
                                     className={`w-full flex items-center ${isCollapsed
-                                            ? 'justify-center px-3 py-3 rounded-2xl'
-                                            : 'justify-between pl-4 pr-3 py-2.5 rounded-r-full'
+                                        ? 'justify-center px-3 py-3 rounded-2xl'
+                                        : 'justify-between pl-4 pr-3 py-2.5 rounded-r-full'
                                         } text-xs font-semibold transition-all duration-200 cursor-pointer ${isActive
                                             ? 'bg-[#0a4d2c] text-white shadow-sm'
                                             : 'text-gray-700 hover:bg-emerald-100/70 hover:text-[#0a4d2c]'
@@ -174,8 +174,8 @@ const CitizenSidebar = ({
                                                 key={idx}
                                                 onClick={() => setActiveItem && setActiveItem(`${item.id} > ${sub}`)}
                                                 className={`w-full text-left py-1.5 px-3 rounded-r-full text-[11px] font-medium transition-all ${activeItem === `${item.id} > ${sub}` || activeItem === sub
-                                                        ? 'bg-emerald-100 text-[#0a4d2c] font-bold'
-                                                        : 'text-gray-600 hover:text-[#0a4d2c] hover:bg-emerald-50'
+                                                    ? 'bg-emerald-100 text-[#0a4d2c] font-bold'
+                                                    : 'text-gray-600 hover:text-[#0a4d2c] hover:bg-emerald-50'
                                                     }`}
                                             >
                                                 • {sub}
@@ -192,8 +192,8 @@ const CitizenSidebar = ({
                         <button
                             onClick={onLogout}
                             className={`w-full flex items-center ${isCollapsed
-                                    ? 'justify-center py-3 px-2 rounded-2xl'
-                                    : 'justify-center gap-2 py-2.5 px-4 rounded-r-full'
+                                ? 'justify-center py-3 px-2 rounded-2xl'
+                                : 'justify-center gap-2 py-2.5 px-4 rounded-r-full'
                                 } bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-xs font-bold text-[#0a4d2c] transition-all cursor-pointer shadow-2xs group`}
                         >
                             <LogOut className="w-4 h-4 text-emerald-700 group-hover:text-[#0a4d2c] transition-colors shrink-0" />
