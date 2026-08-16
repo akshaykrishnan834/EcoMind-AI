@@ -9,6 +9,7 @@ import AddWorker from './admin/AddWorker';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../components/Footer';
 import AllUsers from './admin/AllUsers';
+import AdminPickups from './admin/AdminPickups';
 
 const Admin = () => {
     const [activeTab, setActiveTabState] = useState(() => {
@@ -70,13 +71,15 @@ const Admin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f4f9f5] flex flex-col font-sans">
-            {/* Main Top Header */}
-            <Header />
+        <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f4f9f5] font-sans">
+            {/* Main Top Header (Fixed at top) */}
+            <div className="shrink-0 z-40 border-b border-emerald-100/80 shadow-2xs">
+                <Header />
+            </div>
 
-            {/* Main Container below Header with Side Menu on Left */}
-            <div className="flex-1 flex">
-                {/* Admin Side Menu */}
+            {/* Body Container (Flex below Header) */}
+            <div className="flex-1 flex overflow-hidden min-h-0">
+                {/* Admin Side Menu (Fixed on Left) */}
                 <AdminSidebar
                     activeItem={activeTab}
                     setActiveItem={setActiveTab}
@@ -87,81 +90,90 @@ const Admin = () => {
                     onClose={() => setIsMobileSidebarOpen(false)}
                 />
 
-                {/* Workspace Content Area */}
-                <main className="flex-1 p-8 bg-[#f3f7f5]">
-                    {activeTab === 'Dashboard' && (
-                        <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
-                            <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
-                                Welcome to Dashboard
-                            </h1>
-                            <p className="text-sm text-gray-500 mt-2">
-                                Select any menu item from the sidebar to manage EcoMind AI system settings and operations.
-                            </p>
-                        </div>
-                    )}
-
-                    {(activeTab === 'Panchayat Desk > Panchayt Info' || activeTab === 'Panchayt Info') && (
-                        <PanchayatInfo initialEdit={false} />
-                    )}
-
-                    {(activeTab === 'Panchayat Desk > Add Panchayat' || activeTab === 'Add Panchayat') && (
-                        <PanchayatInfo initialEdit={true} />
-                    )}
-
-                    {(activeTab === 'Panchayat Desk' || activeTab === 'Panchayat Desk > All Wards' || activeTab === 'All Wards') && (
-                        <AllWards onAddWard={() => setActiveTab('Panchayat Desk > Add Ward')} />
-                    )}
-
-                    {activeTab === 'Panchayat Desk > Add Ward' && (
-                        <AddWard
-                            onBack={() => setActiveTab('Panchayat Desk > All Wards')}
-                            onWardAdded={() => setActiveTab('Panchayat Desk > All Wards')}
-                        />
-                    )}
-
-                    {(activeTab === 'Worker Desk' || activeTab === 'Worker Desk > Worker Details' || activeTab === 'Worker Details') && (
-                        <AllWorkers onCreateWorkerClick={() => setActiveTab('Worker Desk > Create Worker Login')} />
-                    )}
-
-                    {(activeTab === 'Worker Desk > Create Worker Login' || activeTab === 'Create Worker Login') && (
-                        <AddWorker
-                            onBack={() => setActiveTab('Worker Desk > Worker Details')}
-                            onWorkerAdded={() => setActiveTab('Worker Desk > Worker Details')}
-                        />
-                    )}
-
-                    {(activeTab === 'Users' || activeTab === 'Registered Users') && (
-                        <AllUsers />
-                    )}
-
-                    {activeTab !== 'Dashboard' &&
-                        activeTab !== 'Panchayat Desk' &&
-                        activeTab !== 'Panchayat Desk > Panchayt Info' &&
-                        activeTab !== 'Panchayt Info' &&
-                        activeTab !== 'Panchayat Desk > Add Panchayat' &&
-                        activeTab !== 'Add Panchayat' &&
-                        activeTab !== 'Panchayat Desk > All Wards' &&
-                        activeTab !== 'All Wards' &&
-                        activeTab !== 'Panchayat Desk > Add Ward' &&
-                        activeTab !== 'Worker Desk' &&
-                        activeTab !== 'Worker Desk > Worker Details' &&
-                        activeTab !== 'Worker Details' &&
-                        activeTab !== 'Worker Desk > Create Worker Login' &&
-                        activeTab !== 'Create Worker Login' &&
-                        activeTab !== 'Users' &&
-                        activeTab !== 'Registered Users' && (
+                {/* Workspace Content Area (Scrolls Vertically) */}
+                <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f3f7f5] min-w-0">
+                    <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
+                        {activeTab === 'Dashboard' && (
                             <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
                                 <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
-                                    {activeTab}
+                                    Welcome to Dashboard
                                 </h1>
                                 <p className="text-sm text-gray-500 mt-2">
-                                    System operations for {activeTab}.
+                                    Select any menu item from the sidebar to manage EcoMind AI system settings and operations.
                                 </p>
                             </div>
                         )}
+
+                        {(activeTab === 'Panchayat Desk > Panchayt Info' || activeTab === 'Panchayt Info') && (
+                            <PanchayatInfo initialEdit={false} />
+                        )}
+
+                        {(activeTab === 'Panchayat Desk > Add Panchayat' || activeTab === 'Add Panchayat') && (
+                            <PanchayatInfo initialEdit={true} />
+                        )}
+
+                        {(activeTab === 'Panchayat Desk' || activeTab === 'Panchayat Desk > All Wards' || activeTab === 'All Wards') && (
+                            <AllWards onAddWard={() => setActiveTab('Panchayat Desk > Add Ward')} />
+                        )}
+
+                        {activeTab === 'Panchayat Desk > Add Ward' && (
+                            <AddWard
+                                onBack={() => setActiveTab('Panchayat Desk > All Wards')}
+                                onWardAdded={() => setActiveTab('Panchayat Desk > All Wards')}
+                            />
+                        )}
+
+                        {(activeTab === 'Worker Desk' || activeTab === 'Worker Desk > Worker Details' || activeTab === 'Worker Details') && (
+                            <AllWorkers onCreateWorkerClick={() => setActiveTab('Worker Desk > Create Worker Login')} />
+                        )}
+
+                        {(activeTab === 'Worker Desk > Create Worker Login' || activeTab === 'Create Worker Login') && (
+                            <AddWorker
+                                onBack={() => setActiveTab('Worker Desk > Worker Details')}
+                                onWorkerAdded={() => setActiveTab('Worker Desk > Worker Details')}
+                            />
+                        )}
+
+                        {(activeTab === 'Users' || activeTab === 'Registered Users') && (
+                            <AllUsers />
+                        )}
+
+                        {(activeTab === 'Pickup Requests' || activeTab === 'Waste Pickups') && (
+                            <AdminPickups />
+                        )}
+
+                        {activeTab !== 'Dashboard' &&
+                            activeTab !== 'Pickup Requests' &&
+                            activeTab !== 'Waste Pickups' &&
+                            activeTab !== 'Panchayat Desk' &&
+                            activeTab !== 'Panchayat Desk > Panchayt Info' &&
+                            activeTab !== 'Panchayt Info' &&
+                            activeTab !== 'Panchayat Desk > Add Panchayat' &&
+                            activeTab !== 'Add Panchayat' &&
+                            activeTab !== 'Panchayat Desk > All Wards' &&
+                            activeTab !== 'All Wards' &&
+                            activeTab !== 'Panchayat Desk > Add Ward' &&
+                            activeTab !== 'Worker Desk' &&
+                            activeTab !== 'Worker Desk > Worker Details' &&
+                            activeTab !== 'Worker Details' &&
+                            activeTab !== 'Worker Desk > Create Worker Login' &&
+                            activeTab !== 'Create Worker Login' &&
+                            activeTab !== 'Users' &&
+                            activeTab !== 'Registered Users' && (
+                                <div className="bg-white rounded-2xl p-6 border border-emerald-100/80 shadow-xs">
+                                    <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
+                                        {activeTab}
+                                    </h1>
+                                    <p className="text-sm text-gray-500 mt-2">
+                                        System operations for {activeTab}.
+                                    </p>
+                                </div>
+                            )}
+                    </div>
+
+                    <Footer />
                 </main>
             </div>
-            <Footer />
         </div>
     );
 };

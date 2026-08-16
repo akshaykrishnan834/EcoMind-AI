@@ -139,6 +139,28 @@
         }
       }
     },
+    "/api/Citizen/ward/{wardId}": {
+      "get": {
+        "tags": [
+          "Citizen"
+        ],
+        "parameters": [
+          {
+            "name": "wardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Citizen/{email}": {
       "get": {
         "tags": [
@@ -274,6 +296,238 @@
         }
       }
     },
+    "/api/PickupRequest": {
+      "post": {
+        "tags": [
+          "PickupRequest"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePickupRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePickupRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePickupRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/PickupRequest/all": {
+      "get": {
+        "tags": [
+          "PickupRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/PickupRequest/citizen/{citizenId}": {
+      "get": {
+        "tags": [
+          "PickupRequest"
+        ],
+        "parameters": [
+          {
+            "name": "citizenId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/PickupRequest/citizen/{citizenId}/monthly-status": {
+      "get": {
+        "tags": [
+          "PickupRequest"
+        ],
+        "parameters": [
+          {
+            "name": "citizenId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/PickupRequest/ward/{wardId}": {
+      "get": {
+        "tags": [
+          "PickupRequest"
+        ],
+        "parameters": [
+          {
+            "name": "wardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/PickupRequest/{requestId}/schedule": {
+      "put": {
+        "tags": [
+          "PickupRequest"
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePickupRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePickupRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePickupRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/PickupRequest/{requestId}/complete": {
+      "put": {
+        "tags": [
+          "PickupRequest"
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletePickupRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletePickupRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletePickupRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/PickupRequest/{requestId}/status": {
+      "put": {
+        "tags": [
+          "PickupRequest"
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePickupStatusDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePickupStatusDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePickupStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/User": {
       "get": {
         "tags": [
@@ -402,6 +656,38 @@
         }
       }
     },
+    "/api/WasteAnalysis/analyze": {
+      "post": {
+        "tags": [
+          "WasteAnalysis"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "Image": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Worker": {
       "post": {
         "tags": [
@@ -493,6 +779,16 @@
         },
         "additionalProperties": false
       },
+      "CompletePickupRequestDto": {
+        "type": "object",
+        "properties": {
+          "workerId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateCitizenDto": {
         "type": "object",
         "properties": {
@@ -505,6 +801,10 @@
             "nullable": true
           },
           "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "houseName": {
             "type": "string",
             "nullable": true
           },
@@ -547,6 +847,38 @@
             "items": {
               "$ref": "#/components/schemas/CreateWardDto"
             },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreatePickupRequestDto": {
+        "type": "object",
+        "properties": {
+          "citizenId": {
+            "type": "string",
+            "nullable": true
+          },
+          "wasteItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WasteItemDto"
+            },
+            "nullable": true
+          },
+          "overallCategory": {
+            "type": "string",
+            "nullable": true
+          },
+          "aiAnalyzed": {
+            "type": "boolean"
+          },
+          "aiConfidence": {
+            "type": "number",
+            "format": "double"
+          },
+          "segregationAdvice": {
+            "type": "string",
             "nullable": true
           }
         },
@@ -640,6 +972,20 @@
         },
         "additionalProperties": false
       },
+      "SchedulePickupRequestDto": {
+        "type": "object",
+        "properties": {
+          "workerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "collectionDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
       "UpdateCitizenDto": {
         "type": "object",
         "properties": {
@@ -656,6 +1002,10 @@
             "nullable": true
           },
           "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "houseName": {
             "type": "string",
             "nullable": true
           },
@@ -702,6 +1052,16 @@
         },
         "additionalProperties": false
       },
+      "UpdatePickupStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "UpdateProfileDto": {
         "type": "object",
         "properties": {
@@ -742,6 +1102,20 @@
           "status": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "WasteItemDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false

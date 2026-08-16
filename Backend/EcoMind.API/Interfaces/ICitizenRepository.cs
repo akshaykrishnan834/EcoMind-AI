@@ -8,6 +8,8 @@ namespace EcoMind.API.Interfaces
 
         Task<Citizen?> GetCitizenByEmailAsync(string email);
 
+        Task<Citizen?> GetCitizenByCitizenIdAsync(string citizenId);
+
         Task<List<Citizen>> GetAllCitizensAsync();
 
         Task<List<Citizen>> GetCitizensByWardAsync(string wardId);

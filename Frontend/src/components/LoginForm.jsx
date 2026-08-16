@@ -79,6 +79,11 @@ export const LoginForm = ({ onSwitchToSignUp, onOpenForgotPassword, onSubmitLogi
         localStorage.setItem('userName', response.fullName);
       }
 
+      // Reset active tab keys so user logs directly into their main Dashboard interface
+      sessionStorage.removeItem('adminActiveTab');
+      sessionStorage.removeItem('workerActiveTab');
+      sessionStorage.removeItem('citizenActiveTab');
+
       if (userRole === "citizen") {
         navigate("/citizen");
       } else if (userRole === "worker" || userRole === "haritha karma sena worker") {

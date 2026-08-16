@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import CitizenSidebar from '../components/CitizenSidebar';
 import CitizenProfile from '../components/CitizenProfile';
+import PickupRequest from '../components/PickupRequest';
 import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -163,12 +164,14 @@ const CitizenDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f3f7f5] flex flex-col font-sans">
-      {/* Top Header */}
-      <Header />
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f3f7f5] font-sans">
+      {/* Top Header (Fixed at top) */}
+      <div className="shrink-0 z-40 border-b border-emerald-100/80 shadow-2xs">
+        <Header />
+      </div>
 
       {/* Main Content Layout with Sidebar */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         <CitizenSidebar
           activeItem={activeTab}
           setActiveItem={setActiveTab}
@@ -179,10 +182,13 @@ const CitizenDashboard = () => {
           onClose={() => setIsMobileSidebarOpen(false)}
         />
 
-        {/* Main Workspace */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6">
-          {activeTab === 'Profile' ? (
+        {/* Main Workspace (Scrolls Vertically) */}
+        <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f3f7f5] min-w-0">
+          <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
+            {activeTab === 'Profile' ? (
             <CitizenProfile />
+          ) : activeTab === 'Pickup Request' ? (
+            <PickupRequest citizenData={citizenData} />
           ) : (
             /* CITIZEN DASHBOARD OVERVIEW */
             <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
@@ -222,10 +228,18 @@ const CitizenDashboard = () => {
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                     <button
                       type="button"
-                      onClick={() => setActiveTab('Profile')}
+                      onClick={() => setActiveTab('Pickup Request')}
                       className="px-5 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <User className="w-4 h-4 text-[#0a4d2c]" />
+                      <Truck className="w-4 h-4 text-[#0a4d2c]" />
+                      <span>Request Pickup</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('Profile')}
+                      className="px-5 py-3 bg-emerald-900/80 hover:bg-emerald-950 border border-emerald-400/40 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <User className="w-4 h-4 text-emerald-300" />
                       <span>{isProfileComplete ? 'View Profile' : 'Complete Profile'}</span>
                     </button>
                   </div>
@@ -234,11 +248,11 @@ const CitizenDashboard = () => {
 
             </div>
           )}
+          </div>
+
+          <Footer />
         </main>
       </div>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

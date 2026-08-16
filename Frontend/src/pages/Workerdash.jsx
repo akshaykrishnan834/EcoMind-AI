@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import WorkerSidebar from '../components/WorkerSidebar';
 import WorkerCitizens from './worker/WorkerCitizens';
+import WorkerPickups from './worker/WorkerPickups';
 import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -25,7 +26,8 @@ import {
   Clock,
   ArrowRight,
   RefreshCw,
-  Award
+  Award,
+  Truck
 } from 'lucide-react';
 import { getUserByEmail, updateUserProfile } from '../services/userService';
 import { getAllCitizens, getCitizensByWard } from '../services/citizenService';
@@ -256,12 +258,14 @@ const WorkerDashboard = () => {
   const completionRate = totalCitizensCount > 0 ? Math.round((completedProfilesCount / totalCitizensCount) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#f3f7f5] flex flex-col font-sans">
-      {/* Top Header */}
-      <Header />
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f3f7f5] font-sans">
+      {/* Top Header (Fixed at top) */}
+      <div className="shrink-0 z-40 border-b border-emerald-100/80 shadow-2xs">
+        <Header />
+      </div>
 
       {/* Main Content Layout with Sidebar */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         <WorkerSidebar
           activeItem={activeTab}
           setActiveItem={setActiveTab}
@@ -272,9 +276,10 @@ const WorkerDashboard = () => {
           onClose={() => setIsMobileSidebarOpen(false)}
         />
 
-        {/* Main Workspace */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6">
-          {successMsg && (
+        {/* Main Workspace (Scrolls Vertically) */}
+        <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f3f7f5] min-w-0">
+          <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
+            {successMsg && (
             <div className="max-w-5xl mx-auto p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-sm font-bold rounded-xl flex items-center gap-3 shadow-xs animate-fadeIn">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               <span>{successMsg}</span>
@@ -424,6 +429,9 @@ const WorkerDashboard = () => {
                 </div>
               </div>
             </div>
+          ) : activeTab === 'Pickup Requests' || activeTab === 'Plastic Pickups' ? (
+            /* WARD PLASTIC PICKUPS TAB */
+            <WorkerPickups wardId={profile.wardId || 'Ward 1'} workerId={profile.email || 'WORKER001'} />
           ) : activeTab === 'Assigned Citizens' || activeTab === 'Ward Citizens' ? (
             /* WARD CITIZENS DIRECTORY TAB */
             <WorkerCitizens />
@@ -461,12 +469,20 @@ const WorkerDashboard = () => {
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                     <button
                       type="button"
-                      onClick={() => setActiveTab('Assigned Citizens')}
+                      onClick={() => setActiveTab('Pickup Requests')}
                       className="px-6 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <Users className="w-4 h-4 text-[#0a4d2c]" />
-                      <span>View Ward Citizens</span>
+                      <Truck className="w-4 h-4 text-[#0a4d2c]" />
+                      <span>Plastic Pickups</span>
                       <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('Assigned Citizens')}
+                      className="px-6 py-3 bg-emerald-900/80 hover:bg-emerald-950 border border-emerald-400/40 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Users className="w-4 h-4 text-emerald-300" />
+                      <span>Ward Citizens</span>
                     </button>
                   </div>
                 </div>
@@ -595,9 +611,13 @@ const WorkerDashboard = () => {
 
             </div>
           )}
+          </div>
+
+          <Footer />
         </main>
       </div>
 
+      {/* Footer inside Main workspace */}
       {/* Edit Profile Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
@@ -704,9 +724,6 @@ const WorkerDashboard = () => {
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("EcoMind.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+79816fcc4616c9e9b84f8e9fd25b842b67dd7acc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+94ff7060aa7d2693217c43475ab1f0e8f7f5a232")]
 [assembly: System.Reflection.AssemblyProductAttribute("EcoMind.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("EcoMind.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

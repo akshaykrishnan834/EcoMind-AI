@@ -82,7 +82,7 @@ export const QuoteBar = () => {
 
 export const Footer = ({ onOpenPrivacy, onOpenTerms }) => {
   return (
-    <footer className="w-full bg-[#0a4d2c] text-white text-xs py-4 px-4 sm:px-6 lg:px-8 mt-auto">
+    <footer className="w-full bg-[#0a4d2c] text-white text-xs py-4 px-4 sm:px-6 lg:px-8 mt-auto shrink-0 border-t border-emerald-800/60">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
 
         <div>

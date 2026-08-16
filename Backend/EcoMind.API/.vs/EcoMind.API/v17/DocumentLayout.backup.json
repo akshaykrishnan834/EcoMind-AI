@@ -3,8 +3,56 @@
   "WorkspaceRootPath": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\models\\pickuprequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:models\\pickuprequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\controllers\\wasteanalysiscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:controllers\\wasteanalysiscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\repositories\\citizenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:repositories\\citizenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\interfaces\\icitizenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:interfaces\\icitizenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\controllers\\pickuprequestcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:controllers\\pickuprequestcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\services\\pickuprequestservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:services\\pickuprequestservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\interfaces\\ipickuprequestservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:interfaces\\ipickuprequestservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\repositories\\pickuprequestrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:repositories\\pickuprequestrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\interfaces\\ipickuprequestrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:interfaces\\ipickuprequestrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\dtos\\createpickuprequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:dtos\\createpickuprequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\models\\citizen.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:models\\citizen.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\dtos\\createcitizendto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -19,14 +67,6 @@
       "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:dtos\\updatecitizendto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\models\\citizen.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:models\\citizen.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\repositories\\citizenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:repositories\\citizenrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\dtos\\updatecitizenlocationdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:dtos\\updatecitizenlocationdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -35,16 +75,8 @@
       "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:controllers\\citizencontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\interfaces\\icitizenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:interfaces\\icitizenservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{3FBF5AE8-5171-484B-B8BC-5F8FEC6861B2}|EcoMind.API.csproj|c:\\users\\achuz\\onedrive\\desktop\\ajce\\miniproject\\ecomind ai\\backend\\ecomind.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -198,63 +230,193 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "CitizenService.cs",
-              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\CitizenService.cs",
-              "RelativeDocumentMoniker": "Services\\CitizenService.cs",
-              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\CitizenService.cs",
-              "RelativeToolTip": "Services\\CitizenService.cs",
-              "ViewState": "AgIAAKgBAAAAAAAAAAAAAMMBAAABAAAAAAAAAA==",
+              "DocumentIndex": 8,
+              "Title": "IPickupRequestService.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IPickupRequestService.cs",
+              "RelativeDocumentMoniker": "Interfaces\\IPickupRequestService.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IPickupRequestService.cs",
+              "RelativeToolTip": "Interfaces\\IPickupRequestService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-09T18:59:02.862Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-15T21:30:26.139Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "CreateCitizenDto.cs",
-              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreateCitizenDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\CreateCitizenDto.cs",
-              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreateCitizenDto.cs",
-              "RelativeToolTip": "DTOs\\CreateCitizenDto.cs",
-              "ViewState": "AgIAAAQAAAAAAAAAAAAzwAwAAAA/AAAAAAAAAA==",
+              "DocumentIndex": 9,
+              "Title": "PickupRequestRepository.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\PickupRequestRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\PickupRequestRepository.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\PickupRequestRepository.cs",
+              "RelativeToolTip": "Repositories\\PickupRequestRepository.cs",
+              "ViewState": "AgIAADMAAAAAAAAAAAAgwEoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-09T18:56:31.953Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-15T21:29:59.677Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAADgAAAAAAAAAAAAwwDoAAAAbAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-27T09:30:32.784Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "ICitizenRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\ICitizenRepository.cs",
               "RelativeDocumentMoniker": "Interfaces\\ICitizenRepository.cs",
               "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\ICitizenRepository.cs",
               "RelativeToolTip": "Interfaces\\ICitizenRepository.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAEAAAAAAAAAAAAgwBgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-09T18:57:09.22Z",
+              "WhenOpened": "2026-08-09T18:57:09.22Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "CitizenRepository.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\CitizenRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\CitizenRepository.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\CitizenRepository.cs",
+              "RelativeToolTip": "Repositories\\CitizenRepository.cs",
+              "ViewState": "AgIAAEsAAAAAAAAAAAAgwGAAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-09T18:57:40.933Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-07-27T09:27:07.685Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 1,
+              "Title": "PickupRequest.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Models\\PickupRequest.cs",
+              "RelativeDocumentMoniker": "Models\\PickupRequest.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Models\\PickupRequest.cs",
+              "RelativeToolTip": "Models\\PickupRequest.cs",
+              "ViewState": "AgIAACUAAAAAAAAAAAA7wCsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-15T20:53:54.948Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "WasteAnalysisController.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\WasteAnalysisController.cs",
+              "RelativeDocumentMoniker": "Controllers\\WasteAnalysisController.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\WasteAnalysisController.cs",
+              "RelativeToolTip": "Controllers\\WasteAnalysisController.cs",
+              "ViewState": "AgIAABwAAAAAAAAAAAAkwOIAAAA4AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-16T16:24:34.589Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "PickupRequestService.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\PickupRequestService.cs",
+              "RelativeDocumentMoniker": "Services\\PickupRequestService.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\PickupRequestService.cs",
+              "RelativeToolTip": "Services\\PickupRequestService.cs",
+              "ViewState": "AgIAAH0AAAAAAAAAAAAgwJQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-15T21:30:48.572Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "PickupRequestController.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\PickupRequestController.cs",
+              "RelativeDocumentMoniker": "Controllers\\PickupRequestController.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\PickupRequestController.cs",
+              "RelativeToolTip": "Controllers\\PickupRequestController.cs",
+              "ViewState": "AgIAAF8AAAAAAAAAAAAgwHYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-15T21:31:22.13Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "IPickupRequestRepository.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IPickupRequestRepository.cs",
+              "RelativeDocumentMoniker": "Interfaces\\IPickupRequestRepository.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IPickupRequestRepository.cs",
+              "RelativeToolTip": "Interfaces\\IPickupRequestRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-15T21:29:36.192Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "CreatePickupRequestDto.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreatePickupRequestDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\CreatePickupRequestDto.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreatePickupRequestDto.cs",
+              "RelativeToolTip": "DTOs\\CreatePickupRequestDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAgwBcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-15T21:29:08Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "CitizenService.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\CitizenService.cs",
+              "RelativeDocumentMoniker": "Services\\CitizenService.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\CitizenService.cs",
+              "RelativeToolTip": "Services\\CitizenService.cs",
+              "ViewState": "AgIAAL4BAAAAAAAAAAAAANkBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-09T18:59:02.862Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "CreateCitizenDto.cs",
+              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreateCitizenDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\CreateCitizenDto.cs",
+              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreateCitizenDto.cs",
+              "RelativeToolTip": "DTOs\\CreateCitizenDto.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAzwA4AAAA/AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-09T18:56:31.953Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
               "Title": "UpdateCitizenDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\UpdateCitizenDto.cs",
               "RelativeDocumentMoniker": "DTOs\\UpdateCitizenDto.cs",
               "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\UpdateCitizenDto.cs",
               "RelativeToolTip": "DTOs\\UpdateCitizenDto.cs",
-              "ViewState": "AgIAAAIAAAAAAAAAAAAxwA8AAAAuAAAAAAAAAA==",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAxwBAAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-14T18:28:23.565Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-14T18:28:23.565Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 17,
               "Title": "CitizenController.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\CitizenController.cs",
               "RelativeDocumentMoniker": "Controllers\\CitizenController.cs",
@@ -266,7 +428,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 16,
               "Title": "UpdateCitizenLocationDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\UpdateCitizenLocationDto.cs",
               "RelativeDocumentMoniker": "DTOs\\UpdateCitizenLocationDto.cs",
@@ -278,7 +440,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 18,
               "Title": "ICitizenService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\ICitizenService.cs",
               "RelativeDocumentMoniker": "Interfaces\\ICitizenService.cs",
@@ -290,44 +452,19 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "CitizenRepository.cs",
-              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\CitizenRepository.cs",
-              "RelativeDocumentMoniker": "Repositories\\CitizenRepository.cs",
-              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\CitizenRepository.cs",
-              "RelativeToolTip": "Repositories\\CitizenRepository.cs",
-              "ViewState": "AgIAACUAAAAAAAAAAAAiwEEAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-09T18:57:40.933Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 12,
               "Title": "Citizen.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Models\\Citizen.cs",
               "RelativeDocumentMoniker": "Models\\Citizen.cs",
               "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Models\\Citizen.cs",
               "RelativeToolTip": "Models\\Citizen.cs",
-              "ViewState": "AgIAABAAAAAAAAAAAAAuwCEAAAA2AAAAAAAAAA==",
+              "ViewState": "AgIAABUAAAAAAAAAAAA3wCIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-09T18:55:30.361Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-09T18:55:30.361Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Program.cs",
-              "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Program.cs",
-              "RelativeToolTip": "Program.cs",
-              "ViewState": "AgIAABgAAAAAAAAAAAAAACgAAAA8AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-27T09:30:32.784Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 21,
               "Title": "VerifyOtpDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\VerifyOtpDto.cs",
               "RelativeDocumentMoniker": "DTOs\\VerifyOtpDto.cs",
@@ -339,7 +476,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 22,
               "Title": "ForgotPasswordDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\ForgotPasswordDto.cs",
               "RelativeDocumentMoniker": "DTOs\\ForgotPasswordDto.cs",
@@ -351,7 +488,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 23,
               "Title": "CreateWardDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreateWardDto.cs",
               "RelativeDocumentMoniker": "DTOs\\CreateWardDto.cs",
@@ -363,7 +500,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 31,
               "Title": "IPanchayatRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IPanchayatRepository.cs",
               "RelativeDocumentMoniker": "Interfaces\\IPanchayatRepository.cs",
@@ -375,7 +512,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 32,
               "Title": "CreatePanchayatDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreatePanchayatDto.cs",
               "RelativeDocumentMoniker": "DTOs\\CreatePanchayatDto.cs",
@@ -387,7 +524,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 19,
               "Title": "AuthController.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\AuthController.cs",
               "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
@@ -399,19 +536,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "appsettings.json",
-              "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\appsettings.json",
-              "RelativeDocumentMoniker": "appsettings.json",
-              "ToolTip": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\appsettings.json",
-              "RelativeToolTip": "appsettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAgAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-07-27T09:27:07.685Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 20,
               "Title": "ResetPasswordDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\ResetPasswordDto.cs",
               "RelativeDocumentMoniker": "DTOs\\ResetPasswordDto.cs",
@@ -423,7 +548,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 27,
               "Title": "PanchayatController.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\PanchayatController.cs",
               "RelativeDocumentMoniker": "Controllers\\PanchayatController.cs",
@@ -435,7 +560,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 26,
               "Title": "Ward.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Models\\Ward.cs",
               "RelativeDocumentMoniker": "Models\\Ward.cs",
@@ -447,7 +572,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 25,
               "Title": "WardService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\WardService.cs",
               "RelativeDocumentMoniker": "Services\\WardService.cs",
@@ -459,7 +584,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 24,
               "Title": "CreateWorkerDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\CreateWorkerDto.cs",
               "RelativeDocumentMoniker": "DTOs\\CreateWorkerDto.cs",
@@ -471,7 +596,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 30,
               "Title": "PanchayatRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\PanchayatRepository.cs",
               "RelativeDocumentMoniker": "Repositories\\PanchayatRepository.cs",
@@ -483,7 +608,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 28,
               "Title": "IPanchayatService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IPanchayatService.cs",
               "RelativeDocumentMoniker": "Interfaces\\IPanchayatService.cs",
@@ -495,7 +620,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 29,
               "Title": "PanchayatService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\PanchayatService.cs",
               "RelativeDocumentMoniker": "Services\\PanchayatService.cs",
@@ -507,7 +632,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 33,
               "Title": "Panchayat.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Models\\Panchayat.cs",
               "RelativeDocumentMoniker": "Models\\Panchayat.cs",
@@ -519,7 +644,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 34,
               "Title": "WorkerController.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\WorkerController.cs",
               "RelativeDocumentMoniker": "Controllers\\WorkerController.cs",
@@ -531,7 +656,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 35,
               "Title": "WorkerService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\WorkerService.cs",
               "RelativeDocumentMoniker": "Services\\WorkerService.cs",
@@ -543,7 +668,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 36,
               "Title": "IWorkerService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IWorkerService.cs",
               "RelativeDocumentMoniker": "Interfaces\\IWorkerService.cs",
@@ -555,7 +680,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 37,
               "Title": "WorkerRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\WorkerRepository.cs",
               "RelativeDocumentMoniker": "Repositories\\WorkerRepository.cs",
@@ -567,7 +692,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 38,
               "Title": "IWorkerRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IWorkerRepository.cs",
               "RelativeDocumentMoniker": "Interfaces\\IWorkerRepository.cs",
@@ -579,7 +704,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 40,
               "Title": "WardRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\WardRepository.cs",
               "RelativeDocumentMoniker": "Repositories\\WardRepository.cs",
@@ -591,7 +716,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 34,
+              "DocumentIndex": 42,
               "Title": "WardController.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Controllers\\WardController.cs",
               "RelativeDocumentMoniker": "Controllers\\WardController.cs",
@@ -603,7 +728,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 39,
               "Title": "Worker.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Models\\Worker.cs",
               "RelativeDocumentMoniker": "Models\\Worker.cs",
@@ -615,7 +740,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 35,
+              "DocumentIndex": 43,
               "Title": "IWardService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IWardService.cs",
               "RelativeDocumentMoniker": "Interfaces\\IWardService.cs",
@@ -627,7 +752,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 36,
+              "DocumentIndex": 44,
               "Title": "IWardRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IWardRepository.cs",
               "RelativeDocumentMoniker": "Interfaces\\IWardRepository.cs",
@@ -639,7 +764,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 33,
+              "DocumentIndex": 41,
               "Title": "MongoDbService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\MongoDbService.cs",
               "RelativeDocumentMoniker": "Services\\MongoDbService.cs",
@@ -651,7 +776,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 37,
+              "DocumentIndex": 45,
               "Title": "AuthService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Services\\AuthService.cs",
               "RelativeDocumentMoniker": "Services\\AuthService.cs",
@@ -663,7 +788,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 40,
+              "DocumentIndex": 48,
               "Title": "IAuthService.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IAuthService.cs",
               "RelativeDocumentMoniker": "Interfaces\\IAuthService.cs",
@@ -675,7 +800,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 41,
+              "DocumentIndex": 49,
               "Title": "UserRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Repositories\\UserRepository.cs",
               "RelativeDocumentMoniker": "Repositories\\UserRepository.cs",
@@ -687,7 +812,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 42,
+              "DocumentIndex": 50,
               "Title": "IUserRepository.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Interfaces\\IUserRepository.cs",
               "RelativeDocumentMoniker": "Interfaces\\IUserRepository.cs",
@@ -699,7 +824,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 43,
+              "DocumentIndex": 51,
               "Title": "RegisterDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\RegisterDto.cs",
               "RelativeDocumentMoniker": "DTOs\\RegisterDto.cs",
@@ -711,7 +836,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 38,
+              "DocumentIndex": 46,
               "Title": "User.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Models\\User.cs",
               "RelativeDocumentMoniker": "Models\\User.cs",
@@ -723,7 +848,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 39,
+              "DocumentIndex": 47,
               "Title": "launchSettings.json",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Properties\\launchSettings.json",
               "RelativeDocumentMoniker": "Properties\\launchSettings.json",
@@ -735,7 +860,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 44,
+              "DocumentIndex": 52,
               "Title": "LoginDto.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\DTOs\\LoginDto.cs",
               "RelativeDocumentMoniker": "DTOs\\LoginDto.cs",
@@ -747,7 +872,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 45,
+              "DocumentIndex": 53,
               "Title": "MongoDbSettings.cs",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\Configurations\\MongoDbSettings.cs",
               "RelativeDocumentMoniker": "Configurations\\MongoDbSettings.cs",
@@ -759,7 +884,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 46,
+              "DocumentIndex": 54,
               "Title": "EcoMind.API.csproj",
               "DocumentMoniker": "C:\\Users\\achuz\\OneDrive\\Desktop\\AJCE\\miniproject\\EcoMind AI\\Backend\\EcoMind.API\\EcoMind.API.csproj",
               "RelativeDocumentMoniker": "EcoMind.API.csproj",

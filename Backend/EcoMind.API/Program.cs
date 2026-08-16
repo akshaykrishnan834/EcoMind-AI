@@ -41,6 +41,13 @@ builder.Services.AddScoped<IWorkerService, WorkerService>();
 builder.Services.AddScoped<ICitizenRepository, CitizenRepository>();
 builder.Services.AddScoped<ICitizenService, CitizenService>();
 
+builder.Services.AddScoped<
+    IPickupRequestRepository,
+    PickupRequestRepository>();
+
+builder.Services.AddScoped<
+    IPickupRequestService,
+    PickupRequestService>();
 
 // Swagger Services
 builder.Services.AddEndpointsApiExplorer();

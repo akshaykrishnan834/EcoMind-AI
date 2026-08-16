@@ -10,7 +10,8 @@ import {
   ChevronDown,
   Menu,
   X,
-  User
+  User,
+  Truck
 } from 'lucide-react';
 
 const AdminSidebar = ({
@@ -30,6 +31,11 @@ const AdminSidebar = ({
 
   const menuItems = [
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    {
+      id: 'Pickup Requests',
+      label: 'Pickup Requests',
+      icon: Truck
+    },
     {
       id: 'Panchayat Desk',
       label: 'Panchayat Desk',
@@ -75,8 +81,8 @@ const AdminSidebar = ({
 
       {/* Sidebar Drawer */}
       <aside
-        className={`relative ${isCollapsed ? 'w-20' : 'w-64'
-          } bg-white text-gray-800 flex flex-col justify-between border-r border-emerald-100/80 shadow-xs shrink-0 min-h-[calc(100vh-80px)] transition-all duration-300 ease-in-out ${isOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden lg:flex'
+        className={`${isCollapsed ? 'w-20' : 'w-64'
+          } bg-white text-gray-800 flex flex-col justify-between border-r border-emerald-100/80 shadow-xs shrink-0 h-full overflow-y-auto transition-all duration-300 ease-in-out ${isOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden lg:flex'
           }`}
       >
         {/* Top Header & Profile Section */}
