@@ -376,21 +376,10 @@ const WorkerPickups = ({ wardId, workerId }) => {
                   )}
 
                   {isScheduled && (
-                    <button
-                      type="button"
-                      onClick={() => handleComplete(req.requestId)}
-                      disabled={isActionLoading}
-                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {isActionLoading ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-4 h-4 text-blue-200" />
-                          <span>Mark as Collected</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="w-full py-2.5 text-center text-xs font-extrabold text-[#0f5b37] bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                      <CheckCircle2 className="w-4 h-4 text-[#0f5b37]" />
+                      <span>Request Accepted</span>
+                    </div>
                   )}
 
                   {isCompleted && (
