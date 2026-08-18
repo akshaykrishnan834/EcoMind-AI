@@ -33,9 +33,15 @@ namespace EcoMind.API.Models
 
         public double Longitude { get; set; }
 
-        public string Status { get; set; } = "Active";
+        public string Status { get; set; } = "Pending";
 
         public bool ProfileCompleted { get; set; } = false;
+
+        public bool IsVerified { get; set; } = false;
+
+        public DateTime? VerifiedAt { get; set; }
+
+        public string VerifiedBy { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

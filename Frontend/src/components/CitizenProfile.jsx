@@ -109,6 +109,8 @@ export const CitizenProfile = () => {
 
   const [citizenId, setCitizenId] = useState('');
   const [profileCompleted, setProfileCompleted] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState('Pending');
   const [panchayats, setPanchayats] = useState([]);
   const [wards, setWards] = useState([]);
 
@@ -197,6 +199,9 @@ export const CitizenProfile = () => {
               setSavedData(loaded);
               setCitizenId(citizenData.citizenId || '');
               setProfileCompleted(Boolean(citizenData.profileCompleted));
+              const verifiedState = Boolean(citizenData.isVerified || citizenData.status === 'Verified');
+              setIsVerified(verifiedState);
+              setVerificationStatus(citizenData.status || (verifiedState ? 'Verified' : 'Pending Verification'));
             } else if (userAccountData) {
               const loaded = {
                 fullName: userAccountData.fullName || userObj.fullName || '',
@@ -497,6 +502,9 @@ export const CitizenProfile = () => {
       
       if (cleanedAddress && (formData.panchayatName || formData.wardId)) {
         setProfileCompleted(true);
+        if (!isVerified) {
+          setVerificationStatus('Pending Verification');
+        }
       }
 
       const updatedUser = {
@@ -584,10 +592,21 @@ export const CitizenProfile = () => {
                 )}
               </span>
 
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-white border border-white/20">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-                Verified Citizen Account
-              </span>
+              {isVerified ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-400/50 shadow-xs">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                  Verified by Admin
+                </span>
+              ) : profileCompleted ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/30 text-amber-100 border border-amber-400/50 shadow-xs">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-300" />
+                  Pending Admin Verification
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20">
+                  Unverified Profile
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -608,6 +627,31 @@ export const CitizenProfile = () => {
           <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-3 shadow-xs animate-fadeIn">
             <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
             <span>{profileError}</span>
+          </div>
+        )}
+
+        {/* Verification Status Informational Banners */}
+        {profileCompleted && !isVerified && (
+          <div className="p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-3 shadow-xs animate-fadeIn">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <p className="font-bold text-amber-900">Profile Pending Admin Verification</p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Your completed profile details have been submitted. An Administrator must verify your profile before you can submit plastic waste pickup requests.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isVerified && (
+          <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-900 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-3 shadow-xs animate-fadeIn">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div>
+              <p className="font-bold text-emerald-900">Profile Verified by Admin</p>
+              <p className="text-xs text-emerald-800 mt-0.5">
+                Your residence profile has been verified by the administrator. You have full access to submit pickup requests.
+              </p>
+            </div>
           </div>
         )}
 

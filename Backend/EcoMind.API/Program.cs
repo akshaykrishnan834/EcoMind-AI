@@ -24,6 +24,11 @@ builder.Services.AddControllers();
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
 
+// Configure Email Settings
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddTransient<IEmailService, EmailService>();
+
 // Register MongoDB Service
 builder.Services.AddSingleton<MongoDbService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();

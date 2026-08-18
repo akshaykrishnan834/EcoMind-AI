@@ -97,7 +97,11 @@ export const LoginForm = ({ onSwitchToSignUp, onOpenForgotPassword, onSubmitLogi
     } catch (error) {
       console.log("Login Error:", error);
       if (error.response) {
-        alert(typeof error.response.data === 'string' ? error.response.data : 'Invalid email or password.');
+        const errorData = error.response.data;
+        const msg = typeof errorData === 'string'
+          ? errorData
+          : (errorData?.message || 'Invalid email or password.');
+        alert(msg);
       } else if (error.request) {
         alert("Unable to connect to backend server. Please ensure the backend is running.");
       } else {
@@ -216,12 +220,12 @@ export const LoginForm = ({ onSwitchToSignUp, onOpenForgotPassword, onSubmitLogi
                 )}
               </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between pt-1">
-
+              {/* Forgot Password Link */}
+              <div className="flex items-center justify-end pt-1">
                 <button
                   type="button"
                   onClick={onOpenForgotPassword}
+                  className="text-xs font-semibold text-[#0f5b37] hover:text-[#0a4d2c] hover:underline focus:outline-none transition-colors cursor-pointer"
                 >
                   Forgot Password?
                 </button>

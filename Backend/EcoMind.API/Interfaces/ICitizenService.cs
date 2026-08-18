@@ -18,5 +18,9 @@ namespace EcoMind.API.Interfaces
         Task<bool> UpdateLocationAsync(
             string citizenId,
             UpdateCitizenLocationDto dto);
+
+        Task<bool> VerifyCitizenAsync(string citizenId, VerifyCitizenDto dto);
+
+        Task<List<Citizen>> GetPendingVerificationCitizensAsync();
     }
 }

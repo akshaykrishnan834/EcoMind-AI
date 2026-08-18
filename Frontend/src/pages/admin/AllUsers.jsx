@@ -13,12 +13,20 @@ import {
   Shield,
   UserCheck,
   X,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck,
+  Building2,
+  Home,
+  MapPin,
+  Check,
+  Eye
 } from "lucide-react";
 import { getAllUsers, deleteUser } from "../../services/userService";
+import { getAllCitizens, verifyCitizen } from "../../services/citizenService";
 
 const AllUsers = () => {
   const [users, setUsers] = useState([]);
+  const [citizens, setCitizens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("All");
@@ -26,6 +34,11 @@ const AllUsers = () => {
   // State for Delete Confirmation Modal
   const [userToDelete, setUserToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // State for Citizen Profile Verification Modal
+  const [citizenToVerify, setCitizenToVerify] = useState(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
   const [notification, setNotification] = useState({ show: false, type: "", message: "" });
 
   useEffect(() => {
@@ -35,10 +48,14 @@ const AllUsers = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const data = await getAllUsers();
-      setUsers(data || []);
+      const [usersData, citizensData] = await Promise.all([
+        getAllUsers().catch(() => []),
+        getAllCitizens().catch(() => [])
+      ]);
+      setUsers(usersData || []);
+      setCitizens(citizensData || []);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching users/citizens:", error);
       showNotification("error", "Failed to load users list.");
     } finally {
       setLoading(false);
@@ -82,11 +99,64 @@ const AllUsers = () => {
     }
   };
 
+  // Helper to find citizen record by user email
+  const getCitizenForUser = (userEmail) => {
+    if (!userEmail) return null;
+    return citizens.find(
+      (c) => (c.email || "").toLowerCase() === userEmail.toLowerCase()
+    );
+  };
+
+  // Handle Verify Citizen Action
+  const handleConfirmVerification = async (isApproved) => {
+    if (!citizenToVerify) return;
+    const cid = citizenToVerify.citizenId || citizenToVerify.id;
+    if (!cid) {
+      showNotification("error", "Invalid citizen record ID.");
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const statusStr = isApproved ? "Verified" : "Rejected";
+      await verifyCitizen(cid, isApproved, statusStr, "Admin");
+
+      // Update state locally
+      setCitizens((prev) =>
+        prev.map((c) =>
+          (c.citizenId || c.id) === cid
+            ? { ...c, isVerified: isApproved, status: statusStr }
+            : c
+        )
+      );
+
+      showNotification(
+        "success",
+        `Citizen profile for "${citizenToVerify.fullName}" ${isApproved ? "verified & approved" : "rejected"} successfully.`
+      );
+      setCitizenToVerify(null);
+    } catch (err) {
+      console.error("Verification failed:", err);
+      showNotification("error", "Failed to update citizen verification status.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   // Filter logic
   const filteredUsers = users.filter((user) => {
     const userName = user.fullName || user.name || "";
     const userPhone = user.phoneNumber || user.phone || "";
     const userEmail = user.email || "";
+
+    const citizenRec = getCitizenForUser(userEmail);
+    const isCitizenRole = (user.role || "Citizen").toLowerCase() === "citizen";
+    const isPendingVerif =
+      isCitizenRole &&
+      citizenRec &&
+      citizenRec.profileCompleted &&
+      !citizenRec.isVerified &&
+      citizenRec.status !== "Verified";
 
     const matchesSearch =
       searchQuery === "" ||
@@ -94,15 +164,24 @@ const AllUsers = () => {
       userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
       userPhone.includes(searchQuery);
 
-    const matchesRole =
-      selectedRole === "All" ||
-      (user.role || "Citizen").toLowerCase() === selectedRole.toLowerCase();
+    let matchesRole = false;
+    if (selectedRole === "All") {
+      matchesRole = true;
+    } else if (selectedRole === "Pending Verification") {
+      matchesRole = isPendingVerif;
+    } else {
+      matchesRole = (user.role || "Citizen").toLowerCase() === selectedRole.toLowerCase();
+    }
 
     return matchesSearch && matchesRole;
   });
 
   const citizenCount = users.filter(
     (u) => (u.role || "Citizen").toLowerCase() === "citizen"
+  ).length;
+
+  const pendingCount = citizens.filter(
+    (c) => c.profileCompleted && !c.isVerified && c.status !== "Verified"
   ).length;
 
   const workerAdminCount = users.length - citizenCount;
@@ -151,10 +230,10 @@ const AllUsers = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
             <Users className="w-6 h-6 text-[#0a4d2c]" />
-            Registered Users Management
+            Registered Users & Profile Verification
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            View system users, inspect accounts, and remove user profiles when needed
+            Manage system accounts, inspect citizen house profiles, and verify completed citizen registrations.
           </p>
         </div>
 
@@ -172,7 +251,7 @@ const AllUsers = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-5 border border-emerald-100/80 shadow-xs flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#0a4d2c] flex items-center justify-center font-bold">
             <Users className="w-6 h-6" />
@@ -188,8 +267,28 @@ const AllUsers = () => {
             <UserCheck className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">Citizens</p>
+            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">Total Citizens</p>
             <h3 className="text-2xl font-extrabold text-emerald-800">{citizenCount}</h3>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setSelectedRole("Pending Verification")}
+          className={`bg-white rounded-2xl p-5 border transition-all cursor-pointer shadow-xs flex items-center gap-4 ${
+            pendingCount > 0
+              ? "border-amber-300 bg-amber-50/30 hover:bg-amber-50"
+              : "border-emerald-100/80"
+          }`}
+        >
+          <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold relative">
+            <ShieldCheck className="w-6 h-6" />
+            {pendingCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full animate-ping" />
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-amber-900 uppercase tracking-wider font-bold">Pending Verification</p>
+            <h3 className="text-2xl font-extrabold text-amber-900">{pendingCount}</h3>
           </div>
         </div>
 
@@ -228,6 +327,7 @@ const AllUsers = () => {
               className="px-3 py-2 border border-gray-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white cursor-pointer"
             >
               <option value="All">All Roles</option>
+              <option value="Pending Verification">Pending Verification ({pendingCount})</option>
               <option value="Citizen">Citizen</option>
               <option value="Worker">Worker</option>
               <option value="Admin">Admin</option>
@@ -243,6 +343,7 @@ const AllUsers = () => {
                 <th className="p-3.5 text-left font-bold uppercase tracking-wider">User Profile</th>
                 <th className="p-3.5 text-left font-bold uppercase tracking-wider">Contact Info</th>
                 <th className="p-3.5 text-left font-bold uppercase tracking-wider">Role</th>
+                <th className="p-3.5 text-left font-bold uppercase tracking-wider">Verification Status</th>
                 <th className="p-3.5 text-left font-bold uppercase tracking-wider">Joined Date</th>
                 <th className="p-3.5 text-center font-bold uppercase tracking-wider">Actions</th>
               </tr>
@@ -250,7 +351,7 @@ const AllUsers = () => {
             <tbody className="divide-y divide-gray-200 bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-gray-500">
+                  <td colSpan="6" className="p-8 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <RefreshCw className="w-6 h-6 text-emerald-600 animate-spin" />
                       <p className="font-semibold text-sm text-gray-700">Loading registered users...</p>
@@ -264,11 +365,22 @@ const AllUsers = () => {
                   const phone = user.phoneNumber || user.phone || "Not provided";
                   const email = user.email || "N/A";
                   const role = user.role || "Citizen";
+                  const citizenRec = getCitizenForUser(email);
+                  const isCitizen = role.toLowerCase() === "citizen";
+
+                  const isVerified = Boolean(
+                    citizenRec?.isVerified || citizenRec?.status === "Verified"
+                  );
+
+                  const profileCompleted = Boolean(citizenRec?.profileCompleted);
+                  const isPending = isCitizen && profileCompleted && !isVerified;
 
                   return (
                     <tr
                       key={uid}
-                      className="hover:bg-emerald-50/60 transition-colors"
+                      className={`hover:bg-emerald-50/60 transition-colors ${
+                        isPending ? "bg-amber-50/30" : ""
+                      }`}
                     >
                       <td className="p-3.5 font-bold text-gray-800">
                         <div className="flex items-center gap-3">
@@ -305,6 +417,28 @@ const AllUsers = () => {
                         </span>
                       </td>
 
+                      <td className="p-3.5">
+                        {isCitizen ? (
+                          isVerified ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Verified by Admin
+                            </span>
+                          ) : profileCompleted ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                              Pending Verification
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                              Incomplete Profile
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-gray-400 text-[11px]">N/A</span>
+                        )}
+                      </td>
+
                       <td className="p-3.5 text-gray-500">
                         <div className="flex items-center gap-1 text-[11px]">
                           <Clock className="w-3.5 h-3.5 text-gray-400" />
@@ -321,21 +455,37 @@ const AllUsers = () => {
                       </td>
 
                       <td className="p-3.5 text-center">
-                        <button
-                          onClick={() => handleDeleteClick(user)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 transition-all font-semibold text-xs cursor-pointer shadow-2xs"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-600" />
-                          <span>Delete</span>
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          {isCitizen && citizenRec && (
+                            <button
+                              onClick={() => setCitizenToVerify(citizenRec)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                                isPending
+                                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                                  : "bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-200"
+                              }`}
+                              title="Inspect & Verify Profile"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>{isPending ? "Verify Profile" : "Inspect Profile"}</span>
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => handleDeleteClick(user)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 transition-all font-semibold text-xs cursor-pointer shadow-2xs"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-gray-500">
+                  <td colSpan="6" className="p-8 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <Users className="w-8 h-8 text-emerald-300" />
                       <p className="font-semibold text-sm text-gray-700">No User Records Found</p>
@@ -350,6 +500,114 @@ const AllUsers = () => {
           </table>
         </div>
       </div>
+
+      {/* Citizen Profile Verification Inspection Modal */}
+      {citizenToVerify && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-lg w-full border border-emerald-100 shadow-2xl space-y-5 animate-scale-up">
+            
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-[#0a4d2c] flex items-center justify-center shrink-0 border border-emerald-200 font-bold">
+                  <ShieldCheck className="w-5 h-5 text-[#0a4d2c]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Admin Citizen Verification</h3>
+                  <p className="text-xs text-gray-500">Inspect residence address details before approving profile.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCitizenToVerify(null)}
+                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Citizen Details View */}
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                <span className="font-bold text-gray-900 text-sm">{citizenToVerify.fullName}</span>
+                <span className="font-mono text-[11px] bg-emerald-100 text-[#0a4d2c] px-2 py-0.5 rounded font-bold">
+                  ID: {citizenToVerify.citizenId || 'N/A'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Email Address</span>
+                  <span className="font-medium text-gray-800">{citizenToVerify.email}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Phone Number</span>
+                  <span className="font-medium text-gray-800">{citizenToVerify.phoneNumber || 'Not provided'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase block">House Name</span>
+                  <span className="font-medium text-gray-800">{citizenToVerify.houseName || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase block">House Number</span>
+                  <span className="font-semibold text-gray-900">{citizenToVerify.houseNumber || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Panchayat / Local Body</span>
+                  <span className="font-medium text-gray-800">{citizenToVerify.panchayatName || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Ward ID / Number</span>
+                  <span className="font-medium text-gray-800">{citizenToVerify.wardId || 'N/A'}</span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-gray-200">
+                <span className="text-[10px] text-gray-500 font-bold uppercase block mb-1">Residential Address</span>
+                <p className="bg-white p-2.5 rounded-lg border border-gray-200 text-gray-800 whitespace-pre-line font-medium">
+                  {citizenToVerify.address || 'No address provided.'}
+                </p>
+              </div>
+
+              {citizenToVerify.latitude && citizenToVerify.longitude ? (
+                <div className="text-[11px] text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200 flex items-center justify-between font-mono font-bold">
+                  <span>GPS Location Coordinates</span>
+                  <span>Lat: {citizenToVerify.latitude.toFixed(5)}, Lng: {citizenToVerify.longitude.toFixed(5)}</span>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => handleConfirmVerification(false)}
+                disabled={isVerifying}
+                className="px-4 py-2 rounded-xl border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Reject Profile
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleConfirmVerification(true)}
+                disabled={isVerifying}
+                className="px-5 py-2.5 rounded-xl bg-[#0a4d2c] hover:bg-[#063820] text-white text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isVerifying ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                    <span>Approve & Verify Profile</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {userToDelete && (

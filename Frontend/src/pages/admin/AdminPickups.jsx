@@ -362,20 +362,16 @@ const AdminPickups = () => {
                     </div>
                   </div>
 
-                  {/* Column 2: Waste Items Breakdown */}
-                  <div className="bg-emerald-50/60 p-3.5 rounded-2xl border border-emerald-100 space-y-1.5">
+                  {/* Column 2: Waste Details */}
+                  <div className="bg-emerald-50/60 p-3.5 rounded-2xl border border-emerald-100 space-y-2">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0a4d2c] block mb-1">
-                      Waste Breakdown ({req.wasteItems?.length || 0})
+                      Waste Details
                     </span>
-                    <div className="space-y-1">
-                      {req.wasteItems?.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center bg-white px-3 py-1 rounded-xl border border-emerald-100 text-xs font-bold text-gray-800">
-                          <span>{item.type}</span>
-                          <span className="px-2 py-0.5 bg-emerald-100 text-[#0a4d2c] rounded-md text-[10px]">
-                            Qty: {item.quantity}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="flex justify-between items-center py-0.5">
+                      <span className="text-gray-500">Waste Category:</span>
+                      <span className="font-bold text-[#0a4d2c] bg-white px-2.5 py-1 rounded-md border border-emerald-200">
+                        {req.overallCategory || 'Recyclable Plastic'}
+                      </span>
                     </div>
                   </div>
 
@@ -387,12 +383,6 @@ const AdminPickups = () => {
                     <div className="flex justify-between py-0.5">
                       <span className="text-gray-500">Classification:</span>
                       <span className="font-bold text-[#0a4d2c]">{req.overallCategory || 'Recyclable Plastic'}</span>
-                    </div>
-                    <div className="flex justify-between py-0.5">
-                      <span className="text-gray-500">AI Analysis:</span>
-                      <span className="font-bold text-gray-800">
-                        {req.aiAnalyzed ? `Yes (${Math.round((req.aiConfidence || 0) * 100)}%)` : 'Manual Selection'}
-                      </span>
                     </div>
                     {req.acceptedAt && (
                       <div className="flex justify-between py-0.5">

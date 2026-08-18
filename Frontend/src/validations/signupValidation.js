@@ -18,12 +18,17 @@ export const validateField = (name, value, formData) => {
             return "";
 
         case "email":
-            if (!value.trim()) {
+            if (!value || !value.trim()) {
                 return "Email Address is required.";
             }
 
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                return "Enter a valid Email Address.";
+            const trimmedEmail = value.trim();
+            const atCount = (trimmedEmail.match(/@/g) || []).length;
+            const hasSpace = /\s/.test(value);
+            const isValidFormat = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(trimmedEmail);
+
+            if (hasSpace || atCount !== 1 || !isValidFormat) {
+                return "Please enter a valid email address.";
             }
 
             return "";
@@ -36,12 +41,8 @@ export const validateField = (name, value, formData) => {
 
             const cleanPhone = value.replace(/\D/g, "");
 
-            if (!/^[6-9]/.test(cleanPhone)) {
-                return "Phone number must start with 6, 7, 8, or 9.";
-            }
-
-            if (cleanPhone.length !== 10) {
-                return "Phone number must contain exactly 10 digits.";
+            if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+                return "Please enter a valid Indian mobile number.";
             }
 
             return "";

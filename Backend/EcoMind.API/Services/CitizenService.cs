@@ -48,9 +48,11 @@ namespace EcoMind.API.Services
 
                 Longitude = 0,
 
-                Status = "Active",
+                Status = "Pending Verification",
 
                 ProfileCompleted = true,
+
+                IsVerified = false,
 
                 CreatedAt = DateTime.UtcNow
             };
@@ -148,9 +150,11 @@ namespace EcoMind.API.Services
 
                     Longitude = 0,
 
-                    Status = "Active",
+                    Status = "Pending",
 
                     ProfileCompleted = false,
+
+                    IsVerified = false,
 
                     CreatedAt = DateTime.UtcNow
                 };
@@ -390,6 +394,18 @@ namespace EcoMind.API.Services
             )
             {
                 citizen.ProfileCompleted = true;
+                if (!citizen.IsVerified)
+                {
+                    citizen.Status = "Pending Verification";
+                }
+            }
+            else
+            {
+                citizen.ProfileCompleted = false;
+                if (!citizen.IsVerified)
+                {
+                    citizen.Status = "Pending";
+                }
             }
 
 
@@ -469,6 +485,56 @@ namespace EcoMind.API.Services
                 dto.Latitude,
                 dto.Longitude
             );
+        }
+
+        // ============================================================
+        // VERIFY CITIZEN PROFILE (ADMIN)
+        // ============================================================
+        public async Task<bool> VerifyCitizenAsync(
+            string citizenId,
+            VerifyCitizenDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(citizenId) || dto == null)
+            {
+                return false;
+            }
+
+            var citizen = await _citizenRepository.GetCitizenByCitizenIdAsync(citizenId);
+            if (citizen == null)
+            {
+                return false;
+            }
+
+            bool isVerified = dto.IsVerified;
+            string status = isVerified ? "Verified" : (string.IsNullOrWhiteSpace(dto.Status) ? "Rejected" : dto.Status);
+            string verifiedBy = string.IsNullOrWhiteSpace(dto.VerifiedBy) ? "Admin" : dto.VerifiedBy;
+
+            bool result = await _citizenRepository.VerifyCitizenAsync(
+                citizenId,
+                isVerified,
+                status,
+                verifiedBy);
+
+            if (result)
+            {
+                // Synchronize User account status if user exists
+                var user = await _userRepository.GetByEmailAsync(citizen.Email);
+                if (user != null)
+                {
+                    user.Status = status;
+                    await _userRepository.UpdateAsync(user);
+                }
+            }
+
+            return result;
+        }
+
+        // ============================================================
+        // GET PENDING VERIFICATION CITIZENS
+        // ============================================================
+        public async Task<List<Citizen>> GetPendingVerificationCitizensAsync()
+        {
+            return await _citizenRepository.GetPendingVerificationCitizensAsync();
         }
     }
 }

@@ -18,8 +18,8 @@ namespace EcoMind.API.Models
         // Used to show the request to the correct worker/ward
         public string WardId { get; set; } = string.Empty;
 
-        // Plastic waste details
-        public List<WasteItem> WasteItems { get; set; } = new();
+        // Overall estimated plastic waste volume: "Small", "Medium", "Large"
+        public string EstimatedVolume { get; set; } = "Medium";
 
         // Overall waste classification (Defaults to Recyclable Plastic)
         public string OverallCategory { get; set; } = "Recyclable Plastic";
@@ -47,12 +47,5 @@ namespace EcoMind.API.Models
 
         // Filled when waste is collected by worker
         public DateTime? CollectedAt { get; set; }
-    }
-
-    public class WasteItem
-    {
-        public string Type { get; set; } = string.Empty;
-
-        public int Quantity { get; set; }
     }
 }

@@ -9,12 +9,11 @@ namespace EcoMind.API.Services
         private readonly IPickupRequestRepository _pickupRepository;
         private readonly ICitizenRepository _citizenRepository;
 
-        // Allowed plastic pickup categories strictly (Requirement 7)
-        private static readonly HashSet<string> AllowedPickupCategories = new(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> AllowedVolumes = new(StringComparer.OrdinalIgnoreCase)
         {
-            "Plastic Bottles",
-            "Plastic Covers / Wrappers",
-            "Other recyclable plastic"
+            "Small",
+            "Medium",
+            "Large"
         };
 
         public PickupRequestService(
@@ -39,7 +38,7 @@ namespace EcoMind.API.Services
                 return null;
             }
 
-            // Check if citizen already has a pickup request for the current calendar month (Requirement 1 & 8)
+            // Check if citizen already has a pickup request for the current calendar month
             var existingMonthlyRequest = await _pickupRepository
                 .GetCurrentMonthRequestByCitizenIdAsync(citizen.CitizenId);
 
@@ -48,11 +47,11 @@ namespace EcoMind.API.Services
                 throw new InvalidOperationException("Your monthly plastic pickup request has already been submitted.");
             }
 
-            // Citizen must have house details
-            if (string.IsNullOrWhiteSpace(citizen.HouseNumber))
+            // Citizen must have completed profile
+            if (!citizen.ProfileCompleted || string.IsNullOrWhiteSpace(citizen.HouseNumber))
             {
                 throw new InvalidOperationException(
-                    "Please complete your house number in your profile before requesting pickup.");
+                    "Please complete your profile details (House Number, Address, Ward) before requesting pickup.");
             }
 
             // Citizen must have location
@@ -62,34 +61,32 @@ namespace EcoMind.API.Services
                     "Please set your house location in your profile before requesting pickup.");
             }
 
-            // Filter items strictly to allowed plastic categories (Requirement 7)
-            var validPickupItems = dto.WasteItems?
-                .Where(x => AllowedPickupCategories.Contains(x.Type?.Trim() ?? ""))
-                .Select(x => new WasteItem
-                {
-                    Type = x.Type.Trim(),
-                    Quantity = Math.Max(1, x.Quantity)
-                })
-                .ToList() ?? new List<WasteItem>();
-
-            if (validPickupItems.Count == 0)
+            // Mandatory check: Citizen profile MUST be verified by Admin
+            if (!citizen.IsVerified && citizen.Status != "Verified")
             {
-                throw new ArgumentException("Pickup requests are strictly for eligible plastic materials (Plastic Bottles, Plastic Covers / Wrappers, or Other recyclable plastic). Non-plastic items like glass, paper, cardboard, and medicine blister packs are not accepted.");
+                throw new InvalidOperationException(
+                    "Your profile must be verified by an Admin before creating pickup requests. Current profile status: " + (string.IsNullOrWhiteSpace(citizen.Status) ? "Pending Verification" : citizen.Status));
             }
 
-            // Create pickup request (Status = Pending, CollectionDate = null)
+            // Validate Estimated Volume
+            string volume = (dto.EstimatedVolume ?? "").Trim();
+            if (!AllowedVolumes.Contains(volume))
+            {
+                volume = "Medium";
+            }
+            else
+            {
+                volume = char.ToUpper(volume[0]) + volume.Substring(1).ToLower();
+            }
+
+            // Create pickup request
             var request = new PickupRequest
             {
                 RequestId = "REQ" + Random.Shared.Next(100000, 999999),
                 CitizenId = citizen.CitizenId,
                 WardId = citizen.WardId,
-                WasteItems = validPickupItems,
+                EstimatedVolume = volume,
                 OverallCategory = "Recyclable Plastic",
-                AIAnalyzed = dto.AIAnalyzed,
-                AIConfidence = dto.AIConfidence,
-                SegregationAdvice = string.IsNullOrWhiteSpace(dto.SegregationAdvice)
-                    ? "Keep recyclable plastics clean, dry, and bundled."
-                    : dto.SegregationAdvice.Trim(),
                 Status = "Pending",
                 CollectionDate = null,
                 RequestedAt = DateTime.UtcNow
@@ -121,11 +118,8 @@ namespace EcoMind.API.Services
                     RequestId = req.RequestId,
                     CitizenId = req.CitizenId,
                     WardId = req.WardId,
-                    WasteItems = req.WasteItems,
+                    EstimatedVolume = string.IsNullOrWhiteSpace(req.EstimatedVolume) ? "Medium" : req.EstimatedVolume,
                     OverallCategory = req.OverallCategory,
-                    AIAnalyzed = req.AIAnalyzed,
-                    AIConfidence = req.AIConfidence,
-                    SegregationAdvice = req.SegregationAdvice,
                     Status = req.Status,
                     AcceptedByWorkerId = req.AcceptedByWorkerId,
                     AcceptedAt = req.AcceptedAt,
@@ -185,11 +179,8 @@ namespace EcoMind.API.Services
                     RequestId = req.RequestId,
                     CitizenId = req.CitizenId,
                     WardId = req.WardId,
-                    WasteItems = req.WasteItems,
+                    EstimatedVolume = string.IsNullOrWhiteSpace(req.EstimatedVolume) ? "Medium" : req.EstimatedVolume,
                     OverallCategory = req.OverallCategory,
-                    AIAnalyzed = req.AIAnalyzed,
-                    AIConfidence = req.AIConfidence,
-                    SegregationAdvice = req.SegregationAdvice,
                     Status = req.Status,
                     AcceptedByWorkerId = req.AcceptedByWorkerId,
                     AcceptedAt = req.AcceptedAt,
@@ -223,19 +214,16 @@ namespace EcoMind.API.Services
                 throw new ArgumentException("Pickup request not found.");
             }
 
-            // Validate status is Pending (Requirement 3)
             if (!request.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Only 'Pending' requests can be scheduled. Current status is '{request.Status}'.");
             }
 
-            // Validate collection date is between 15th and 25th of the month (Requirement 3)
             if (collectionDate.Day < 15 || collectionDate.Day > 25)
             {
                 throw new ArgumentException("Worker collection date must be scheduled between the 15th and 25th of the collection month.");
             }
 
-            // Perform schedule update: Status = "Scheduled", AcceptedByWorkerId = workerId, AcceptedAt = UtcNow, CollectionDate = collectionDate
             return await _pickupRepository.ScheduleRequestAsync(requestId, workerId, collectionDate);
         }
 
@@ -252,13 +240,11 @@ namespace EcoMind.API.Services
                 throw new ArgumentException("Pickup request not found.");
             }
 
-            // Validate status is Scheduled (Requirement 4)
             if (!request.Status.Equals("Scheduled", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Only 'Scheduled' requests can be completed. Current status is '{request.Status}'.");
             }
 
-            // If worker ID provided, validate assigned worker (Requirement 4)
             if (!string.IsNullOrWhiteSpace(workerId) && 
                 !string.IsNullOrWhiteSpace(request.AcceptedByWorkerId) &&
                 !request.AcceptedByWorkerId.Equals(workerId, StringComparison.OrdinalIgnoreCase))

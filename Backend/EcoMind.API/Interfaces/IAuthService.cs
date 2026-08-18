@@ -10,5 +10,17 @@ namespace EcoMind.API.Interfaces
         Task<User?> LoginAsync(LoginDto loginDto);
 
         Task<string> ChangePasswordAsync(ChangePasswordDto dto);
+
+        Task<string> SendForgotPasswordOtpAsync(ForgotPasswordDto dto);
+
+        Task<string> VerifyOtpAsync(VerifyOtpDto dto);
+
+        Task<string> ResetPasswordAsync(ResetPasswordDto dto);
+
+        Task<bool> CheckEmailExistsAsync(string email);
+
+        Task<bool> CheckPhoneExistsAsync(string phone);
+
+        string? GetDevOtp(string email);
     }
 }

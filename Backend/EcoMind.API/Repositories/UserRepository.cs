@@ -12,6 +12,24 @@ namespace EcoMind.API.Repositories
         public UserRepository(MongoDbService mongoDbService)
         {
             _users = mongoDbService.Database.GetCollection<User>("Users");
+
+            // Ensure unique indexes on Email and PhoneNumber
+            try
+            {
+                var emailIndex = new CreateIndexModel<User>(
+                    Builders<User>.IndexKeys.Ascending(u => u.Email),
+                    new CreateIndexOptions { Unique = true, Sparse = true }
+                );
+                var phoneIndex = new CreateIndexModel<User>(
+                    Builders<User>.IndexKeys.Ascending(u => u.PhoneNumber),
+                    new CreateIndexOptions { Unique = true, Sparse = true }
+                );
+                _users.Indexes.CreateManyAsync(new[] { emailIndex, phoneIndex });
+            }
+            catch
+            {
+                // Ignore index creation errors if already exist
+            }
         }
 
         public async Task<List<User>> GetAllAsync()

@@ -95,5 +95,32 @@ namespace EcoMind.API.Repositories
 
             return result.ModifiedCount > 0;
         }
+
+        // Verify Citizen Profile
+        public async Task<bool> VerifyCitizenAsync(
+            string citizenId,
+            bool isVerified,
+            string status,
+            string verifiedBy)
+        {
+            var filter = Builders<Citizen>.Filter.Eq(x => x.CitizenId, citizenId);
+
+            var update = Builders<Citizen>.Update
+                .Set(x => x.IsVerified, isVerified)
+                .Set(x => x.Status, status)
+                .Set(x => x.VerifiedAt, isVerified ? DateTime.UtcNow : (DateTime?)null)
+                .Set(x => x.VerifiedBy, verifiedBy ?? "Admin");
+
+            var result = await _citizens.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0 || result.MatchedCount > 0;
+        }
+
+        // Get Pending Verification Citizens
+        public async Task<List<Citizen>> GetPendingVerificationCitizensAsync()
+        {
+            return await _citizens
+                .Find(x => x.ProfileCompleted && !x.IsVerified)
+                .ToListAsync();
+        }
     }
 }

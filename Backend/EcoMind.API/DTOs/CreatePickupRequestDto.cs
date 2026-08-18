@@ -1,27 +1,13 @@
-using EcoMind.API.Models;
-
 namespace EcoMind.API.DTOs
 {
     public class CreatePickupRequestDto
     {
         public string CitizenId { get; set; } = string.Empty;
 
-        public List<WasteItemDto> WasteItems { get; set; } = new();
+        // Allowed values: "Small", "Medium", "Large"
+        public string EstimatedVolume { get; set; } = "Medium";
 
         public string OverallCategory { get; set; } = "Recyclable Plastic";
-
-        public bool AIAnalyzed { get; set; } = false;
-
-        public double AIConfidence { get; set; } = 0;
-
-        public string SegregationAdvice { get; set; } = string.Empty;
-    }
-
-    public class WasteItemDto
-    {
-        public string Type { get; set; } = string.Empty;
-
-        public int Quantity { get; set; }
     }
 
     public class SchedulePickupRequestDto
@@ -36,18 +22,15 @@ namespace EcoMind.API.DTOs
         public string? WorkerId { get; set; }
     }
 
-    // Response DTO for Ward Worker view that dynamically retrieves Citizen details without duplicating them in DB
+    // Response DTO for Ward Worker & Admin view
     public class WardPickupRequestResponseDto
     {
         public string Id { get; set; } = string.Empty;
         public string RequestId { get; set; } = string.Empty;
         public string CitizenId { get; set; } = string.Empty;
         public string WardId { get; set; } = string.Empty;
-        public List<WasteItem> WasteItems { get; set; } = new();
+        public string EstimatedVolume { get; set; } = "Medium";
         public string OverallCategory { get; set; } = "Recyclable Plastic";
-        public bool AIAnalyzed { get; set; }
-        public double AIConfidence { get; set; }
-        public string SegregationAdvice { get; set; } = string.Empty;
         public string Status { get; set; } = "Pending";
         public string? AcceptedByWorkerId { get; set; }
         public DateTime? AcceptedAt { get; set; }

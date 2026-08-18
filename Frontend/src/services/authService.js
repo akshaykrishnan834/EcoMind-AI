@@ -13,39 +13,41 @@ export const loginUser = async (credentials) => {
 };
 
 export const forgotPassword = async (email) => {
-    return axios.post(
-        "http://localhost:5214/api/Auth/ForgotPassword",
-        {
-            email
-        }
-    );
+  const response = await axios.post(`${API_URL}/forgot-password`, { email });
+  return response.data;
 };
 
 export const verifyOtp = async (email, otp) => {
-    return axios.post(
-        "http://localhost:5214/api/Auth/VerifyOtp",
-        {
-            email,
-            otp
-        }
-    );
+  const response = await axios.post(`${API_URL}/verify-otp`, { email, otp });
+  return response.data;
 };
-export const resetPassword = async (
+
+export const resetPassword = async (email, otp, newPassword) => {
+  const response = await axios.post(`${API_URL}/reset-password`, {
     email,
+    otp,
     newPassword
-) => {
-
-    return axios.post(
-        "http://localhost:5214/api/Auth/ResetPassword",
-        {
-            email,
-            newPassword
-        }
-    );
-
+  });
+  return response.data;
 };
 
 export const changePassword = async (data) => {
-    const response = await axios.post(`${API_URL}/change-password`, data);
-    return response.data;
+  const response = await axios.post(`${API_URL}/change-password`, data);
+  return response.data;
+};
+
+export const checkEmailExists = async (email, signal) => {
+  const response = await axios.get(`${API_URL}/check-email`, {
+    params: { email },
+    signal
+  });
+  return response.data;
+};
+
+export const checkPhoneExists = async (phone, signal) => {
+  const response = await axios.get(`${API_URL}/check-phone`, {
+    params: { phone },
+    signal
+  });
+  return response.data;
 };

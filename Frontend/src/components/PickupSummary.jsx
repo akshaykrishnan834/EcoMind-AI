@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, MapPin, Sparkles, FileText, Send, ArrowLeft, CheckCircle, Info } from 'lucide-react';
+import { Home, MapPin, Send, ArrowLeft, CheckCircle, Info, Package } from 'lucide-react';
 
 const PickupSummary = ({
   citizenData,
@@ -10,11 +10,8 @@ const PickupSummary = ({
   error
 }) => {
   const {
-    wasteItems = [],
-    overallCategory = 'Recyclable Plastic',
-    aiAnalyzed = false,
-    aiConfidence = 0,
-    segregationAdvice = ''
+    estimatedVolume = 'Medium',
+    overallCategory = 'Recyclable Plastic'
   } = confirmedData || {};
 
   const citizenId = citizenData?.citizenId || citizenData?.id || citizenData?._id || 'CIT001';
@@ -24,21 +21,19 @@ const PickupSummary = ({
   const wardId = citizenData?.wardId || 'Ward 1';
   const panchayatName = citizenData?.panchayatName || 'Ponkunnam';
 
-  const confidencePercent = Math.round((aiConfidence <= 1 ? aiConfidence : aiConfidence / 100) * 100);
-
   return (
     <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-emerald-100/80 space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-[#0a4d2c] block mb-1">
-            Step 3 of 3: Final Verification
+            Step 2 of 2: Final Verification
           </span>
           <h2 className="text-xl font-extrabold text-gray-900">
             Monthly Plastic Pickup Summary
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Please verify your household details and plastic items before submitting your monthly request.
+            Please verify your household details and selected waste volume before submitting your request.
           </p>
         </div>
 
@@ -49,7 +44,7 @@ const PickupSummary = ({
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Edit Selection</span>
+          <span>Change Volume</span>
         </button>
       </div>
 
@@ -105,28 +100,20 @@ const PickupSummary = ({
           </div>
         </div>
 
-        {/* Waste Details & AI Classification Card */}
+        {/* Waste Details & Volume Card */}
         <div className="bg-emerald-50/50 border border-emerald-100 p-5 rounded-2xl space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-[#0a4d2c]" />
-              Plastic Waste Breakdown
+              <Package className="w-5 h-5 text-[#0a4d2c]" />
+              Plastic Waste Details
             </h3>
 
-            {aiAnalyzed ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-[#0a4d2c] font-bold text-[11px] rounded-full">
-                <Sparkles className="w-3 h-3" />
-                AI Analyzed ({confidencePercent}%)
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-200 text-gray-800 font-bold text-[11px] rounded-full">
-                <FileText className="w-3 h-3" />
-                Manual Entry
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-[#0a4d2c] font-bold text-[11px] rounded-full">
+              Recyclable Plastic
+            </span>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3 pt-1">
             <div className="flex justify-between text-xs py-1 border-b border-emerald-100">
               <span className="text-gray-500 font-medium">Collection Window:</span>
               <span className="font-extrabold text-[#0a4d2c]">
@@ -135,37 +122,23 @@ const PickupSummary = ({
             </div>
 
             <div className="flex justify-between text-xs py-1 border-b border-emerald-100">
-              <span className="text-gray-500 font-medium">Classification:</span>
-              <span className="px-2 py-0.5 bg-[#0a4d2c] text-white font-bold text-[11px] rounded-md">
-                Monthly Recyclable Waste
+              <span className="text-gray-500 font-medium">Waste Category:</span>
+              <span className="px-2.5 py-0.5 bg-[#0a4d2c] text-white font-bold text-[11px] rounded-md">
+                Recyclable Plastic
               </span>
             </div>
 
-            <div className="py-2">
-              <span className="text-xs text-gray-500 font-medium block mb-1">
-                Confirmed Items ({wasteItems.length}):
+            <div className="flex justify-between text-xs py-2 border-b border-emerald-100 items-center">
+              <span className="text-gray-500 font-medium">Selected Volume:</span>
+              <span className="px-3.5 py-1 bg-[#0a4d2c] text-white font-extrabold text-xs rounded-lg shadow-2xs">
+                {estimatedVolume} Volume
               </span>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
-                {wasteItems.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between items-center bg-white px-3 py-2 rounded-xl text-xs font-bold text-gray-800 border border-emerald-100"
-                  >
-                    <span>{item.type}</span>
-                    <span className="px-2 py-0.5 bg-emerald-100 text-[#0a4d2c] rounded-lg">
-                      Qty: {item.quantity}
-                    </span>
-                  </div>
-                ))}
-              </div>
             </div>
 
-            {segregationAdvice && (
-              <div className="p-3 bg-white border border-emerald-200 rounded-xl text-[11px] text-emerald-900">
-                <span className="font-bold block text-emerald-800">Advice:</span>
-                {segregationAdvice}
-              </div>
-            )}
+            <div className="p-3 bg-white border border-emerald-200 rounded-xl text-[11px] text-emerald-900 mt-2">
+              <span className="font-bold block text-emerald-800">Notice:</span>
+              Haritha Karma Sena workers will collect recyclable plastic waste during the 15th–25th monthly collection window.
+            </div>
           </div>
         </div>
       </div>
@@ -178,7 +151,7 @@ const PickupSummary = ({
           disabled={isSubmitting}
           className="w-full sm:w-auto px-5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
         >
-          Change Items
+          Change Volume
         </button>
 
         <button
@@ -190,7 +163,7 @@ const PickupSummary = ({
           {isSubmitting ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Submitting Pickup Request...</span>
+              <span>Submitting Request...</span>
             </>
           ) : (
             <>

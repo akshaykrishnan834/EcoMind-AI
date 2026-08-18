@@ -329,21 +329,12 @@ const WorkerPickups = ({ wardId, workerId }) => {
                     )}
                   </div>
 
-                  {/* Waste Items Breakdown */}
-                  <div className="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100 space-y-1.5">
-                    <span className="text-[11px] font-bold text-[#0a4d2c] uppercase tracking-wider block">
-                      Recyclable Plastic Items ({req.wasteItems?.length || 0})
+                  {/* Plastic Waste Category Details */}
+                  <div className="bg-emerald-50/50 p-3.5 rounded-2xl border border-emerald-100 flex items-center justify-between text-xs">
+                    <span className="text-gray-500 font-medium">Waste Category:</span>
+                    <span className="font-extrabold text-[#0a4d2c] bg-white px-3 py-1 rounded-lg border border-emerald-200 shadow-2xs">
+                      {req.overallCategory || 'Recyclable Plastic'}
                     </span>
-                    <div className="space-y-1">
-                      {req.wasteItems?.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-xs font-bold text-gray-800 bg-white px-3 py-1.5 rounded-xl border border-emerald-100">
-                          <span>{item.type}</span>
-                          <span className="px-2 py-0.5 bg-emerald-100 text-[#0a4d2c] rounded-md text-[11px]">
-                            Qty: {item.quantity}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </div>
 

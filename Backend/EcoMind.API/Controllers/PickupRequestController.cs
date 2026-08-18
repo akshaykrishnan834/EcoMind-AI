@@ -63,15 +63,13 @@ namespace EcoMind.API.Controllers
             {
                 r.RequestId,
                 r.Status,
-                r.WasteItems,
+                r.EstimatedVolume,
+                r.OverallCategory,
                 r.RequestedAt,
                 r.CollectionDate,
                 r.AcceptedByWorkerId,
                 r.AcceptedAt,
-                r.CollectedAt,
-                r.AIAnalyzed,
-                r.AIConfidence,
-                r.SegregationAdvice
+                r.CollectedAt
             });
             return Ok(response);
         }

@@ -21,5 +21,13 @@ namespace EcoMind.API.Interfaces
             string address,
             double latitude,
             double longitude);
+
+        Task<bool> VerifyCitizenAsync(
+            string citizenId,
+            bool isVerified,
+            string status,
+            string verifiedBy);
+
+        Task<List<Citizen>> GetPendingVerificationCitizensAsync();
     }
 }

@@ -16,7 +16,7 @@ namespace EcoMind.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateCitizen(CreateCitizenDto dto)
+        public async Task<IActionResult> CreateCitizen([FromBody] CreateCitizenDto dto)
         {
             await _citizenService.CreateCitizenAsync(dto);
 
@@ -48,7 +48,7 @@ namespace EcoMind.API.Controllers
 
             if (citizen == null)
             {
-                return NotFound("Citizen not found");
+                return NotFound(new { message = "Citizen not found" });
             }
 
             return Ok(citizen);
@@ -61,7 +61,7 @@ namespace EcoMind.API.Controllers
 
             if (result != "Profile Updated Successfully")
             {
-                return BadRequest(result);
+                return BadRequest(new { message = result });
             }
 
             return Ok(new
@@ -69,39 +69,66 @@ namespace EcoMind.API.Controllers
                 message = result
             });
         }
+
         [HttpPut("{citizenId}/location")]
         public async Task<IActionResult> UpdateLocation(
-    string citizenId,
-    UpdateCitizenLocationDto dto)
+            string citizenId,
+            [FromBody] UpdateCitizenLocationDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Address))
             {
-                return BadRequest("Address is required.");
+                return BadRequest(new { message = "Address is required." });
             }
 
             if (dto.Latitude < -90 || dto.Latitude > 90)
             {
-                return BadRequest("Invalid latitude.");
+                return BadRequest(new { message = "Invalid latitude." });
             }
 
             if (dto.Longitude < -180 || dto.Longitude > 180)
             {
-                return BadRequest("Invalid longitude.");
+                return BadRequest(new { message = "Invalid longitude." });
             }
 
-            var updated =
-                await _citizenService.UpdateLocationAsync(
-                    citizenId,
-                    dto);
+            var updated = await _citizenService.UpdateLocationAsync(citizenId, dto);
 
             if (!updated)
             {
-                return NotFound("Citizen not found.");
+                return NotFound(new { message = "Citizen not found." });
             }
 
             return Ok(new
             {
                 message = "Location updated successfully."
+            });
+        }
+
+        [HttpGet("pending-verification")]
+        public async Task<IActionResult> GetPendingVerificationCitizens()
+        {
+            var citizens = await _citizenService.GetPendingVerificationCitizensAsync();
+            return Ok(citizens);
+        }
+
+        [HttpPut("{citizenId}/verify")]
+        public async Task<IActionResult> VerifyCitizen(string citizenId, [FromBody] VerifyCitizenDto dto)
+        {
+            if (dto == null)
+            {
+                return BadRequest(new { message = "Invalid verification payload." });
+            }
+
+            var verified = await _citizenService.VerifyCitizenAsync(citizenId, dto);
+
+            if (!verified)
+            {
+                return NotFound(new { message = "Citizen not found or verification failed." });
+            }
+
+            return Ok(new
+            {
+                message = dto.IsVerified ? "Citizen profile verified successfully." : "Citizen profile status updated.",
+                status = dto.IsVerified ? "Verified" : dto.Status
             });
         }
     }

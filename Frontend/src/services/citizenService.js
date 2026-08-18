@@ -56,4 +56,19 @@ export const updateCitizenLocation = async ({ email, address, latitude, longitud
   return response.data;
 };
 
+export const getPendingVerificationCitizens = async () => {
+  const response = await axios.get(`${API_URL}/pending-verification`);
+  return response.data || [];
+};
+
+export const verifyCitizen = async (citizenId, isVerified, status = "Verified", verifiedBy = "Admin") => {
+  const response = await axios.put(`${API_URL}/${encodeURIComponent(citizenId)}/verify`, {
+    isVerified,
+    status: isVerified ? "Verified" : status,
+    verifiedBy
+  });
+  return response.data;
+};
+
+
 

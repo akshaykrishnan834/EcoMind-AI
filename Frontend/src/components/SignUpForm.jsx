@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UserPlus, User, Mail, Phone, Lock, Eye, EyeOff } from 'lucide-react';
 import { SignUpHeroIllustration } from './Logos';
 import {
   validateField,
   validateForm,
 } from "../validations/signupValidation";
-import { registerUser } from "../services/authService";
+import { registerUser, checkEmailExists, checkPhoneExists } from "../services/authService";
 
 export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubmitSignUp }) => {
   const [formData, setFormData] = useState({
@@ -22,6 +22,110 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Live validation states for Email and Phone
+  const [emailStatus, setEmailStatus] = useState({
+    isChecking: false,
+    isAvailable: false,
+    error: ''
+  });
+
+  const [phoneStatus, setPhoneStatus] = useState({
+    isChecking: false,
+    isAvailable: false,
+    error: ''
+  });
+
+  // Debounce timers and AbortControllers
+  const emailTimerRef = useRef(null);
+  const phoneTimerRef = useRef(null);
+  const emailAbortRef = useRef(null);
+  const phoneAbortRef = useRef(null);
+
+  // Clean up timers & abort controllers on unmount
+  useEffect(() => {
+    return () => {
+      if (emailTimerRef.current) clearTimeout(emailTimerRef.current);
+      if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
+      if (emailAbortRef.current) emailAbortRef.current.abort();
+      if (phoneAbortRef.current) phoneAbortRef.current.abort();
+    };
+  }, []);
+
+  const triggerEmailLiveCheck = (emailValue) => {
+    if (emailTimerRef.current) clearTimeout(emailTimerRef.current);
+    if (emailAbortRef.current) emailAbortRef.current.abort();
+
+    if (!emailValue || !emailValue.trim()) {
+      setEmailStatus({ isChecking: false, isAvailable: false, error: '' });
+      return;
+    }
+
+    const formatErr = validateField('email', emailValue, formData);
+    if (formatErr) {
+      setEmailStatus({ isChecking: false, isAvailable: false, error: formatErr });
+      return;
+    }
+
+    // Format is valid -> start debounced uniqueness check
+    setEmailStatus({ isChecking: true, isAvailable: false, error: '' });
+
+    const controller = new AbortController();
+    emailAbortRef.current = controller;
+
+    emailTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await checkEmailExists(emailValue.trim(), controller.signal);
+        if (res?.exists) {
+          setEmailStatus({ isChecking: false, isAvailable: false, error: 'This email address is already registered.' });
+        } else {
+          setEmailStatus({ isChecking: false, isAvailable: true, error: '' });
+        }
+      } catch (err) {
+        if (err?.name !== 'CanceledError' && err?.message !== 'canceled' && err?.code !== 'ERR_CANCELED') {
+          setEmailStatus({ isChecking: false, isAvailable: false, error: 'Failed to verify email availability.' });
+        }
+      }
+    }, 500);
+  };
+
+  const triggerPhoneLiveCheck = (phoneValue) => {
+    if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
+    if (phoneAbortRef.current) phoneAbortRef.current.abort();
+
+    if (!phoneValue || !phoneValue.trim()) {
+      setPhoneStatus({ isChecking: false, isAvailable: false, error: '' });
+      return;
+    }
+
+    const formatErr = validateField('phone', phoneValue, formData);
+    if (formatErr) {
+      setPhoneStatus({ isChecking: false, isAvailable: false, error: formatErr });
+      return;
+    }
+
+    // Structurally valid (10 digits starting with 6-9) -> start debounced uniqueness check
+    setPhoneStatus({ isChecking: true, isAvailable: false, error: '' });
+
+    const controller = new AbortController();
+    phoneAbortRef.current = controller;
+
+    phoneTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await checkPhoneExists(phoneValue.trim(), controller.signal);
+        if (res?.exists) {
+          setPhoneStatus({ isChecking: false, isAvailable: false, error: 'This phone number is already registered.' });
+        } else {
+          setPhoneStatus({ isChecking: false, isAvailable: true, error: '' });
+        }
+      } catch (err) {
+        if (err?.name !== 'CanceledError' && err?.message !== 'canceled' && err?.code !== 'ERR_CANCELED') {
+          setPhoneStatus({ isChecking: false, isAvailable: false, error: 'Failed to verify phone number availability.' });
+        }
+      }
+    }, 500);
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -38,6 +142,12 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
     };
 
     setFormData(updatedForm);
+
+    if (name === 'email') {
+      triggerEmailLiveCheck(fieldValue);
+    } else if (name === 'phone') {
+      triggerPhoneLiveCheck(fieldValue);
+    }
 
     if (touched[name] || isSubmitted) {
       const fieldError = validateField(name, fieldValue, updatedForm);
@@ -67,6 +177,12 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
       ...prev,
       [name]: fieldError
     }));
+
+    if (name === 'email') {
+      triggerEmailLiveCheck(fieldValue);
+    } else if (name === 'phone') {
+      triggerPhoneLiveCheck(fieldValue);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -80,19 +196,31 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
       return;
     }
 
+    if (emailStatus.error || !emailStatus.isAvailable || emailStatus.isChecking) {
+      setErrors((prev) => ({ ...prev, email: emailStatus.error || 'Please enter a valid, available email address.' }));
+      return;
+    }
+
+    if (phoneStatus.error || !phoneStatus.isAvailable || phoneStatus.isChecking) {
+      setErrors((prev) => ({ ...prev, phone: phoneStatus.error || 'Please enter a valid, available Indian mobile number.' }));
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
       const result = await registerUser({
-        fullName: formData.fullName,
-        email: formData.email,
-        phoneNumber: formData.phone,
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phoneNumber: formData.phone.trim(),
         password: formData.password,
       });
 
       if (onSubmitSignUp) {
         onSubmitSignUp({
-          fullName: formData.fullName,
-          email: formData.email,
-          phoneNumber: formData.phone,
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phoneNumber: formData.phone.trim(),
           password: formData.password,
         });
       }
@@ -108,24 +236,28 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
 
       setErrors({});
       setTouched({});
+      setEmailStatus({ isChecking: false, isAvailable: false, error: '' });
+      setPhoneStatus({ isChecking: false, isAvailable: false, error: '' });
       setIsSubmitted(false);
 
-      // Directly switch to Login view after successful registration
       if (onSwitchToLogin) {
         onSwitchToLogin();
       }
 
     } catch (error) {
-      console.log("Full Error:", error);
+      console.log("Registration Error:", error);
 
       if (error.response) {
-        const errorMsg = typeof error.response.data === 'string' ? error.response.data : 'Registration failed.';
+        const errorMsg = typeof error.response.data === 'string'
+          ? error.response.data
+          : (error.response.data?.message || 'Registration failed.');
+
         if (errorMsg.toLowerCase().includes('phone')) {
+          setPhoneStatus({ isChecking: false, isAvailable: false, error: errorMsg });
           setErrors((prev) => ({ ...prev, phone: errorMsg }));
-          setTouched((prev) => ({ ...prev, phone: true }));
         } else if (errorMsg.toLowerCase().includes('email')) {
+          setEmailStatus({ isChecking: false, isAvailable: false, error: errorMsg });
           setErrors((prev) => ({ ...prev, email: errorMsg }));
-          setTouched((prev) => ({ ...prev, email: true }));
         } else {
           alert(errorMsg);
         }
@@ -134,6 +266,8 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
       } else {
         alert(error.message);
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -141,7 +275,18 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
     return (touched[fieldName] || isSubmitted) ? errors[fieldName] : '';
   };
 
-  const hasVisibleErrors = isSubmitted && Object.values(errors).some(Boolean);
+  const isFormValid =
+    formData.fullName.trim().length >= 3 &&
+    emailStatus.isAvailable &&
+    !emailStatus.isChecking &&
+    !emailStatus.error &&
+    phoneStatus.isAvailable &&
+    !phoneStatus.isChecking &&
+    !phoneStatus.error &&
+    formData.password.length >= 8 &&
+    formData.password === formData.confirmPassword &&
+    formData.agreeTerms &&
+    !isSubmitting;
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-8 md:py-12">
@@ -182,13 +327,6 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
               <p className="text-xs sm:text-sm text-gray-500 mt-1">Sign up to get started with EcoMind AI</p>
             </div>
 
-            {/* General Error Banner on Submit */}
-            {hasVisibleErrors && (
-              <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold rounded">
-                Please fix the validation errors below to proceed.
-              </div>
-            )}
-
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -207,15 +345,17 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                     onBlur={handleBlur}
                     placeholder="Enter your full name"
                     className={`w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-colors ${
-                      getFieldError('fullName') ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-emerald-600'
+                      getFieldError('fullName') ? 'border-red-400 focus:ring-red-400 bg-red-50/20' : 'border-gray-200 focus:ring-emerald-600'
                     }`}
                   />
                 </div>
-                {getFieldError('fullName') && <p className="text-xs text-red-500 mt-1 font-medium">{getFieldError('fullName')}</p>}
+                {getFieldError('fullName') && <p className="text-xs text-red-500 mt-1 font-medium">❌ {getFieldError('fullName')}</p>}
               </div>
 
               {/* Row 2: Email & Phone Number */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                
+                {/* Email Address */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">Email Address *</label>
                   <div className="relative rounded-lg shadow-sm">
@@ -230,13 +370,41 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       onBlur={handleBlur}
                       placeholder="Enter your email"
                       className={`w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-colors ${
-                        getFieldError('email') ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-emerald-600'
+                        emailStatus.error || getFieldError('email')
+                          ? 'border-red-400 focus:ring-red-400 bg-red-50/20'
+                          : emailStatus.isAvailable
+                          ? 'border-emerald-500 focus:ring-emerald-500 bg-emerald-50/20'
+                          : emailStatus.isChecking
+                          ? 'border-amber-400 focus:ring-amber-400 bg-amber-50/20'
+                          : 'border-gray-200 focus:ring-emerald-600'
                       }`}
                     />
                   </div>
-                  {getFieldError('email') && <p className="text-xs text-red-500 mt-1 font-medium">{getFieldError('email')}</p>}
+
+                  {/* Email Live Validation Messages */}
+                  {emailStatus.isChecking && (
+                    <p className="text-xs text-amber-600 mt-1 font-medium flex items-center gap-1">
+                      <span className="animate-spin text-xs">⏳</span> Checking email availability...
+                    </p>
+                  )}
+                  {!emailStatus.isChecking && emailStatus.error && (
+                    <p className="text-xs text-red-500 mt-1 font-medium flex items-center gap-1">
+                      ❌ {emailStatus.error}
+                    </p>
+                  )}
+                  {!emailStatus.isChecking && !emailStatus.error && emailStateIsAvailable(emailStatus) && (
+                    <p className="text-xs text-emerald-600 mt-1 font-semibold flex items-center gap-1">
+                      ✓ Email is available.
+                    </p>
+                  )}
+                  {!emailStatus.isChecking && !emailStatus.error && !emailStatus.isAvailable && getFieldError('email') && (
+                    <p className="text-xs text-red-500 mt-1 font-medium flex items-center gap-1">
+                      ❌ {getFieldError('email')}
+                    </p>
+                  )}
                 </div>
 
+                {/* Phone Number */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">Phone Number *</label>
                   <div className="relative rounded-lg shadow-sm">
@@ -250,14 +418,42 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       onChange={handleChange}
                       onBlur={handleBlur}
                       maxLength={10}
-                      placeholder="10-digit mobile number (e.g. 9876543210)"
+                      placeholder="10-digit mobile number"
                       className={`w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-colors ${
-                        getFieldError('phone') ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-emerald-600'
+                        phoneStatus.error || getFieldError('phone')
+                          ? 'border-red-400 focus:ring-red-400 bg-red-50/20'
+                          : phoneStatus.isAvailable
+                          ? 'border-emerald-500 focus:ring-emerald-500 bg-emerald-50/20'
+                          : phoneStatus.isChecking
+                          ? 'border-amber-400 focus:ring-amber-400 bg-amber-50/20'
+                          : 'border-gray-200 focus:ring-emerald-600'
                       }`}
                     />
                   </div>
-                  {getFieldError('phone') && <p className="text-xs text-red-500 mt-1 font-medium">{getFieldError('phone')}</p>}
+
+                  {/* Phone Live Validation Messages */}
+                  {phoneStatus.isChecking && (
+                    <p className="text-xs text-amber-600 mt-1 font-medium flex items-center gap-1">
+                      <span className="animate-spin text-xs">⏳</span> Checking phone availability...
+                    </p>
+                  )}
+                  {!phoneStatus.isChecking && phoneStatus.error && (
+                    <p className="text-xs text-red-500 mt-1 font-medium flex items-center gap-1">
+                      ❌ {phoneStatus.error}
+                    </p>
+                  )}
+                  {!phoneStatus.isChecking && !phoneStatus.error && phoneStateIsAvailable(phoneStatus) && (
+                    <p className="text-xs text-emerald-600 mt-1 font-semibold flex items-center gap-1">
+                      ✓ Phone number is available.
+                    </p>
+                  )}
+                  {!phoneStatus.isChecking && !phoneStatus.error && !phoneStatus.isAvailable && getFieldError('phone') && (
+                    <p className="text-xs text-red-500 mt-1 font-medium flex items-center gap-1">
+                      ❌ {getFieldError('phone')}
+                    </p>
+                  )}
                 </div>
+
               </div>
 
               {/* Row 3: Password & Confirm Password */}
@@ -276,7 +472,7 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       onBlur={handleBlur}
                       placeholder="Create a password"
                       className={`w-full pl-9 pr-8 py-2.5 text-xs sm:text-sm bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-colors ${
-                        getFieldError('password') ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-emerald-600'
+                        getFieldError('password') ? 'border-red-400 focus:ring-red-400 bg-red-50/20' : 'border-gray-200 focus:ring-emerald-600'
                       }`}
                     />
                     <button
@@ -287,7 +483,7 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                  {getFieldError('password') && <p className="text-xs text-red-500 mt-1 font-medium">{getFieldError('password')}</p>}
+                  {getFieldError('password') && <p className="text-xs text-red-500 mt-1 font-medium">❌ {getFieldError('password')}</p>}
                 </div>
 
                 <div className="space-y-1.5">
@@ -304,7 +500,7 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       onBlur={handleBlur}
                       placeholder="Confirm your password"
                       className={`w-full pl-9 pr-8 py-2.5 text-xs sm:text-sm bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-colors ${
-                        getFieldError('confirmPassword') ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-emerald-600'
+                        getFieldError('confirmPassword') ? 'border-red-400 focus:ring-red-400 bg-red-50/20' : 'border-gray-200 focus:ring-emerald-600'
                       }`}
                     />
                     <button
@@ -315,7 +511,7 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                  {getFieldError('confirmPassword') && <p className="text-xs text-red-500 mt-1 font-medium">{getFieldError('confirmPassword')}</p>}
+                  {getFieldError('confirmPassword') && <p className="text-xs text-red-500 mt-1 font-medium">❌ {getFieldError('confirmPassword')}</p>}
                 </div>
               </div>
 
@@ -349,16 +545,17 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                     </button>
                   </span>
                 </label>
-                {getFieldError('agreeTerms') && <p className="text-xs text-red-500 mt-1 font-medium">{getFieldError('agreeTerms')}</p>}
+                {getFieldError('agreeTerms') && <p className="text-xs text-red-500 mt-1 font-medium">❌ {getFieldError('agreeTerms')}</p>}
               </div>
 
               {/* Create Account Button */}
               <button
                 type="submit"
-                className="w-full mt-2 py-3 px-4 bg-[#0f5b37] hover:bg-[#0a4d2c] text-white font-bold text-sm uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group"
+                disabled={!isFormValid}
+                className="w-full mt-2 py-3 px-4 bg-[#0f5b37] hover:bg-[#0a4d2c] text-white font-bold text-sm uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0f5b37]"
               >
                 <UserPlus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                <span>CREATE ACCOUNT</span>
+                <span>{isSubmitting ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}</span>
               </button>
 
               {/* Switch to Login */}
@@ -385,5 +582,13 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
   );
 };
 
-export default SignUpForm;
+// Helper functions for clean boolean checking
+function emailStateIsAvailable(status) {
+  return status.isAvailable && !status.isChecking && !status.error;
+}
 
+function phoneStateIsAvailable(status) {
+  return status.isAvailable && !status.isChecking && !status.error;
+}
+
+export default SignUpForm;

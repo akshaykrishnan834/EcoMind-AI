@@ -9,7 +9,8 @@ import {
     X,
     User,
     MapPin,
-    Truck
+    Truck,
+    FileText
 } from 'lucide-react';
 
 const CitizenSidebar = ({
@@ -33,6 +34,7 @@ const CitizenSidebar = ({
     const menuItems = [
         { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'Pickup Request', label: 'Pickup Request', icon: Truck },
+        { id: 'Collection Records', label: 'Collection Records', icon: FileText },
     ];
 
     const handleItemClick = (item) => {
