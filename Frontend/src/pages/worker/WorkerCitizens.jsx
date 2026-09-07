@@ -108,7 +108,12 @@ export const WorkerCitizens = () => {
           }
         }
 
-        setCitizens(wardCitizensList || []);
+        // Only show citizens who are verified by admin under workers
+        const verifiedCitizens = (wardCitizensList || []).filter(
+          (c) => Boolean(c.isVerified || c.status === 'Verified')
+        );
+
+        setCitizens(verifiedCitizens);
       } catch (err) {
         console.error("Error loading ward citizens:", err);
       } finally {

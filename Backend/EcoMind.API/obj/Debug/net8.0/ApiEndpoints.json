@@ -17,6 +17,38 @@
   },
   {
     "ContainingType": "EcoMind.API.Controllers.AuthController",
+    "Method": "CheckEmail",
+    "RelativePath": "api/Auth/check-email",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "email",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.AuthController",
+    "Method": "CheckPhone",
+    "RelativePath": "api/Auth/check-phone",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "phone",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.AuthController",
     "Method": "ForgotPassword",
     "RelativePath": "api/Auth/forgot-password",
     "HttpMethod": "POST",
@@ -245,6 +277,54 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.PaymentController",
+    "Method": "GetCitizenPayments",
+    "RelativePath": "api/Payment/citizen/{citizenId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "citizenId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.PaymentController",
+    "Method": "GetCurrentMonthPayment",
+    "RelativePath": "api/Payment/current/{citizenId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "citizenId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.PaymentController",
+    "Method": "ProcessPayment",
+    "RelativePath": "api/Payment/pay",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EcoMind.API.DTOs.ProcessPaymentDto",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {

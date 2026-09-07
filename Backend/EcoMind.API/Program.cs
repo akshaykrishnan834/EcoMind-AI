@@ -29,6 +29,11 @@ builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddTransient<IEmailService, EmailService>();
 
+// Configure Razorpay Settings
+builder.Services.Configure<RazorpaySettings>(
+    builder.Configuration.GetSection("RazorpaySettings"));
+builder.Services.AddHttpClient<IPaymentService, PaymentService>();
+
 // Register MongoDB Service
 builder.Services.AddSingleton<MongoDbService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -53,6 +58,9 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IPickupRequestService,
     PickupRequestService>();
+
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // Swagger Services
 builder.Services.AddEndpointsApiExplorer();

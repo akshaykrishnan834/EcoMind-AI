@@ -132,7 +132,12 @@ const WorkerDashboard = () => {
         }
       }
 
-      setWardCitizens(citizensList || []);
+      // Only show citizens who are verified by admin under workers
+      const verifiedCitizensList = (citizensList || []).filter(
+        c => Boolean(c.isVerified || c.status === 'Verified')
+      );
+
+      setWardCitizens(verifiedCitizensList);
     } catch (err) {
       console.error("Dashboard data load error:", err);
     } finally {

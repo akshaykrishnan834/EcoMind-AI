@@ -4,6 +4,7 @@ import { SignUpHeroIllustration } from './Logos';
 import {
   validateField,
   validateForm,
+  getPasswordCriteria,
 } from "../validations/signupValidation";
 import { registerUser, checkEmailExists, checkPhoneExists } from "../services/authService";
 
@@ -149,19 +150,26 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
       triggerPhoneLiveCheck(fieldValue);
     }
 
-    if (touched[name] || isSubmitted) {
+    // Live password & confirm password validation
+    if (name === 'password') {
+      const passErr = validateField('password', fieldValue, updatedForm);
+      const confirmErr = updatedForm.confirmPassword ? validateField('confirmPassword', updatedForm.confirmPassword, updatedForm) : '';
+      setErrors((prev) => ({
+        ...prev,
+        password: passErr,
+        confirmPassword: confirmErr
+      }));
+    } else if (name === 'confirmPassword') {
+      const confirmErr = validateField('confirmPassword', fieldValue, updatedForm);
+      setErrors((prev) => ({
+        ...prev,
+        confirmPassword: confirmErr
+      }));
+    } else if (touched[name] || isSubmitted) {
       const fieldError = validateField(name, fieldValue, updatedForm);
       setErrors((prev) => ({
         ...prev,
         [name]: fieldError
-      }));
-    }
-
-    if ((touched.confirmPassword || isSubmitted) && name === 'password' && formData.confirmPassword) {
-      const confirmErr = validateField('confirmPassword', formData.confirmPassword, updatedForm);
-      setErrors((prev) => ({
-        ...prev,
-        confirmPassword: confirmErr
       }));
     }
   };
@@ -275,6 +283,10 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
     return (touched[fieldName] || isSubmitted) ? errors[fieldName] : '';
   };
 
+  const passCriteria = getPasswordCriteria(formData.password);
+  const isPasswordValid = validateField('password', formData.password, formData) === '';
+  const isConfirmValid = validateField('confirmPassword', formData.confirmPassword, formData) === '';
+
   const isFormValid =
     formData.fullName.trim().length >= 3 &&
     emailStatus.isAvailable &&
@@ -283,8 +295,8 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
     phoneStatus.isAvailable &&
     !phoneStatus.isChecking &&
     !phoneStatus.error &&
-    formData.password.length >= 8 &&
-    formData.password === formData.confirmPassword &&
+    isPasswordValid &&
+    isConfirmValid &&
     formData.agreeTerms &&
     !isSubmitting;
 
@@ -472,7 +484,11 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       onBlur={handleBlur}
                       placeholder="Create a password"
                       className={`w-full pl-9 pr-8 py-2.5 text-xs sm:text-sm bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-colors ${
-                        getFieldError('password') ? 'border-red-400 focus:ring-red-400 bg-red-50/20' : 'border-gray-200 focus:ring-emerald-600'
+                        getFieldError('password')
+                          ? 'border-red-400 focus:ring-red-400 bg-red-50/20'
+                          : isPasswordValid && formData.password
+                          ? 'border-emerald-500 focus:ring-emerald-500 bg-emerald-50/20'
+                          : 'border-gray-200 focus:ring-emerald-600'
                       }`}
                     />
                     <button
@@ -484,6 +500,30 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                     </button>
                   </div>
                   {getFieldError('password') && <p className="text-xs text-red-500 mt-1 font-medium">❌ {getFieldError('password')}</p>}
+
+                  {/* Password Strength Checklist */}
+                  {(formData.password.length > 0 || touched.password) && (
+                    <div className="mt-2 p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-[11px] space-y-1 animate-fadeIn">
+                      <p className="font-bold text-gray-700 mb-1">Password Requirements:</p>
+                      <div className="grid grid-cols-1 gap-y-0.5 font-medium">
+                        <span className={passCriteria.minLength ? 'text-emerald-600 font-semibold' : 'text-gray-400'}>
+                          {passCriteria.minLength ? '✓' : '•'} At least 8 characters
+                        </span>
+                        <span className={passCriteria.hasUpper ? 'text-emerald-600 font-semibold' : 'text-gray-400'}>
+                          {passCriteria.hasUpper ? '✓' : '•'} At least 1 uppercase letter (A-Z)
+                        </span>
+                        <span className={passCriteria.hasLower ? 'text-emerald-600 font-semibold' : 'text-gray-400'}>
+                          {passCriteria.hasLower ? '✓' : '•'} At least 1 lowercase letter (a-z)
+                        </span>
+                        <span className={passCriteria.hasNumber ? 'text-emerald-600 font-semibold' : 'text-gray-400'}>
+                          {passCriteria.hasNumber ? '✓' : '•'} At least 1 number (0-9)
+                        </span>
+                        <span className={passCriteria.hasSpecial ? 'text-emerald-600 font-semibold' : 'text-gray-400'}>
+                          {passCriteria.hasSpecial ? '✓' : '•'} At least 1 special character (!@#$%^&*)
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -500,7 +540,11 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                       onBlur={handleBlur}
                       placeholder="Confirm your password"
                       className={`w-full pl-9 pr-8 py-2.5 text-xs sm:text-sm bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-colors ${
-                        getFieldError('confirmPassword') ? 'border-red-400 focus:ring-red-400 bg-red-50/20' : 'border-gray-200 focus:ring-emerald-600'
+                        getFieldError('confirmPassword')
+                          ? 'border-red-400 focus:ring-red-400 bg-red-50/20'
+                          : isConfirmValid && formData.confirmPassword
+                          ? 'border-emerald-500 focus:ring-emerald-500 bg-emerald-50/20'
+                          : 'border-gray-200 focus:ring-emerald-600'
                       }`}
                     />
                     <button
@@ -512,6 +556,11 @@ export const SignUpForm = ({ onSwitchToLogin, onOpenTerms, onOpenPrivacy, onSubm
                     </button>
                   </div>
                   {getFieldError('confirmPassword') && <p className="text-xs text-red-500 mt-1 font-medium">❌ {getFieldError('confirmPassword')}</p>}
+                  {!getFieldError('confirmPassword') && formData.confirmPassword && isConfirmValid && (
+                    <p className="text-xs text-emerald-600 mt-1 font-semibold flex items-center gap-1">
+                      ✓ Passwords match.
+                    </p>
+                  )}
                 </div>
               </div>
 

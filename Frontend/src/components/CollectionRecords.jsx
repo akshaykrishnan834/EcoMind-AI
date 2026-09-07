@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, CheckCircle2, Clock, Truck, ShieldCheck, RefreshCw, FileText, AlertCircle, MapPin, Home, Info, Award, UserCheck, Check, DollarSign, Download, Printer } from 'lucide-react';
 import { getCitizenRequests } from '../services/pickupRequestService';
+import { getCitizenPayments } from '../services/paymentService';
 
 const MONTH_NAMES = [
   { short: 'JAN', full: 'January', monthNum: 1 },
@@ -19,6 +20,7 @@ const MONTH_NAMES = [
 
 const CollectionRecords = ({ citizenData }) => {
   const [requests, setRequests] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -45,8 +47,12 @@ const CollectionRecords = ({ citizenData }) => {
     setLoading(true);
     setError('');
     try {
-      const data = await getCitizenRequests(citizenId);
-      setRequests(data || []);
+      const [reqData, payData] = await Promise.all([
+        getCitizenRequests(citizenId).catch(() => []),
+        getCitizenPayments(citizenId).catch(() => [])
+      ]);
+      setRequests(reqData || []);
+      setPayments(payData || []);
     } catch (err) {
       console.error('Error fetching collection card records:', err);
       setError('Could not load user fee collection records.');
@@ -89,6 +95,13 @@ const CollectionRecords = ({ citizenData }) => {
         }
       }
     }
+  });
+
+  // Map payments by key "YEAR-MONTH" (e.g. "2026-9")
+  const paymentMap = {};
+  payments.forEach((pay) => {
+    const key = `${pay.year}-${pay.month}`;
+    paymentMap[key] = pay;
   });
 
   const handlePrint = () => {
@@ -270,50 +283,55 @@ const CollectionRecords = ({ citizenData }) => {
 
                             {/* Amount */}
                             <td className="py-1 px-1 text-center border-r border-emerald-200 font-extrabold text-[#0a4d2c] text-[11px]">
-                              {req ? '₹50' : '-'}
+                              ₹50
                             </td>
 
                             {/* Status & Verification (Delivery Complete + Payment Paid) */}
                             <td className="py-1 px-1 text-center">
-                              {isCompleted ? (
-                                <div className="flex items-center justify-center gap-1 flex-wrap">
-                                  <span
-                                    title={`Verified & Collected by HKS Worker ${req.acceptedByWorkerId || ''}`}
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-[#0a4d2c] font-extrabold text-[9px] rounded border border-emerald-300"
-                                  >
-                                    <Check className="w-2.5 h-2.5 text-[#0a4d2c] stroke-[3]" />
-                                    <span>Collected</span>
-                                  </span>
+                              {(() => {
+                                const payRecord = paymentMap[reqKey];
+                                const isPaidFee = payRecord && (payRecord.status || '').toLowerCase() === 'paid';
+                                const now = new Date();
+                                const isPastMonth = year < now.getFullYear() || (year === now.getFullYear() && m.monthNum < (now.getMonth() + 1));
 
-                                  <span
-                                    title="User Fee Paid (₹50)"
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-700 text-white font-extrabold text-[9px] rounded shadow-2xs"
-                                  >
-                                    <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
-                                    <span>Paid ₹50</span>
-                                  </span>
-                                </div>
-                              ) : isScheduled ? (
-                                <div className="flex items-center justify-center gap-1 flex-wrap">
-                                  <span className="text-[9px] font-extrabold text-blue-800 px-1 py-0.5 bg-blue-50 rounded border border-blue-200">
-                                    Scheduled
-                                  </span>
-                                  <span className="text-[9px] font-semibold text-gray-500">
-                                    Fee Pending
-                                  </span>
-                                </div>
-                              ) : req ? (
-                                <div className="flex items-center justify-center gap-1 flex-wrap">
-                                  <span className="text-[9px] font-bold text-amber-800 px-1 py-0.5 bg-amber-50 rounded border border-amber-200">
-                                    Requested
-                                  </span>
-                                  <span className="text-[9px] font-semibold text-gray-400">
-                                    Unpaid
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-gray-300 text-[10px]">-</span>
-                              )}
+                                return (
+                                  <div className="flex items-center justify-center gap-1 flex-wrap">
+                                    {isCompleted && (
+                                      <span
+                                        title={`Verified & Collected by HKS Worker ${req.acceptedByWorkerId || ''}`}
+                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-[#0a4d2c] font-extrabold text-[9px] rounded border border-emerald-300"
+                                      >
+                                        <Check className="w-2.5 h-2.5 text-[#0a4d2c] stroke-[3]" />
+                                        <span>Collected</span>
+                                      </span>
+                                    )}
+
+                                    {isPaidFee ? (
+                                      <span
+                                        title={`User Fee Paid (₹50) via ${payRecord.paymentMethod || 'Online'}`}
+                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-700 text-white font-extrabold text-[9px] rounded shadow-2xs"
+                                      >
+                                        <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
+                                        <span>Paid ₹50</span>
+                                      </span>
+                                    ) : isPastMonth ? (
+                                      <span
+                                        title="Previous Month Unpaid - Pending Due"
+                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-rose-100 text-rose-800 font-extrabold text-[9px] rounded border border-rose-300"
+                                      >
+                                        <span>Pending Due ₹50</span>
+                                      </span>
+                                    ) : (
+                                      <span
+                                        title="Current Month Fee Unpaid"
+                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-900 font-extrabold text-[9px] rounded border border-amber-300"
+                                      >
+                                        <span>Unpaid ₹50</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                           </tr>
                         );

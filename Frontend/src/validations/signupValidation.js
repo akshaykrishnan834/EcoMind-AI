@@ -110,3 +110,13 @@ export const validateForm = (formData) => {
 
     return errors;
 };
+
+export const getPasswordCriteria = (password = "") => {
+    return {
+        minLength: password.length >= 8,
+        hasUpper: /[A-Z]/.test(password),
+        hasLower: /[a-z]/.test(password),
+        hasNumber: /[0-9]/.test(password),
+        hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    };
+};

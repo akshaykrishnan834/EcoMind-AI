@@ -191,6 +191,48 @@
         }
       }
     },
+    "/api/Auth/check-email": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Auth/check-phone": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Citizen": {
       "post": {
         "tags": [
@@ -435,6 +477,81 @@
         "tags": [
           "Panchayat"
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Payment/citizen/{citizenId}": {
+      "get": {
+        "tags": [
+          "Payment"
+        ],
+        "parameters": [
+          {
+            "name": "citizenId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Payment/current/{citizenId}": {
+      "get": {
+        "tags": [
+          "Payment"
+        ],
+        "parameters": [
+          {
+            "name": "citizenId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Payment/pay": {
+      "post": {
+        "tags": [
+          "Payment"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessPaymentDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessPaymentDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessPaymentDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -1050,6 +1167,32 @@
             "nullable": true
           },
           "password": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProcessPaymentDto": {
+        "type": "object",
+        "properties": {
+          "citizenId": {
+            "type": "string",
+            "nullable": true
+          },
+          "month": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "nullable": true
+          },
+          "transactionId": {
             "type": "string",
             "nullable": true
           }

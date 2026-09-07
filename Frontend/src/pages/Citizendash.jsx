@@ -4,6 +4,7 @@ import CitizenSidebar from '../components/CitizenSidebar';
 import CitizenProfile from '../components/CitizenProfile';
 import PickupRequest from '../components/PickupRequest';
 import CollectionRecords from '../components/CollectionRecords';
+import MonthlyPaymentSection from '../components/MonthlyPaymentSection';
 import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -27,7 +28,8 @@ import {
   ChevronRight,
   FileText,
   RefreshCw,
-  Leaf
+  Leaf,
+  CreditCard
 } from 'lucide-react';
 import { getCitizenByEmail } from '../services/citizenService';
 import { getCitizenRequests, getMonthlyStatus } from '../services/pickupRequestService';
@@ -175,6 +177,12 @@ const CitizenDashboard = () => {
   const isProfileComplete = Boolean(
     citizenData?.profileCompleted || (citizenData?.houseNumber && citizenData?.address)
   );
+  const isVerified = Boolean(
+    citizenData?.isVerified ||
+    citizenData?.status === 'Verified' ||
+    userObj?.isVerified ||
+    userObj?.status === 'Verified'
+  );
 
   // Worker & Helpline derived contact details
   const senaWorkerName = assignedWorker?.fullName || 'Haritha Karma Sena Unit 4';
@@ -280,6 +288,8 @@ const CitizenDashboard = () => {
           <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
             {activeTab === 'Profile' ? (
               <CitizenProfile />
+            ) : activeTab === 'Monthly Payments' ? (
+              <MonthlyPaymentSection citizenData={citizenData} />
             ) : activeTab === 'Pickup Request' ? (
               <PickupRequest citizenData={citizenData} />
             ) : activeTab === 'Collection Records' ? (
@@ -304,7 +314,7 @@ const CitizenDashboard = () => {
                       </h1>
 
                       <p className="text-xs sm:text-sm text-emerald-100/90 font-medium max-w-xl">
-                        Track ongoing household waste pickup requests, view completed recycling history, and manage your residence location.
+                        Track ongoing household waste pickup requests, view completed recycling history, and pay monthly Haritha Karma Sena fees.
                       </p>
 
                       <div className="pt-2 flex flex-wrap items-center gap-3 text-xs">
@@ -318,14 +328,14 @@ const CitizenDashboard = () => {
                           {wardId} • {panchayat}
                         </span>
 
-                        <span className={`px-3 py-1 border font-extrabold rounded-xl flex items-center gap-1.5 ${citizenData?.isVerified || citizenData?.status === 'Verified'
+                        <span className={`px-3 py-1 border font-extrabold rounded-xl flex items-center gap-1.5 ${isVerified
                             ? 'bg-emerald-500/30 border-emerald-400/60 text-emerald-100'
                             : isProfileComplete
                               ? 'bg-amber-500/30 border-amber-400/60 text-amber-100'
                               : 'bg-red-500/30 border-red-400/60 text-red-100'
                           }`}>
                           <ShieldCheck className="w-3.5 h-3.5" />
-                          {citizenData?.isVerified || citizenData?.status === 'Verified'
+                          {isVerified
                             ? 'Verified by Admin'
                             : isProfileComplete
                               ? 'Pending Verification'
@@ -337,19 +347,19 @@ const CitizenDashboard = () => {
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                       <button
                         type="button"
+                        onClick={() => setActiveTab('Monthly Payments')}
+                        className="px-5 py-3 bg-emerald-400 text-emerald-950 hover:bg-emerald-300 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <CreditCard className="w-4 h-4 text-emerald-950" />
+                        <span>Monthly Payments</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setActiveTab('Pickup Request')}
                         className="px-5 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Truck className="w-4 h-4 text-[#0a4d2c]" />
                         <span>Request Pickup</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('Collection Records')}
-                        className="px-5 py-3 bg-emerald-900/80 hover:bg-emerald-950 border border-emerald-400/40 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <FileText className="w-4 h-4 text-emerald-300" />
-                        <span>Collection Records</span>
                       </button>
                     </div>
                   </div>
@@ -460,125 +470,176 @@ const CitizenDashboard = () => {
 
                 </div>
 
-                {/* ACTIVE HOUSEHOLD PICKUP STATUS & LIVE TRACKER */}
-                <div className="bg-white rounded-3xl p-6 border-2 border-emerald-800/30 shadow-md space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
-                    <div>
+                {/* ACTIVE HOUSEHOLD PICKUP STATUS & LIVE TRACKER / VERIFICATION PENDING */}
+                {isVerified ? (
+                  <div className="bg-white rounded-3xl p-6 border-2 border-emerald-800/30 shadow-md space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="p-2 bg-emerald-100 text-[#0a4d2c] rounded-xl font-bold">
+                            <Truck className="w-5 h-5" />
+                          </span>
+                          <div>
+                            <h2 className="text-lg font-black text-gray-900">Active Monthly Pickup Tracker</h2>
+                            <p className="text-xs text-gray-500 font-medium">Status for current month waste collection drive</p>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex items-center gap-2">
-                        <span className="p-2 bg-emerald-100 text-[#0a4d2c] rounded-xl font-bold">
-                          <Truck className="w-5 h-5" />
+                        <span className="px-3 py-1 bg-emerald-100 border border-emerald-300 text-[#0a4d2c] text-xs font-black rounded-full">
+                          Status: {ongoingWork.status}
+                        </span>
+                        <span className="text-xs font-bold text-gray-400">ID: {ongoingWork.id}</span>
+                      </div>
+                    </div>
+
+                    {/* Stepper Progress Bar */}
+                    <div className="relative py-2">
+                      <div className="grid grid-cols-4 gap-2 text-center relative z-10">
+
+                        {/* Step 1: Requested */}
+                        <div className="space-y-2">
+                          <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 1
+                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
+                              : 'bg-gray-100 text-gray-400'
+                            }`}>
+                            {ongoingWork.currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
+                          </div>
+                          <div>
+                            <p className="text-xs font-extrabold text-gray-900">Requested</p>
+                            <p className="text-[10px] text-gray-500 font-medium">Request Logged</p>
+                          </div>
+                        </div>
+
+                        {/* Step 2: Scheduled */}
+                        <div className="space-y-2">
+                          <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 2
+                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
+                              : 'bg-gray-100 text-gray-400'
+                            }`}>
+                            {ongoingWork.currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
+                          </div>
+                          <div>
+                            <p className="text-xs font-extrabold text-gray-900">Scheduled</p>
+                            <p className="text-[10px] text-gray-500 font-medium">15th - 25th Window</p>
+                          </div>
+                        </div>
+
+                        {/* Step 3: Out for Collection */}
+                        <div className="space-y-2">
+                          <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 3
+                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 animate-pulse'
+                              : 'bg-gray-100 text-gray-400'
+                            }`}>
+                            {ongoingWork.currentStep > 3 ? <Check className="w-4 h-4" /> : '3'}
+                          </div>
+                          <div>
+                            <p className="text-xs font-extrabold text-gray-900">In Transit</p>
+                            <p className="text-[10px] text-gray-500 font-medium">Haritha Sena Active</p>
+                          </div>
+                        </div>
+
+                        {/* Step 4: Completed */}
+                        <div className="space-y-2">
+                          <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 4
+                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
+                              : 'bg-gray-100 text-gray-400'
+                            }`}>
+                            4
+                          </div>
+                          <div>
+                            <p className="text-xs font-extrabold text-gray-900">Completed</p>
+                            <p className="text-[10px] text-gray-500 font-medium">Card & Fee Logged</p>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+
+                    {/* Detailed Request Box */}
+                    <div className="bg-[#f2faf5] rounded-2xl p-4 sm:p-5 border border-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[10px] uppercase font-bold text-gray-500">Waste Category</span>
+                        <h4 className="text-sm font-extrabold text-[#0a4d2c]">{ongoingWork.category}</h4>
+                        <p className="text-xs text-gray-600 font-medium flex items-center gap-1.5 pt-1">
+                          <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                          Collection Schedule: <span className="font-extrabold text-gray-900">{ongoingWork.scheduledDate}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-emerald-700" />
+                          Assigned Team: <span className="font-extrabold text-gray-800">{ongoingWork.workerName}</span> ({ongoingWork.workerPhone})
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <button
+                          onClick={() => setActiveTab('Pickup Request')}
+                          className="px-4 py-2.5 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>{monthlyStatusData?.hasMonthlyRequest ? 'View Request' : 'Submit Pickup Request'}</span>
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('Collection Records')}
+                          className="px-4 py-2.5 bg-white border border-emerald-300 text-[#0a4d2c] hover:bg-emerald-50 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Card History</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* VERIFICATION PENDING CONTAINER */
+                  <div className="bg-white rounded-3xl p-6 border-2 border-amber-300/80 shadow-md space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="p-2 bg-amber-100 text-amber-800 rounded-xl font-bold">
+                          <Clock className="w-5 h-5" />
                         </span>
                         <div>
-                          <h2 className="text-lg font-black text-gray-900">Active Monthly Pickup Tracker</h2>
-                          <p className="text-xs text-gray-500 font-medium">Status for current month waste collection drive</p>
+                          <h2 className="text-lg font-black text-gray-900">Verification Pending</h2>
+                          <p className="text-xs text-gray-500 font-medium">Account verification required to access monthly pickup tracker</p>
                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 bg-amber-100 border border-amber-300 text-amber-800 text-xs font-black rounded-full flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                          Status: Verification Pending
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 bg-emerald-100 border border-emerald-300 text-[#0a4d2c] text-xs font-black rounded-full">
-                        Status: {ongoingWork.status}
-                      </span>
-                      <span className="text-xs font-bold text-gray-400">ID: {ongoingWork.id}</span>
+                    <div className="bg-amber-50/70 border border-amber-200/90 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                      <div className="space-y-2 max-w-2xl">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-200/60 text-amber-900 text-[11px] font-bold">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Admin Approval Required</span>
+                        </div>
+                        <h3 className="text-base font-extrabold text-amber-950">
+                          Pickup Tracker Unavailable
+                        </h3>
+                        <p className="text-xs text-amber-900/90 leading-relaxed font-medium">
+                          {isProfileComplete
+                            ? "Your residence profile has been submitted and is currently pending verification by the Panchayat Administrator. Once verified, your active monthly pickup tracker and collection schedules will appear here."
+                            : "Your residence profile is incomplete. Please set your House Number and address details so your account can be verified by the Administrator."}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row md:flex-col items-stretch gap-2.5 w-full md:w-auto shrink-0">
+                        <button
+                          onClick={() => setActiveTab('Profile')}
+                          className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <User className="w-4 h-4" />
+                          <span>{isProfileComplete ? 'View Profile Status' : 'Complete Profile Now'}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Stepper Progress Bar */}
-                  <div className="relative py-2">
-                    <div className="grid grid-cols-4 gap-2 text-center relative z-10">
-
-                      {/* Step 1: Requested */}
-                      <div className="space-y-2">
-                        <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 1
-                            ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
-                            : 'bg-gray-100 text-gray-400'
-                          }`}>
-                          {ongoingWork.currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
-                        </div>
-                        <div>
-                          <p className="text-xs font-extrabold text-gray-900">Requested</p>
-                          <p className="text-[10px] text-gray-500 font-medium">Request Logged</p>
-                        </div>
-                      </div>
-
-                      {/* Step 2: Scheduled */}
-                      <div className="space-y-2">
-                        <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 2
-                            ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
-                            : 'bg-gray-100 text-gray-400'
-                          }`}>
-                          {ongoingWork.currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
-                        </div>
-                        <div>
-                          <p className="text-xs font-extrabold text-gray-900">Scheduled</p>
-                          <p className="text-[10px] text-gray-500 font-medium">15th - 25th Window</p>
-                        </div>
-                      </div>
-
-                      {/* Step 3: Out for Collection */}
-                      <div className="space-y-2">
-                        <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 3
-                            ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 animate-pulse'
-                            : 'bg-gray-100 text-gray-400'
-                          }`}>
-                          {ongoingWork.currentStep > 3 ? <Check className="w-4 h-4" /> : '3'}
-                        </div>
-                        <div>
-                          <p className="text-xs font-extrabold text-gray-900">In Transit</p>
-                          <p className="text-[10px] text-gray-500 font-medium">Haritha Sena Active</p>
-                        </div>
-                      </div>
-
-                      {/* Step 4: Completed */}
-                      <div className="space-y-2">
-                        <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 4
-                            ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
-                            : 'bg-gray-100 text-gray-400'
-                          }`}>
-                          4
-                        </div>
-                        <div>
-                          <p className="text-xs font-extrabold text-gray-900">Completed</p>
-                          <p className="text-[10px] text-gray-500 font-medium">Card & Fee Logged</p>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* Detailed Request Box */}
-                  <div className="bg-[#f2faf5] rounded-2xl p-4 sm:p-5 border border-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase font-bold text-gray-500">Waste Category</span>
-                      <h4 className="text-sm font-extrabold text-[#0a4d2c]">{ongoingWork.category}</h4>
-                      <p className="text-xs text-gray-600 font-medium flex items-center gap-1.5 pt-1">
-                        <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                        Collection Schedule: <span className="font-extrabold text-gray-900">{ongoingWork.scheduledDate}</span>
-                      </p>
-                      <p className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-emerald-700" />
-                        Assigned Team: <span className="font-extrabold text-gray-800">{ongoingWork.workerName}</span> ({ongoingWork.workerPhone})
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button
-                        onClick={() => setActiveTab('Pickup Request')}
-                        className="px-4 py-2.5 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
-                      >
-                        <Truck className="w-3.5 h-3.5" />
-                        <span>{monthlyStatusData?.hasMonthlyRequest ? 'View Request' : 'Submit Pickup Request'}</span>
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('Collection Records')}
-                        className="px-4 py-2.5 bg-white border border-emerald-300 text-[#0a4d2c] hover:bg-emerald-50 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>Card History</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {/* TWO COLUMN / FULL GRID: SEGREGATION INSTRUCTIONS & HELPDESK */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

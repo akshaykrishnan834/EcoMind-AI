@@ -10,7 +10,8 @@ import {
     User,
     MapPin,
     Truck,
-    FileText
+    FileText,
+    CreditCard
 } from 'lucide-react';
 
 const CitizenSidebar = ({
@@ -33,6 +34,7 @@ const CitizenSidebar = ({
 
     const menuItems = [
         { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'Monthly Payments', label: 'Monthly Payments', icon: CreditCard },
         { id: 'Pickup Request', label: 'Pickup Request', icon: Truck },
         { id: 'Collection Records', label: 'Collection Records', icon: FileText },
     ];
