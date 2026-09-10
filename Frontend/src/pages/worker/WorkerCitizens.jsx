@@ -18,10 +18,10 @@ import {
   ShieldAlert,
   LocateFixed
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { getAllCitizens, getCitizensByWard } from '../../services/citizenService';
+import { getAllCitizens, getCitizensByWard, getAllWards } from '../../services/citizenService';
 import { getAllWorkers } from '../../services/workerService';
 
 // Fix Leaflet default icon paths in React Vite
@@ -50,6 +50,7 @@ export const WorkerCitizens = () => {
   const [loading, setLoading] = useState(true);
   const [workerInfo, setWorkerInfo] = useState(null);
   const [assignedWard, setAssignedWard] = useState('');
+  const [wardDetails, setWardDetails] = useState(null);
   const [citizens, setCitizens] = useState([]);
   
   // Search & Filter State
@@ -63,12 +64,16 @@ export const WorkerCitizens = () => {
     const fetchWorkerAndWardCitizens = async () => {
       setLoading(true);
       try {
-        // 1. Fetch workers to find assigned ward for logged-in worker
+        // 1. Fetch workers & ward boundaries to find assigned ward for logged-in worker
         let ward = userObj.wardId || '';
         let currentWorker = null;
 
         try {
-          const workers = await getAllWorkers();
+          const [workers, wardsList] = await Promise.all([
+            getAllWorkers().catch(() => []),
+            getAllWards().catch(() => [])
+          ]);
+
           if (Array.isArray(workers)) {
             currentWorker = workers.find(
               (w) => w.email && w.email.toLowerCase() === workerEmail.toLowerCase()
@@ -77,8 +82,19 @@ export const WorkerCitizens = () => {
               ward = currentWorker.wardId;
             }
           }
+
+          if (ward && Array.isArray(wardsList)) {
+            const cleanWard = ward.trim().toLowerCase();
+            const matched = wardsList.find(
+              (w) =>
+                (w.wardId && w.wardId.trim().toLowerCase() === cleanWard) ||
+                (w.id && w.id.trim().toLowerCase() === cleanWard) ||
+                (w.wardName && w.wardName.trim().toLowerCase() === cleanWard)
+            );
+            setWardDetails(matched || null);
+          }
         } catch (e) {
-          console.warn("Could not fetch worker profile list:", e);
+          console.warn("Could not fetch worker profile or wards list:", e);
         }
 
         setWorkerInfo(currentWorker);
@@ -186,9 +202,14 @@ export const WorkerCitizens = () => {
           <div className="bg-white/10 border border-white/20 px-4 py-2 rounded-2xl text-xs text-emerald-100 flex items-center gap-3 shrink-0">
             <Award className="w-5 h-5 text-emerald-300" />
             <div>
-              <span className="text-[10px] uppercase font-bold text-emerald-200 block">Assigned Ward</span>
-              <span className="text-sm font-extrabold text-white">{assignedWard || 'Unassigned'}</span>
+              <span className="text-[10px] uppercase font-bold text-emerald-200 block">Assigned Ward Zone</span>
+              <span className="text-sm font-extrabold text-white">
+                {wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : assignedWard || 'Unassigned'}
+              </span>
             </div>
+            {wardDetails?.boundary?.length >= 3 && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1" title="Official Boundary Polygon Active" />
+            )}
           </div>
         </div>
       </div>
@@ -464,6 +485,26 @@ export const WorkerCitizens = () => {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <ChangeView center={[selectedCitizenMap.latitude, selectedCitizenMap.longitude]} zoom={16} />
+
+                {/* Assigned Ward Boundary Polygon */}
+                {wardDetails?.boundary && wardDetails.boundary.length >= 3 && (
+                  <Polygon
+                    positions={wardDetails.boundary}
+                    pathOptions={{
+                      color: '#059669',
+                      fillColor: '#10b981',
+                      fillOpacity: 0.18,
+                      weight: 2.5
+                    }}
+                  >
+                    <Tooltip sticky>
+                      <span className="font-bold text-xs">
+                        {wardDetails.wardName || wardDetails.wardId} Official Boundary Zone
+                      </span>
+                    </Tooltip>
+                  </Polygon>
+                )}
+
                 <Marker position={[selectedCitizenMap.latitude, selectedCitizenMap.longitude]}>
                   <Popup>
                     <div className="p-1 text-xs">

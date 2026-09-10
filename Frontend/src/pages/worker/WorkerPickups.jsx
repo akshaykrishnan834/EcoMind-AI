@@ -10,8 +10,39 @@ const WorkerPickups = ({ wardId, workerId }) => {
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Pending' | 'Scheduled' | 'Completed'
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
+  // Location Tracking States
+  const [currentWardId, setCurrentWardId] = useState(null);
+  const [locationWarning, setLocationWarning] = useState('');
+
   // Selected date map for pending items: { [requestId]: YYYY-MM-DD }
   const [selectedDates, setSelectedDates] = useState({});
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          try {
+            const response = await fetch(`http://localhost:5214/api/Ward/identify?lat=${lat}&lng=${lng}`);
+            if (response.ok) {
+              const data = await response.json();
+              setCurrentWardId(data.wardId);
+              if (wardId && data.wardId !== wardId) {
+                setLocationWarning(`Worker is currently outside the assigned ward. Current: ${data.wardId}, Assigned: ${wardId}`);
+              }
+            } else {
+              setLocationWarning(`Worker is currently outside the assigned ward.`);
+            }
+          } catch (e) {
+            console.error("Failed to identify current ward", e);
+          }
+        },
+        (err) => console.error(err),
+        { enableHighAccuracy: true }
+      );
+    }
+  }, [wardId]);
 
   const fetchPickups = async () => {
     if (!wardId) {
@@ -163,6 +194,14 @@ const WorkerPickups = ({ wardId, workerId }) => {
           </button>
         </div>
       </div>
+
+      {/* Location Warning Banner */}
+      {locationWarning && (
+        <div className="p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 text-sm font-bold rounded-2xl flex items-center gap-3 shadow-xs animate-fadeIn">
+          <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
+          <span>{locationWarning}</span>
+        </div>
+      )}
 
       {/* Success / Error Alerts */}
       {successMsg && (

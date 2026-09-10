@@ -7,6 +7,8 @@ import {
   Building2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  Check,
   Save,
   Loader2,
   ShieldCheck,
@@ -19,9 +21,10 @@ import {
   Search,
   Map as MapIcon,
   Info,
-  LocateFixed
+  LocateFixed,
+  Target
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
@@ -72,6 +75,33 @@ const cleanAddressString = (addr) => {
   return Array.from(new Set(lines)).join('\n');
 };
 
+// Point-in-Polygon (Ray-Casting Algorithm) to check if [lat, lng] is inside a polygon
+const isPointInPolygon = (lat, lng, polygon) => {
+  if (!polygon || !Array.isArray(polygon) || polygon.length < 3) return null;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [latI, lngI] = polygon[i];
+    const [latJ, lngJ] = polygon[j];
+    const intersect =
+      latI > lat !== latJ > lat &&
+      lng < ((lngJ - lngI) * (lat - latI)) / (latJ - latI) + lngI;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+};
+
+// Calculate centroid of polygon coordinates
+const getPolygonCenter = (polygon) => {
+  if (!polygon || polygon.length === 0) return null;
+  let latSum = 0;
+  let lngSum = 0;
+  for (const pt of polygon) {
+    latSum += pt[0];
+    lngSum += pt[1];
+  }
+  return [latSum / polygon.length, lngSum / polygon.length];
+};
+
 export const CitizenProfile = () => {
   const userObj = JSON.parse(localStorage.getItem('user') || '{}');
   const userEmail = userObj.email || localStorage.getItem('userEmail') || '';
@@ -120,6 +150,8 @@ export const CitizenProfile = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const [gettingLiveLocation, setGettingLiveLocation] = useState(false);
+  const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
+  const [geocodeNotice, setGeocodeNotice] = useState('');
   const [zoom, setZoom] = useState(15);
   const markerRef = useRef(null);
 
@@ -296,7 +328,24 @@ export const CitizenProfile = () => {
     }
   };
 
-  // Live GPS Location Detection Button
+  // Live GPS Location Detection & Ward Identification
+  const identifyWard = async (lat, lng) => {
+    try {
+      const response = await axios.get(`http://localhost:5214/api/Ward/identify?lat=${lat}&lng=${lng}`);
+      if (response.data && response.data.wardId) {
+        // Auto-select ward only if citizen has not selected one yet
+        setFormData(prev => {
+          if (!prev.wardId) {
+            return { ...prev, wardId: response.data.wardId };
+          }
+          return prev;
+        });
+      }
+    } catch (error) {
+      console.log("Could not auto-identify ward from location");
+    }
+  };
+
   const handleGetLiveLocation = () => {
     if (!navigator.geolocation) {
       setProfileError('Geolocation is not supported by your browser.');
@@ -320,6 +369,7 @@ export const CitizenProfile = () => {
         setZoom(17);
 
         reverseGeocode(lat, lng);
+        identifyWard(lat, lng);
         setGettingLiveLocation(false);
         setProfileSuccess('Live GPS location detected successfully!');
       },
@@ -357,6 +407,7 @@ export const CitizenProfile = () => {
     setSuggestions([]);
     setProfileError('');
     setProfileSuccess('');
+    identifyWard(lat, lon);
   };
 
   // Handle marker drag end
@@ -371,6 +422,7 @@ export const CitizenProfile = () => {
     setProfileError('');
     setProfileSuccess('');
     reverseGeocode(lat, lng);
+    identifyWard(lat, lng);
   };
 
   const markerEventHandlers = useMemo(
@@ -398,6 +450,164 @@ export const CitizenProfile = () => {
     setProfileError('');
     setProfileSuccess('');
     reverseGeocode(cleanLat, cleanLng);
+    identifyWard(cleanLat, cleanLng);
+  };
+
+  // Find the ward object corresponding to selected wardId
+  const selectedWard = useMemo(() => {
+    if (!formData.wardId) return null;
+    return wards.find(
+      (w) =>
+        w.wardId === formData.wardId ||
+        w.id === formData.wardId ||
+        w.wardName === formData.wardId
+    );
+  }, [wards, formData.wardId]);
+
+  // Check if current (lat, lng) falls inside any configured ward in the system
+  const detectedWard = useMemo(() => {
+    if (!formData.latitude || !formData.longitude) return null;
+    return wards.find((w) => {
+      if (!w.boundary || w.boundary.length < 3) return false;
+      return isPointInPolygon(formData.latitude, formData.longitude, w.boundary);
+    });
+  }, [wards, formData.latitude, formData.longitude]);
+
+  // Boundary verification status
+  const boundaryStatus = useMemo(() => {
+    if (!formData.wardId) {
+      if (detectedWard) {
+        return {
+          status: 'detected',
+          isInside: true,
+          ward: detectedWard,
+          message: `Location falls inside ${detectedWard.wardName || detectedWard.wardId}. Click below to select this ward.`
+        };
+      }
+      return {
+        status: 'unselected',
+        isInside: null,
+        message: 'Select your Panchayat & Ward to verify boundary containment.'
+      };
+    }
+
+    if (!selectedWard || !selectedWard.boundary || selectedWard.boundary.length < 3) {
+      return {
+        status: 'no_boundary',
+        isInside: null,
+        ward: selectedWard,
+        message: `Official digital boundary polygon is not yet configured for ${selectedWard?.wardName || formData.wardId}.`
+      };
+    }
+
+    const inside = isPointInPolygon(formData.latitude, formData.longitude, selectedWard.boundary);
+    if (inside) {
+      return {
+        status: 'inside',
+        isInside: true,
+        ward: selectedWard,
+        message: `Address location is verified INSIDE official boundary of ${selectedWard.wardName || selectedWard.wardId}.`
+      };
+    } else {
+      let extra = '';
+      if (detectedWard && detectedWard.wardId !== selectedWard.wardId) {
+        extra = ` (Coordinates fall inside ${detectedWard.wardName || detectedWard.wardId})`;
+      }
+      return {
+        status: 'outside',
+        isInside: false,
+        ward: selectedWard,
+        detectedWard: detectedWard,
+        message: `Address pin is OUTSIDE official boundary of ${selectedWard.wardName || selectedWard.wardId}${extra}.`
+      };
+    }
+  }, [formData.wardId, selectedWard, detectedWard, formData.latitude, formData.longitude]);
+
+  // Forward geocode manually entered address string to GPS Coordinates
+  const geocodeManualAddress = async (customAddr) => {
+    const text = (customAddr !== undefined ? customAddr : formData.address || '').trim();
+    if (!text || text.length < 3) {
+      setGeocodeNotice('Please enter an address first to locate on the map.');
+      return;
+    }
+
+    setIsGeocodingAddress(true);
+    setGeocodeNotice('');
+    try {
+      const pName = formData.panchayatName ? `${formData.panchayatName}, ` : '';
+      const query = `${text.replace(/\n/g, ', ')}, ${pName}Kerala, India`;
+
+      const res = await axios.get('https://nominatim.openstreetmap.org/search', {
+        params: {
+          q: query,
+          format: 'json',
+          limit: 1,
+          addressdetails: 1
+        },
+        headers: {
+          'Accept-Language': 'en'
+        }
+      });
+
+      if (res.data && res.data.length > 0) {
+        const item = res.data[0];
+        const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+        const lng = parseFloat(parseFloat(item.lon).toFixed(6));
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng
+        }));
+        setZoom(16);
+        setGeocodeNotice('Address pinpointed on map! Please verify the marker position within the ward boundary.');
+      } else {
+        // Fallback broader search
+        const broaderRes = await axios.get('https://nominatim.openstreetmap.org/search', {
+          params: {
+            q: `${text}, Kerala, India`,
+            format: 'json',
+            limit: 1
+          }
+        });
+        if (broaderRes.data && broaderRes.data.length > 0) {
+          const item = broaderRes.data[0];
+          const lat = parseFloat(parseFloat(item.lat).toFixed(6));
+          const lng = parseFloat(parseFloat(item.lon).toFixed(6));
+          setFormData(prev => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng
+          }));
+          setZoom(16);
+          setGeocodeNotice('Address found! Verify and adjust pin if needed.');
+        } else {
+          setGeocodeNotice('Exact address not found in map database. You can click or drag the map pin to mark your house.');
+        }
+      }
+    } catch (err) {
+      console.warn("Manual address geocoding error:", err);
+      setGeocodeNotice('Could not reach map lookup. You can drag the pin manually on the map.');
+    } finally {
+      setIsGeocodingAddress(false);
+    }
+  };
+
+  // Center map on the selected ward's polygon centroid
+  const handleCenterOnWard = () => {
+    if (selectedWard?.boundary?.length >= 3) {
+      const center = getPolygonCenter(selectedWard.boundary);
+      if (center) {
+        const lat = parseFloat(center[0].toFixed(6));
+        const lng = parseFloat(center[1].toFixed(6));
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng
+        }));
+        setZoom(16);
+        reverseGeocode(lat, lng);
+      }
+    }
   };
 
   // Filter wards dynamically based on selected panchayat from database records
@@ -463,6 +673,15 @@ export const CitizenProfile = () => {
         setProfileError(
           'Phone number must be exactly 10 digits starting with 6, 7, 8, or 9.'
         );
+        return;
+      }
+    }
+
+    if (boundaryStatus.status === 'outside') {
+      const confirmOutside = window.confirm(
+        `Notice: Your address pin appears to be outside the official boundary of ${selectedWard?.wardName || formData.wardId}.\n\nDo you want to proceed and save anyway?`
+      );
+      if (!confirmOutside) {
         return;
       }
     }
@@ -768,14 +987,26 @@ export const CitizenProfile = () => {
 
               {/* Saved Map Location & GPS Coordinates */}
               <div className="pt-2 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Navigation className="w-4 h-4 text-emerald-700" />
                     <span className="text-xs font-extrabold text-gray-700 uppercase tracking-wider">Pinpointed Map Location & GPS</span>
                   </div>
-                  <div className="flex items-center gap-2 font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                    <Compass className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Lat: {formData.latitude ? formData.latitude.toFixed(6) : '0.000000'}, Lng: {formData.longitude ? formData.longitude.toFixed(6) : '0.000000'}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                      <Compass className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Lat: {formData.latitude ? formData.latitude.toFixed(6) : '0.000000'}, Lng: {formData.longitude ? formData.longitude.toFixed(6) : '0.000000'}</span>
+                    </div>
+                    {boundaryStatus.isInside !== null && selectedWard && (
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                        boundaryStatus.isInside
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border-amber-300'
+                      }`}>
+                        {boundaryStatus.isInside ? <Check className="w-3 h-3 text-emerald-700" /> : <AlertTriangle className="w-3 h-3 text-amber-700" />}
+                        <span>{boundaryStatus.isInside ? 'Inside Ward Boundary' : 'Outside Boundary'}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -791,6 +1022,23 @@ export const CitizenProfile = () => {
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     <ChangeView center={mapCenter} zoom={15} />
+
+                    {selectedWard?.boundary && selectedWard.boundary.length >= 3 && (
+                      <Polygon
+                        positions={selectedWard.boundary}
+                        pathOptions={{
+                          color: boundaryStatus.isInside ? '#059669' : '#dc2626',
+                          fillColor: boundaryStatus.isInside ? '#10b981' : '#ef4444',
+                          fillOpacity: 0.18,
+                          weight: 2
+                        }}
+                      >
+                        <Tooltip sticky>
+                          <span className="font-bold text-xs">{selectedWard.wardName || selectedWard.wardId} Official Boundary</span>
+                        </Tooltip>
+                      </Polygon>
+                    )}
+
                     <Marker position={mapCenter} draggable={false}>
                       <Popup>
                         <div className="p-1 text-xs">
@@ -1021,10 +1269,43 @@ export const CitizenProfile = () => {
                     value={formData.address}
                     onChange={handleProfileChange}
                     onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
                     placeholder="Type house name, street, landmark or search area (e.g. Newhouse, Cheruvally, Kanjirappally)"
                     className="w-full pl-9 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white transition-colors"
                   />
                 </div>
+
+                {/* Manual Address Geocoding Action & Helper */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <p className="text-[11px] text-gray-500">
+                    Type address manually, then click locate or select from suggestions to plot coordinates.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => geocodeManualAddress()}
+                    disabled={isGeocodingAddress || !formData.address.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+                  >
+                    {isGeocodingAddress ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-700" />
+                        <span>Locating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Locate Address on Map</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {geocodeNotice && (
+                  <p className="text-xs font-medium text-emerald-800 bg-emerald-50/80 px-3 py-1.5 rounded-lg border border-emerald-200">
+                    {geocodeNotice}
+                  </p>
+                )}
 
                 {/* Suggestions Dropdown attached to the Unified Address Field */}
                 {showSuggestions && suggestions.length > 0 && (
@@ -1052,6 +1333,87 @@ export const CitizenProfile = () => {
                     ))}
                   </div>
                 )}
+
+                {/* REAL-TIME WARD BOUNDARY VERIFICATION STATUS CARD */}
+                <div className="pt-2">
+                  {boundaryStatus.status === 'inside' && (
+                    <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-start gap-3 shadow-2xs animate-fadeIn">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-xs sm:text-sm text-emerald-900">Official Ward Boundary Verified</p>
+                          <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide bg-emerald-200 text-emerald-900 rounded-full border border-emerald-300">
+                            Inside Ward
+                          </span>
+                        </div>
+                        <p className="text-xs text-emerald-800 mt-0.5">{boundaryStatus.message}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {boundaryStatus.status === 'outside' && (
+                    <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-3 shadow-2xs animate-fadeIn">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-xs sm:text-sm text-amber-900">Address Pin Outside Selected Ward Boundary</p>
+                          <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide bg-amber-200 text-amber-900 rounded-full border border-amber-300">
+                            Boundary Mismatch
+                          </span>
+                        </div>
+                        <p className="text-xs text-amber-800">{boundaryStatus.message}</p>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {boundaryStatus.detectedWard && (
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, wardId: boundaryStatus.detectedWard.wardId || boundaryStatus.detectedWard.id }))}
+                              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Switch to {boundaryStatus.detectedWard.wardName || boundaryStatus.detectedWard.wardId}</span>
+                            </button>
+                          )}
+                          {selectedWard?.boundary?.length >= 3 && (
+                            <button
+                              type="button"
+                              onClick={handleCenterOnWard}
+                              className="px-3 py-1.5 bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Navigation className="w-3.5 h-3.5 text-amber-700" />
+                              <span>Move Pin Inside {selectedWard.wardName || selectedWard.wardId}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {boundaryStatus.status === 'detected' && (
+                    <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-start justify-between gap-3 shadow-2xs animate-fadeIn">
+                      <div className="flex items-start gap-2.5">
+                        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-xs sm:text-sm text-blue-900">Ward Boundary Auto-Detected</p>
+                          <p className="text-xs text-blue-800 mt-0.5">{boundaryStatus.message}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, wardId: boundaryStatus.ward.wardId || boundaryStatus.ward.id }))}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer shrink-0"
+                      >
+                        Select {boundaryStatus.ward.wardName || boundaryStatus.ward.wardId}
+                      </button>
+                    </div>
+                  )}
+
+                  {boundaryStatus.status === 'no_boundary' && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-center gap-2.5 text-xs text-gray-600">
+                      <Info className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span>{boundaryStatus.message}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1067,40 +1429,62 @@ export const CitizenProfile = () => {
                   </div>
                 </div>
 
-                {/* Detect Live GPS Location Button */}
-                <button
-                  type="button"
-                  onClick={handleGetLiveLocation}
-                  disabled={gettingLiveLocation}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-50 shrink-0"
-                >
-                  {gettingLiveLocation ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>Detecting Live GPS...</span>
-                    </>
-                  ) : (
-                    <>
-                      <LocateFixed className="w-4 h-4 text-emerald-200" />
-                      <span>Use Current Live Location</span>
-                    </>
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedWard?.boundary?.length >= 3 && (
+                    <button
+                      type="button"
+                      onClick={handleCenterOnWard}
+                      className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs uppercase tracking-wider rounded-xl shadow-2xs hover:shadow transition-all cursor-pointer shrink-0"
+                      title="Focus map inside official ward boundary polygon"
+                    >
+                      <Target className="w-4 h-4 text-emerald-700" />
+                      <span>Focus Ward Boundary</span>
+                    </button>
                   )}
-                </button>
+
+                  {/* Detect Live GPS Location Button */}
+                  <button
+                    type="button"
+                    onClick={handleGetLiveLocation}
+                    disabled={gettingLiveLocation}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    {gettingLiveLocation ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>Detecting Live GPS...</span>
+                      </>
+                    ) : (
+                      <>
+                        <LocateFixed className="w-4 h-4 text-emerald-200" />
+                        <span>Use Current Live Location</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Leaflet Map Display */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="font-bold text-gray-700 flex items-center gap-1.5">
                     <Info className="w-3.5 h-3.5 text-emerald-600" />
                     Drag marker or click anywhere on map to adjust exact house position
                   </span>
-                  {isReverseGeocoding && (
-                    <span className="text-emerald-700 font-semibold flex items-center gap-1 animate-pulse">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Updating location pin...
-                    </span>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {selectedWard?.boundary?.length >= 3 && (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <span className={`w-2 h-2 rounded-full ${boundaryStatus.isInside ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                        {selectedWard.wardName || selectedWard.wardId} Boundary Active
+                      </span>
+                    )}
+                    {isReverseGeocoding && (
+                      <span className="text-emerald-700 font-semibold flex items-center gap-1 animate-pulse">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Updating location pin...
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="h-[360px] w-full rounded-2xl overflow-hidden border border-emerald-200 shadow-inner relative z-0">
@@ -1116,6 +1500,28 @@ export const CitizenProfile = () => {
                     />
                     <ChangeView center={mapCenter} zoom={zoom} />
                     <MapClickHandler onLocationSelect={handleMapClick} />
+
+                    {selectedWard?.boundary && selectedWard.boundary.length >= 3 && (
+                      <Polygon
+                        positions={selectedWard.boundary}
+                        pathOptions={{
+                          color: boundaryStatus.isInside ? '#059669' : '#dc2626',
+                          fillColor: boundaryStatus.isInside ? '#10b981' : '#ef4444',
+                          fillOpacity: 0.2,
+                          weight: 2.5,
+                          dashArray: boundaryStatus.isInside ? undefined : '6, 6'
+                        }}
+                      >
+                        <Tooltip sticky>
+                          <div className="p-0.5 text-xs font-bold">
+                            {selectedWard.wardName || selectedWard.wardId} Official Boundary
+                            <div className="text-[10px] font-normal text-gray-600">
+                              {boundaryStatus.isInside ? '🟢 Address pin is inside' : '🔴 Address pin is outside'}
+                            </div>
+                          </div>
+                        </Tooltip>
+                      </Polygon>
+                    )}
 
                     <Marker
                       position={mapCenter}

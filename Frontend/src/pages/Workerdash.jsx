@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from '../components/Header';
 import WorkerSidebar from '../components/WorkerSidebar';
 import WorkerCitizens from './worker/WorkerCitizens';
@@ -27,11 +27,46 @@ import {
   ArrowRight,
   RefreshCw,
   Award,
-  Truck
+  Truck,
+  Map as MapIcon,
+  Target,
+  Compass
 } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { getUserByEmail, updateUserProfile } from '../services/userService';
-import { getAllCitizens, getCitizensByWard } from '../services/citizenService';
+import { getAllCitizens, getCitizensByWard, getAllWards } from '../services/citizenService';
 import { getAllWorkers } from '../services/workerService';
+
+// Fix Leaflet default icon paths in React Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function ChangeView({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && center[0] && center[1]) {
+      map.setView(center, zoom, { animate: true });
+    }
+  }, [center, zoom, map]);
+  return null;
+}
+
+const getPolygonCenter = (polygon) => {
+  if (!polygon || polygon.length === 0) return [9.5583, 76.7842];
+  let latSum = 0;
+  let lngSum = 0;
+  for (const pt of polygon) {
+    latSum += pt[0];
+    lngSum += pt[1];
+  }
+  return [latSum / polygon.length, lngSum / polygon.length];
+};
 
 const WorkerDashboard = () => {
   const [activeTab, setActiveTabState] = useState(() => {
@@ -57,14 +92,41 @@ const WorkerDashboard = () => {
   });
 
   // Ward & Citizen Summary Stats
+  // Ward & Citizen Summary Stats
   const [wardCitizens, setWardCitizens] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [wardDetails, setWardDetails] = useState(null);
+  const [mapZoom, setMapZoom] = useState(15);
+  const [mapCenterOverride, setMapCenterOverride] = useState(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({ fullName: '', phone: '' });
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Center coordinate calculation for the worker's assigned boundary
+  const mapCenter = useMemo(() => {
+    if (mapCenterOverride) return mapCenterOverride;
+    if (wardDetails?.boundary && wardDetails.boundary.length >= 3) {
+      return getPolygonCenter(wardDetails.boundary);
+    }
+    const citizenWithPin = wardCitizens.find(
+      (c) => c.latitude && c.longitude && (c.latitude !== 0 || c.longitude !== 0)
+    );
+    if (citizenWithPin) {
+      return [citizenWithPin.latitude, citizenWithPin.longitude];
+    }
+    return [9.5583, 76.7842];
+  }, [mapCenterOverride, wardDetails, wardCitizens]);
+
+  const handleRecenterBoundary = () => {
+    if (wardDetails?.boundary && wardDetails.boundary.length >= 3) {
+      const center = getPolygonCenter(wardDetails.boundary);
+      setMapCenterOverride([...center]);
+      setMapZoom(15);
+    }
+  };
 
   // Time-based greeting helper
   const getGreeting = () => {
@@ -74,16 +136,19 @@ const WorkerDashboard = () => {
     return 'Good Evening';
   };
 
-  // Fetch worker profile & assigned ward citizens data
+  // Fetch worker profile, assigned ward boundary polygon & citizens data
   const loadDashboardData = async () => {
     setLoadingStats(true);
     let workerWard = profile.wardId || initialUser.wardId || '';
 
     try {
       if (profile.email) {
-        // Fetch user from db
-        const dbUser = await getUserByEmail(profile.email).catch(() => null);
-        const workersList = await getAllWorkers().catch(() => []);
+        // Fetch user from db, workers list, and official ward delimitation boundaries
+        const [dbUser, workersList, wardsList] = await Promise.all([
+          getUserByEmail(profile.email).catch(() => null),
+          getAllWorkers().catch(() => []),
+          getAllWards().catch(() => [])
+        ]);
 
         let matchedWorker = null;
         if (Array.isArray(workersList)) {
@@ -103,6 +168,18 @@ const WorkerDashboard = () => {
           wardId: finalWard
         }));
         workerWard = finalWard;
+
+        // Match assigned ward details (boundary polygon, panchayat, wardName)
+        if (workerWard && Array.isArray(wardsList)) {
+          const cleanW = workerWard.trim().toLowerCase();
+          const matched = wardsList.find(
+            (w) =>
+              (w.wardId && w.wardId.trim().toLowerCase() === cleanW) ||
+              (w.id && w.id.trim().toLowerCase() === cleanW) ||
+              (w.wardName && w.wardName.trim().toLowerCase() === cleanW)
+          );
+          setWardDetails(matched || null);
+        }
 
         // Sync localStorage
         const currentUserObj = JSON.parse(localStorage.getItem('user') || '{}');
@@ -315,7 +392,7 @@ const WorkerDashboard = () => {
                       </h1>
 
                       <p className="text-xs sm:text-sm text-emerald-100/90 font-medium">
-                        Assigned Ward: <span className="font-extrabold text-white underline">{profile.wardId || 'Ward 1'}</span>
+                        Assigned Ward: <span className="font-extrabold text-white underline">{wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : profile.wardId || 'Ward 1'}</span>
                       </p>
 
                       <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-3">
@@ -382,10 +459,21 @@ const WorkerDashboard = () => {
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Assigned Ward</label>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Assigned Ward & Service Boundary Zone</label>
+                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
                         <Award className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <p className="text-sm font-bold text-gray-900">{profile.wardId || 'Unassigned'}</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : profile.wardId || 'Unassigned'}
+                        </p>
+                        {wardDetails?.boundary?.length >= 3 ? (
+                          <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                            Official Boundary Zone Active ({wardDetails.boundary.length} coordinates)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                            Digital Boundary Pending
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -464,10 +552,21 @@ const WorkerDashboard = () => {
                     </p>
 
                     <div className="pt-2 flex flex-wrap items-center gap-3">
-                      <span className="px-3 py-1 bg-emerald-900/80 border border-emerald-400/40 text-emerald-200 font-extrabold text-xs rounded-xl flex items-center gap-1.5">
+                      <span className="px-3.5 py-1.5 bg-emerald-900/80 border border-emerald-400/40 text-emerald-200 font-extrabold text-xs rounded-xl flex items-center gap-2">
                         <Award className="w-3.5 h-3.5 text-emerald-300" />
-                        Assigned Ward: {profile.wardId || 'Ward 1'}
+                        <span>Zone: {wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : profile.wardId || 'Assigned Ward'}</span>
+                        {wardDetails?.panchayatName && (
+                          <span className="bg-emerald-800 text-emerald-100 text-[10px] px-2 py-0.5 rounded-full border border-emerald-400/30">
+                            {wardDetails.panchayatName}
+                          </span>
+                        )}
                       </span>
+                      {wardDetails?.boundary?.length >= 3 && (
+                        <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 font-semibold text-xs rounded-xl flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          Official Boundary Polygon Active
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -549,6 +648,165 @@ const WorkerDashboard = () => {
                   <p className="text-[11px] font-semibold text-gray-500 flex items-center gap-1">
                     <Clock className="w-3 h-3 text-emerald-600" /> Daily collection active
                   </p>
+                </div>
+              </div>
+
+              {/* ASSIGNED WARD BOUNDARY ZONE & HOUSEHOLD COLLECTION MAP */}
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-emerald-100 shadow-md space-y-5 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-2xl bg-emerald-50 text-[#0a4d2c] shadow-2xs">
+                      <MapIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">
+                          Assigned Ward Boundary Zone
+                        </h2>
+                        {wardDetails?.boundary?.length >= 3 ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            Official Delimitation Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                            Digital Boundary Pending
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Official service boundary polygon for {wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : profile.wardId || 'Assigned Ward'}
+                        {wardDetails?.panchayatName ? ` • ${wardDetails.panchayatName} Panchayat` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {wardDetails?.boundary?.length >= 3 && (
+                      <button
+                        type="button"
+                        onClick={handleRecenterBoundary}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+                        title="Reset map view to assigned ward boundary"
+                      >
+                        <Target className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Center Boundary</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('Assigned Citizens')}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-[#0a4d2c] hover:bg-[#063820] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 text-emerald-200" />
+                      <span>View {wardCitizens.length} Households</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Leaflet Map Display */}
+                <div className="space-y-2">
+                  <div className="h-[380px] w-full rounded-2xl overflow-hidden border border-emerald-200 shadow-inner relative z-0">
+                    <MapContainer
+                      center={mapCenter}
+                      zoom={mapZoom}
+                      scrollWheelZoom={true}
+                      className="h-full w-full"
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <ChangeView center={mapCenter} zoom={mapZoom} />
+
+                      {/* Official Delimitation Boundary Polygon */}
+                      {wardDetails?.boundary && wardDetails.boundary.length >= 3 && (
+                        <Polygon
+                          positions={wardDetails.boundary}
+                          pathOptions={{
+                            color: '#059669',
+                            fillColor: '#10b981',
+                            fillOpacity: 0.18,
+                            weight: 3
+                          }}
+                        >
+                          <Tooltip sticky>
+                            <div className="p-1 text-xs">
+                              <p className="font-extrabold text-emerald-950 text-sm">
+                                {wardDetails.wardName || wardDetails.wardId} Official Boundary Zone
+                              </p>
+                              <p className="text-gray-600 font-medium">
+                                {wardDetails.panchayatName || 'Chirakkadavu'} Panchayat
+                              </p>
+                              <p className="text-emerald-700 text-[10px] font-bold mt-0.5">
+                                Official Delimitation (wardmap.ksmart.live)
+                              </p>
+                            </div>
+                          </Tooltip>
+                        </Polygon>
+                      )}
+
+                      {/* Registered Household Location Pins */}
+                      {wardCitizens
+                        .filter((c) => c.latitude && c.longitude && (c.latitude !== 0 || c.longitude !== 0))
+                        .map((c, idx) => (
+                          <Marker key={c.id || c.citizenId || idx} position={[c.latitude, c.longitude]}>
+                            <Popup>
+                              <div className="p-1 text-xs space-y-1 min-w-[160px]">
+                                <p className="font-bold text-emerald-950 text-sm">{c.fullName}</p>
+                                <p className="text-gray-700 font-semibold">
+                                  House No: {c.houseNumber || 'N/A'}{c.houseName ? ` (${c.houseName})` : ''}
+                                </p>
+                                <p className="text-gray-500 text-[11px] line-clamp-2">{c.address || 'Address registered'}</p>
+                                {c.phoneNumber && (
+                                  <p className="text-[11px] text-emerald-800 font-mono font-bold flex items-center gap-1 pt-0.5">
+                                    <Phone className="w-3 h-3 text-emerald-600" />
+                                    <span>{c.phoneNumber}</span>
+                                  </p>
+                                )}
+                                <div className="pt-1 border-t border-gray-100">
+                                  <a
+                                    href={`https://www.google.com/maps/dir/?api=1&destination=${c.latitude},${c.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:underline"
+                                  >
+                                    <Compass className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Navigate to House</span>
+                                  </a>
+                                </div>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        ))}
+                    </MapContainer>
+                  </div>
+
+                  {/* Map Legend & Summary Strip */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3.5 h-3.5 rounded bg-emerald-500/30 border-2 border-emerald-600" />
+                        <span className="font-bold text-gray-700">
+                          {wardDetails?.wardName || profile.wardId || 'Assigned'} Official Boundary Zone
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-blue-600 border border-white shadow-2xs" />
+                        <span className="text-gray-600 font-medium">
+                          Household Pins ({mapPinCount} Mapped)
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-gray-500 text-[11px]">
+                      <span>Coverage: </span>
+                      <span className="font-bold text-emerald-800">
+                        {totalCitizensCount > 0 ? `${Math.round((mapPinCount / totalCitizensCount) * 100)}% houses mapped` : '0 houses'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -45,3 +45,5 @@ C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\EcoMind.API.pdb
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\EcoMind.API.genruntimeconfig.cache
 C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\ref\EcoMind.API.dll
+c:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\bin\Debug\net8.0\Data\kerala_delimitation_boundaries.json
+C:\Users\achuz\OneDrive\Desktop\AJCE\miniproject\EcoMind AI\Backend\EcoMind.API\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

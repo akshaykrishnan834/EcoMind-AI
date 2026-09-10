@@ -297,6 +297,22 @@
   },
   {
     "ContainingType": "EcoMind.API.Controllers.PaymentController",
+    "Method": "CreateRazorpayOrder",
+    "RelativePath": "api/Payment/create-order",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EcoMind.API.DTOs.CreateRazorpayOrderDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.PaymentController",
     "Method": "GetCurrentMonthPayment",
     "RelativePath": "api/Payment/current/{citizenId}",
     "HttpMethod": "GET",
@@ -322,6 +338,38 @@
       {
         "Name": "dto",
         "Type": "EcoMind.API.DTOs.ProcessPaymentDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.PaymentController",
+    "Method": "ProcessWorkerPayment",
+    "RelativePath": "api/Payment/pay-worker",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EcoMind.API.DTOs.ProcessWorkerPaymentDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.PaymentController",
+    "Method": "VerifyRazorpaySignature",
+    "RelativePath": "api/Payment/verify-signature",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EcoMind.API.DTOs.VerifyRazorpayPaymentDto",
         "IsRequired": true
       }
     ],
@@ -546,6 +594,74 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.WardController",
+    "Method": "UpdateWardBoundary",
+    "RelativePath": "api/Ward/{wardId}/boundary",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "wardId",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "boundary",
+        "Type": "System.Collections.Generic.List\u00601[[System.Collections.Generic.List\u00601[[System.Double, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.WardController",
+    "Method": "IdentifyWard",
+    "RelativePath": "api/Ward/identify",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "lat",
+        "Type": "System.Double",
+        "IsRequired": false
+      },
+      {
+        "Name": "lng",
+        "Type": "System.Double",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EcoMind.API.Controllers.WardController",
+    "Method": "GetOfficialBoundary",
+    "RelativePath": "api/Ward/official-boundary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "panchayatName",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "wardIdentifier",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "wardName",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
     "ReturnTypes": []
   },
   {

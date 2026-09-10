@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Search, Filter, Plus, Building2, MapPin, CheckCircle2, RefreshCw, ChevronDown } from "lucide-react";
+import { Search, Filter, Plus, Building2, MapPin, CheckCircle2, RefreshCw, ChevronDown, Map as MapIcon, Globe, Sparkles } from "lucide-react";
+import WardBoundaryEditor from "../../components/WardBoundaryEditor";
 
 const Wards = ({ onAddWard }) => {
     const [wards, setWards] = useState([]);
@@ -9,6 +10,9 @@ const Wards = ({ onAddWard }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [loading, setLoading] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [syncMessage, setSyncMessage] = useState("");
+    const [editingWard, setEditingWard] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -36,6 +40,46 @@ const Wards = ({ onAddWard }) => {
             setPanchayats(data);
         } catch (error) {
             console.error("Error fetching panchayats:", error);
+        }
+    };
+
+    const syncOfficialBoundaries = async () => {
+        setSyncing(true);
+        setSyncMessage("Syncing official boundaries with Kerala Ward Delimitation Portal...");
+        try {
+            let updatedCount = 0;
+            const targetWards = selectedPanchayat === "All" 
+                ? wards 
+                : wards.filter(w => (w.panchayatName || w.panchayat || '').toLowerCase() === selectedPanchayat.toLowerCase());
+
+            for (const w of targetWards) {
+                const pName = w.panchayatName || w.panchayat || "Chirakkadavu";
+                try {
+                    const res = await axios.get("http://localhost:5214/api/Ward/official-boundary", {
+                        params: {
+                            panchayatName: pName,
+                            wardIdentifier: w.wardId,
+                            wardName: w.wardName
+                        }
+                    });
+
+                    if (res.data && res.data.boundary && res.data.boundary.length >= 3) {
+                        await axios.put(`http://localhost:5214/api/Ward/${w.wardId}/boundary`, res.data.boundary);
+                        updatedCount++;
+                    }
+                } catch {
+                    // skip unmatched ward safely
+                }
+            }
+
+            setSyncMessage(`✓ Successfully synchronized ${updatedCount} official boundaries from Kerala Delimitation Portal!`);
+            await fetchWards();
+        } catch (err) {
+            console.error("Sync error:", err);
+            setSyncMessage("Failed to synchronize some boundaries from portal.");
+        } finally {
+            setSyncing(false);
+            setTimeout(() => setSyncMessage(""), 6000);
         }
     };
 
@@ -85,6 +129,16 @@ const Wards = ({ onAddWard }) => {
 
                 <div className="flex items-center gap-3">
                     <button
+                        onClick={syncOfficialBoundaries}
+                        disabled={syncing}
+                        className="bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-300 px-4 py-2.5 rounded-lg font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        title="Auto-fetch and sync all official ward boundary polygons from Kerala Ward Delimitation Portal (wardmap.ksmart.live)"
+                    >
+                        <Globe className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                        <span>{syncing ? "Syncing..." : "Sync Kerala Boundaries"}</span>
+                    </button>
+
+                    <button
                         onClick={loadData}
                         className="p-2.5 rounded-lg border border-gray-200 hover:bg-emerald-50 text-gray-600 hover:text-[#0a4d2c] transition-colors cursor-pointer"
                         title="Refresh Wards Data"
@@ -101,6 +155,17 @@ const Wards = ({ onAddWard }) => {
                     </button>
                 </div>
             </div>
+
+            {syncMessage && (
+                <div className={`p-4 rounded-xl text-xs font-bold border flex items-center gap-2 ${
+                    syncMessage.includes('Successfully')
+                        ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                        : 'bg-blue-50 text-blue-900 border-blue-200'
+                }`}>
+                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{syncMessage}</span>
+                </div>
+            )}
 
             {/* Primary Panchayat Selection Dropdown Card */}
             <div className="bg-white rounded-2xl p-5 border border-emerald-100/80 shadow-xs space-y-4">
@@ -210,6 +275,7 @@ const Wards = ({ onAddWard }) => {
                                 <th className="p-3 text-left font-bold uppercase tracking-wider">Ward Name</th>
                                 <th className="p-3 text-left font-bold uppercase tracking-wider">Panchayat Name</th>
                                 <th className="p-3 text-left font-bold uppercase tracking-wider">Status</th>
+                                <th className="p-3 text-center font-bold uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
@@ -237,6 +303,27 @@ const Wards = ({ onAddWard }) => {
                                                 {ward.status || 'Active'}
                                             </span>
                                         </td>
+                                        <td className="p-3.5 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                {ward.boundary && ward.boundary.length >= 3 ? (
+                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md" title={`${ward.boundary.length} boundary points from official delimitation data`}>
+                                                        <Globe className="w-3 h-3 text-emerald-600" />
+                                                        Boundary Active
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
+                                                        No Boundary
+                                                    </span>
+                                                )}
+                                                <button
+                                                    onClick={() => setEditingWard(ward)}
+                                                    className="inline-flex items-center gap-1 px-3 py-1 bg-white hover:bg-emerald-50 text-[#0a4d2c] border border-emerald-300 rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                                                >
+                                                    <MapIcon className="w-3.5 h-3.5" />
+                                                    <span>Map View</span>
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
@@ -258,6 +345,16 @@ const Wards = ({ onAddWard }) => {
                     </table>
                 </div>
             </div>
+
+            {editingWard && (
+                <WardBoundaryEditor
+                    ward={editingWard}
+                    onClose={() => setEditingWard(null)}
+                    onSaved={() => {
+                        loadData();
+                    }}
+                />
+            )}
         </div>
     );
 };

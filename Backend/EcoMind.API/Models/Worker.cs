@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace EcoMind.API.Models
@@ -20,6 +20,8 @@ namespace EcoMind.API.Models
         public string WardId { get; set; } = string.Empty;
 
         public string Status { get; set; } = "Active";
+
+        public string CurrentWardId { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

@@ -33,5 +33,12 @@ namespace EcoMind.API.Repositories
         {
             await _wards.DeleteManyAsync(x => x.PanchayatName.ToLower() == panchayatName.ToLower());
         }
+
+        public async Task UpdateWardBoundaryAsync(string wardId, List<List<double>> boundary)
+        {
+            var filter = Builders<Ward>.Filter.Eq(x => x.WardId, wardId);
+            var update = Builders<Ward>.Update.Set(x => x.Boundary, boundary);
+            await _wards.UpdateOneAsync(filter, update);
+        }
     }
 }

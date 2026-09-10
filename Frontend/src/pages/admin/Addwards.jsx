@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Globe, Sparkles, CheckCircle2 } from "lucide-react";
 
 const AddWard = ({ onBack, onWardAdded }) => {
     const [wardId, setWardId] = useState("");
@@ -9,10 +10,50 @@ const AddWard = ({ onBack, onWardAdded }) => {
     const [status, setStatus] = useState("Active");
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
+    const [detectedBoundary, setDetectedBoundary] = useState(null);
+    const [boundaryStatus, setBoundaryStatus] = useState(null);
 
     useEffect(() => {
         fetchPanchayats();
     }, []);
+
+    // Automatic boundary detection from Kerala Delimitation Portal
+    useEffect(() => {
+        if (!wardId && !wardName) {
+            setDetectedBoundary(null);
+            setBoundaryStatus(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const res = await axios.get("http://localhost:5214/api/Ward/official-boundary", {
+                    params: {
+                        panchayatName: panchayatName || "Chirakkadavu",
+                        wardIdentifier: wardId,
+                        wardName: wardName
+                    }
+                });
+
+                if (res.data && res.data.boundary && res.data.boundary.length >= 3) {
+                    setDetectedBoundary(res.data.boundary);
+                    setBoundaryStatus({
+                        type: "success",
+                        count: res.data.boundary.length,
+                        source: res.data.source
+                    });
+                } else {
+                    setDetectedBoundary(null);
+                    setBoundaryStatus(null);
+                }
+            } catch {
+                setDetectedBoundary(null);
+                setBoundaryStatus(null);
+            }
+        }, 350);
+
+        return () => clearTimeout(timer);
+    }, [wardId, wardName, panchayatName]);
 
     const fetchPanchayats = async () => {
         try {
@@ -36,11 +77,17 @@ const AddWard = ({ onBack, onWardAdded }) => {
                 wardId,
                 wardName,
                 panchayatName,
-                status
+                status,
+                boundary: detectedBoundary || []
             });
-            setMessage({ type: "success", text: "Ward added successfully!" });
+            const boundaryMsg = detectedBoundary && detectedBoundary.length > 0
+                ? " Ward and official Delimitation boundary linked successfully!"
+                : " Ward added successfully!";
+            setMessage({ type: "success", text: boundaryMsg });
             setWardId("");
             setWardName("");
+            setDetectedBoundary(null);
+            setBoundaryStatus(null);
             if (onWardAdded) onWardAdded();
         } catch (error) {
             console.error("Error adding ward:", error);
@@ -125,6 +172,21 @@ const AddWard = ({ onBack, onWardAdded }) => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                     </div>
+
+                    {/* Auto-detected Boundary Status from Kerala Delimitation Portal */}
+                    {boundaryStatus && (
+                        <div className="p-3 bg-emerald-50/90 border border-emerald-200 rounded-xl flex items-start gap-2.5 animate-fadeIn">
+                            <Sparkles className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                            <div className="text-xs">
+                                <span className="font-bold text-emerald-900">
+                                    Official Ward Boundary Detected!
+                                </span>
+                                <p className="text-emerald-700 text-[11px] mt-0.5">
+                                    Found <strong>{boundaryStatus.count}</strong> polygon coordinates from Kerala Delimitation Portal (<code>wardmap.ksmart.live</code>). It will be linked automatically upon creation.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Status</label>

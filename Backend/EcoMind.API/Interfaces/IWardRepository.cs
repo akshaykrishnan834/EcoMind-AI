@@ -11,5 +11,7 @@ namespace EcoMind.API.Interfaces
         Task<Ward?> GetWardByIdAsync(string wardId);
 
         Task DeleteWardsByPanchayatNameAsync(string panchayatName);
+
+        Task UpdateWardBoundaryAsync(string wardId, List<List<double>> boundary);
     }
 }

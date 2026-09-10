@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace EcoMind.API.Models
@@ -17,5 +17,8 @@ namespace EcoMind.API.Models
         public string PanchayatName { get; set; } = string.Empty;
 
         public string Status { get; set; } = "Active";
+
+        // Boundary Coordinates [Latitude, Longitude]
+        public List<List<double>> Boundary { get; set; } = new List<List<double>>();
     }
 }

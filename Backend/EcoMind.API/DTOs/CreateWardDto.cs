@@ -1,4 +1,4 @@
-﻿namespace EcoMind.API.DTOs
+namespace EcoMind.API.DTOs
 {
     public class CreateWardDto
     {
@@ -9,5 +9,6 @@
         public string PanchayatName { get; set; } = string.Empty;
 
         public string Status { get; set; } = "Active";
+        public List<List<double>>? Boundary { get; set; }
     }
 }
