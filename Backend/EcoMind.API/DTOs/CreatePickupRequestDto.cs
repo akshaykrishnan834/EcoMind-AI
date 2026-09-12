@@ -20,6 +20,7 @@ namespace EcoMind.API.DTOs
     public class CompletePickupRequestDto
     {
         public string? WorkerId { get; set; }
+        public string VerificationCode { get; set; } = string.Empty;
     }
 
     // Response DTO for Ward Worker & Admin view

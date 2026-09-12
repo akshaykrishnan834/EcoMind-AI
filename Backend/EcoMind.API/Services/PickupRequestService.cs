@@ -79,6 +79,13 @@ namespace EcoMind.API.Services
                 volume = char.ToUpper(volume[0]) + volume.Substring(1).ToLower();
             }
 
+            // Generate unique 4-digit verification code
+            string verificationCode;
+            do
+            {
+                verificationCode = Random.Shared.Next(1000, 10000).ToString();
+            } while (await _pickupRepository.VerificationCodeExistsAsync(verificationCode));
+
             // Create pickup request
             var request = new PickupRequest
             {
@@ -89,7 +96,8 @@ namespace EcoMind.API.Services
                 OverallCategory = "Recyclable Plastic",
                 Status = "Pending",
                 CollectionDate = null,
-                RequestedAt = DateTime.UtcNow
+                RequestedAt = DateTime.UtcNow,
+                VerificationCode = verificationCode
             };
 
             await _pickupRepository.CreateAsync(request);
@@ -227,7 +235,7 @@ namespace EcoMind.API.Services
             return await _pickupRepository.ScheduleRequestAsync(requestId, workerId, collectionDate);
         }
 
-        public async Task<bool> CompleteRequestAsync(string requestId, string? workerId = null)
+        public async Task<bool> CompleteRequestAsync(string requestId, string? workerId = null, string verificationCode = "")
         {
             if (string.IsNullOrWhiteSpace(requestId))
             {
@@ -250,6 +258,17 @@ namespace EcoMind.API.Services
                 !request.AcceptedByWorkerId.Equals(workerId, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Only the assigned worker can complete this pickup request.");
+            }
+
+            // Verify unique verification code provided by citizen
+            if (string.IsNullOrWhiteSpace(verificationCode))
+            {
+                throw new ArgumentException("Verification code is required to complete pickup.");
+            }
+
+            if (!string.Equals(request.VerificationCode?.Trim(), verificationCode.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Invalid verification code. Please check with citizen and enter the correct 4-digit code.");
             }
 
             return await _pickupRepository.CompleteRequestAsync(requestId);

@@ -33,7 +33,8 @@ namespace EcoMind.API.Controllers
                     message = "Pickup request submitted successfully.",
                     requestId = request.RequestId,
                     status = request.Status,
-                    collectionDate = request.CollectionDate
+                    collectionDate = request.CollectionDate,
+                    verificationCode = request.VerificationCode
                 });
             }
             catch (ArgumentException ex)
@@ -69,7 +70,8 @@ namespace EcoMind.API.Controllers
                 r.CollectionDate,
                 r.AcceptedByWorkerId,
                 r.AcceptedAt,
-                r.CollectedAt
+                r.CollectedAt,
+                r.VerificationCode
             });
             return Ok(response);
         }
@@ -143,7 +145,10 @@ namespace EcoMind.API.Controllers
         {
             try
             {
-                var updated = await _pickupService.CompleteRequestAsync(requestId, dto?.WorkerId);
+                var updated = await _pickupService.CompleteRequestAsync(
+                    requestId,
+                    dto?.WorkerId,
+                    dto?.VerificationCode ?? string.Empty);
                 if (!updated)
                 {
                     return NotFound(new { message = "Pickup request not found." });

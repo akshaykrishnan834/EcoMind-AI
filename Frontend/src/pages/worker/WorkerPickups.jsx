@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, CheckCircle2, Clock, AlertCircle, RefreshCw, MapPin, User, Calendar, Check } from 'lucide-react';
-import { getWardPickupRequests, schedulePickupRequest, completePickupRequest } from '../../services/pickupRequestService';
+import { Truck, CheckCircle2, Clock, AlertCircle, RefreshCw, MapPin, User, Calendar, Check, ShieldCheck, Loader2 } from 'lucide-react';
+import { getWardPickupRequests, schedulePickupRequest } from '../../services/pickupRequestService';
+import OTPVerificationModal from '../../components/OTPVerificationModal';
 
 const WorkerPickups = ({ wardId, workerId }) => {
   const [requests, setRequests] = useState([]);
@@ -9,6 +10,10 @@ const WorkerPickups = ({ wardId, workerId }) => {
   const [successMsg, setSuccessMsg] = useState('');
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Pending' | 'Scheduled' | 'Completed'
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  
+  // Verification Modal States
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [selectedOtpRequestId, setSelectedOtpRequestId] = useState(null);
 
   // Location Tracking States
   const [currentWardId, setCurrentWardId] = useState(null);
@@ -121,22 +126,18 @@ const WorkerPickups = ({ wardId, workerId }) => {
   };
 
   // Worker Marks Request as Collected / Completed (Requirement 4: Status: Completed)
-  const handleComplete = async (requestId) => {
-    setActionLoadingId(requestId);
+  // Worker Clicks Complete Pickup -> opens modal to enter citizen's 4-digit verification code
+  const handleCompleteClick = (requestId) => {
     setError('');
     setSuccessMsg('');
+    setSelectedOtpRequestId(requestId);
+    setShowOtpModal(true);
+  };
 
-    try {
-      await completePickupRequest(requestId, workerId || 'WORKER001');
-      setSuccessMsg(`Pickup Request ${requestId} marked as collected & completed!`);
-      setTimeout(() => setSuccessMsg(''), 5000);
-      await fetchPickups();
-    } catch (err) {
-      console.error('Error completing pickup request:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to mark pickup request as collected.');
-    } finally {
-      setActionLoadingId(null);
-    }
+  const handleOtpSuccess = async () => {
+    setSuccessMsg('Pickup successfully verified and completed.');
+    setTimeout(() => setSuccessMsg(''), 5000);
+    await fetchPickups();
   };
 
   const filteredRequests = requests.filter(req => {
@@ -415,9 +416,19 @@ const WorkerPickups = ({ wardId, workerId }) => {
                   )}
 
                   {isScheduled && (
-                    <div className="w-full py-2.5 text-center text-xs font-extrabold text-[#0f5b37] bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5 uppercase tracking-wider">
-                      <CheckCircle2 className="w-4 h-4 text-[#0f5b37]" />
-                      <span>Request Accepted</span>
+                    <div className="space-y-2">
+                      <div className="w-full py-2.5 text-center text-xs font-extrabold text-[#0f5b37] bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5 uppercase tracking-wider mb-2">
+                        <CheckCircle2 className="w-4 h-4 text-[#0f5b37]" />
+                        <span>Request Accepted</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCompleteClick(req.requestId)}
+                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-blue-200" />
+                        <span>Complete Pickup</span>
+                      </button>
                     </div>
                   )}
 
@@ -433,6 +444,18 @@ const WorkerPickups = ({ wardId, workerId }) => {
           })}
         </div>
       )}
+
+      {/* Verification Code Modal */}
+      <OTPVerificationModal
+        isOpen={showOtpModal}
+        onClose={() => {
+          setShowOtpModal(false);
+          setSelectedOtpRequestId(null);
+        }}
+        requestId={selectedOtpRequestId}
+        workerId={workerId || 'WORKER001'}
+        onSuccess={handleOtpSuccess}
+      />
     </div>
   );
 };

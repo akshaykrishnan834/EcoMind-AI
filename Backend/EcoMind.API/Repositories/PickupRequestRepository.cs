@@ -31,10 +31,23 @@ namespace EcoMind.API.Repositories
         public async Task<List<PickupRequest>> GetByCitizenIdAsync(
             string citizenId)
         {
-            return await _requests
+            var list = await _requests
                 .Find(x => x.CitizenId == citizenId)
                 .SortByDescending(x => x.RequestedAt)
                 .ToListAsync();
+
+            foreach (var req in list)
+            {
+                if (string.IsNullOrWhiteSpace(req.VerificationCode) && req.Status != "Cancelled")
+                {
+                    req.VerificationCode = Random.Shared.Next(1000, 10000).ToString();
+                    await _requests.UpdateOneAsync(
+                        x => x.RequestId == req.RequestId,
+                        Builders<PickupRequest>.Update.Set(x => x.VerificationCode, req.VerificationCode));
+                }
+            }
+
+            return list;
         }
 
         public async Task<PickupRequest?> GetCurrentMonthRequestByCitizenIdAsync(
@@ -44,13 +57,23 @@ namespace EcoMind.API.Repositories
             var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var endOfMonth = startOfMonth.AddMonths(1);
 
-            return await _requests
+            var req = await _requests
                 .Find(x => x.CitizenId == citizenId &&
                            x.RequestedAt >= startOfMonth &&
                            x.RequestedAt < endOfMonth &&
                            x.Status != "Cancelled")
                 .SortByDescending(x => x.RequestedAt)
                 .FirstOrDefaultAsync();
+
+            if (req != null && string.IsNullOrWhiteSpace(req.VerificationCode))
+            {
+                req.VerificationCode = Random.Shared.Next(1000, 10000).ToString();
+                await _requests.UpdateOneAsync(
+                    x => x.RequestId == req.RequestId,
+                    Builders<PickupRequest>.Update.Set(x => x.VerificationCode, req.VerificationCode));
+            }
+
+            return req;
         }
 
         public async Task<List<PickupRequest>> GetWardRequestsAsync(
@@ -74,9 +97,19 @@ namespace EcoMind.API.Repositories
         public async Task<PickupRequest?> GetByRequestIdAsync(
             string requestId)
         {
-            return await _requests
+            var req = await _requests
                 .Find(x => x.RequestId == requestId)
                 .FirstOrDefaultAsync();
+
+            if (req != null && string.IsNullOrWhiteSpace(req.VerificationCode))
+            {
+                req.VerificationCode = Random.Shared.Next(1000, 10000).ToString();
+                await _requests.UpdateOneAsync(
+                    x => x.RequestId == req.RequestId,
+                    Builders<PickupRequest>.Update.Set(x => x.VerificationCode, req.VerificationCode));
+            }
+
+            return req;
         }
 
         public async Task<bool> ScheduleRequestAsync(
@@ -111,6 +144,15 @@ namespace EcoMind.API.Repositories
                 update);
 
             return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> VerificationCodeExistsAsync(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code)) return false;
+
+            return await _requests
+                .Find(x => x.VerificationCode == code && x.Status != "Completed" && x.Status != "Cancelled")
+                .AnyAsync();
         }
 
         public async Task<bool> UpdateStatusAsync(

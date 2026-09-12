@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, MapPin, Truck, CheckCircle2, AlertCircle, Clock, Calendar, Info, Send, Package } from 'lucide-react';
+import { Home, MapPin, Truck, CheckCircle2, AlertCircle, Clock, Calendar, Info, Send, Package, KeyRound } from 'lucide-react';
 import { createPickupRequest, getMonthlyStatus } from '../services/pickupRequestService';
 
 const PickupRequest = ({ citizenData }) => {
@@ -66,7 +66,8 @@ const PickupRequest = ({ citizenData }) => {
       setSubmissionResult({
         requestId: response.requestId || response.id || `REQ-${Math.floor(1000 + Math.random() * 9000)}`,
         status: response.status || 'Pending',
-        message: response.message || 'Pickup request submitted successfully.'
+        message: response.message || 'Pickup request submitted successfully.',
+        verificationCode: response.verificationCode || ''
       });
       setStep('success');
       checkMonthlyLimit();
@@ -265,6 +266,32 @@ const PickupRequest = ({ citizenData }) => {
               </div>
             )}
 
+            {/* 4-Digit Pickup Completion Verification Code (Shown only to Citizen) */}
+            {existingMonthlyRequest.verificationCode && (
+              <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-500/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-center gap-3 text-left">
+                  <div className="p-2.5 bg-[#0a4d2c] text-white rounded-xl shrink-0">
+                    <KeyRound className="w-5 h-5 text-emerald-300" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0a4d2c] block">
+                      Pickup Verification Code
+                    </span>
+                    <p className="text-xs text-gray-600 font-medium">
+                      Provide this 4-digit code to the Haritha Karma Sena worker upon collection to complete pickup.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white px-5 py-2.5 rounded-2xl border-2 border-[#0a4d2c] shadow-xs shrink-0 text-center">
+                  <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Your Code</span>
+                  <span className="text-2xl font-black tracking-[8px] font-mono text-[#0a4d2c]">
+                    {existingMonthlyRequest.verificationCode}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pt-1">
               <div>
                 <span className="text-gray-500 font-medium block">Requested Date:</span>
@@ -444,26 +471,44 @@ const PickupRequest = ({ citizenData }) => {
             </p>
           </div>
 
-          {/* Request ID & Status Card */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 grid grid-cols-2 gap-4 max-w-md mx-auto text-center">
-            <div>
-              <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">
-                Generated Request ID
-              </span>
-              <span className="text-lg font-extrabold text-[#0a4d2c]">
-                {submissionResult?.requestId}
-              </span>
+          {/* Request ID, Status & Verification Code Card */}
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 max-w-md mx-auto text-center space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">
+                  Generated Request ID
+                </span>
+                <span className="text-lg font-extrabold text-[#0a4d2c]">
+                  {submissionResult?.requestId}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">
+                  Status
+                </span>
+                <span className="inline-flex items-center gap-1 text-sm font-extrabold text-amber-700 bg-amber-100 px-3 py-1 rounded-full mt-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  {submissionResult?.status || 'Pending'}
+                </span>
+              </div>
             </div>
 
-            <div>
-              <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">
-                Status
-              </span>
-              <span className="inline-flex items-center gap-1 text-sm font-extrabold text-amber-700 bg-amber-100 px-3 py-1 rounded-full mt-1">
-                <Clock className="w-3.5 h-3.5" />
-                {submissionResult?.status || 'Pending'}
-              </span>
-            </div>
+            {submissionResult?.verificationCode && (
+              <div className="pt-3 border-t border-emerald-200">
+                <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">
+                  Pickup Verification Code (Share with Worker)
+                </span>
+                <div className="inline-block mt-1 bg-white px-6 py-2.5 rounded-2xl border-2 border-[#0a4d2c] shadow-xs">
+                  <span className="text-2xl font-black tracking-[8px] font-mono text-[#0a4d2c]">
+                    {submissionResult.verificationCode}
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-800 font-medium mt-1">
+                  Keep this 4-digit code safe. Provide it to the worker upon waste collection to verify pickup.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

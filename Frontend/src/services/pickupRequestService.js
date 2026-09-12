@@ -70,14 +70,16 @@ export const schedulePickupRequest = async (requestId, workerId, collectionDate)
 };
 
 /**
- * Worker marks a pickup request as collected/completed
+ * Worker marks a pickup request as collected/completed using citizen's 4-digit verification code
  * @param {string} requestId - Public request ID
  * @param {string} [workerId] - Optional Worker ID
+ * @param {string} verificationCode - 4-digit verification code provided by citizen
  * @returns {Promise<Object>} Updated status response
  */
-export const completePickupRequest = async (requestId, workerId) => {
+export const completePickupRequest = async (requestId, workerId, verificationCode) => {
   const response = await axios.put(`${API_URL}/${encodeURIComponent(requestId)}/complete`, {
-    workerId
+    workerId,
+    verificationCode
   });
   return response.data;
 };

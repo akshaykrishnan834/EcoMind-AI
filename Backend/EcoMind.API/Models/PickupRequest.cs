@@ -47,5 +47,8 @@ namespace EcoMind.API.Models
 
         // Filled when waste is collected by worker
         public DateTime? CollectedAt { get; set; }
+
+        // Unique 4-digit verification code shown only to citizen for pickup completion verification
+        public string VerificationCode { get; set; } = string.Empty;
     }
 }

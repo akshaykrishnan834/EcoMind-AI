@@ -26,7 +26,8 @@ namespace EcoMind.API.Interfaces
 
         Task<bool> CompleteRequestAsync(
             string requestId,
-            string? workerId = null);
+            string? workerId = null,
+            string verificationCode = "");
 
         Task<bool> UpdateStatusAsync(
             string requestId,

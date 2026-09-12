@@ -31,6 +31,9 @@ namespace EcoMind.API.Interfaces
         Task<bool> CompleteRequestAsync(
             string requestId);
 
+        Task<bool> VerificationCodeExistsAsync(
+            string code);
+
         Task<bool> UpdateStatusAsync(
             string requestId,
             string status);

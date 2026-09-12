@@ -29,7 +29,8 @@ import {
   FileText,
   RefreshCw,
   Leaf,
-  CreditCard
+  CreditCard,
+  KeyRound
 } from 'lucide-react';
 import { getCitizenByEmail } from '../services/citizenService';
 import { getCitizenRequests, getMonthlyStatus } from '../services/pickupRequestService';
@@ -209,6 +210,7 @@ const CitizenDashboard = () => {
       (currentMonthRequest.status || '').toLowerCase() === 'completed' || (currentMonthRequest.status || '').toLowerCase() === 'collected' ? 4 : 1,
     workerName: currentMonthRequest.acceptedByWorkerId ? `Haritha Karma Sena (${currentMonthRequest.acceptedByWorkerId})` : senaWorkerName,
     workerPhone: senaWorkerPhone,
+    verificationCode: currentMonthRequest.verificationCode || '',
     notes: 'Please keep dried non-biodegradable plastics ready at the gate.'
   } : {
     id: 'REQ-8492',
@@ -570,6 +572,15 @@ const CitizenDashboard = () => {
                           <User className="w-3.5 h-3.5 text-emerald-700" />
                           Assigned Team: <span className="font-extrabold text-gray-800">{ongoingWork.workerName}</span> ({ongoingWork.workerPhone})
                         </p>
+                        {ongoingWork.verificationCode && (
+                          <div className="mt-2 inline-flex items-center gap-2 bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-xl">
+                            <KeyRound className="w-3.5 h-3.5 text-[#0a4d2c]" />
+                            <span className="text-[11px] font-bold text-[#0a4d2c]">Pickup Verification Code:</span>
+                            <span className="text-sm font-black font-mono tracking-widest text-[#0a4d2c]">
+                              {ongoingWork.verificationCode}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
