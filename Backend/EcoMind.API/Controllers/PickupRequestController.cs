@@ -88,11 +88,19 @@ namespace EcoMind.API.Controllers
             });
         }
 
-        // 2. Worker views requests in their ward (Requirement 2)
+        // 2. Worker views requests in their ward (Requirement 2) - supports filtering by workerId
         [HttpGet("ward/{wardId}")]
-        public async Task<IActionResult> GetWardRequests(string wardId)
+        public async Task<IActionResult> GetWardRequests(string wardId, [FromQuery] string? workerId = null)
         {
-            var requests = await _pickupService.GetWardRequestsAsync(wardId);
+            var requests = await _pickupService.GetWardRequestsAsync(wardId, workerId);
+            return Ok(requests);
+        }
+
+        // Worker views their assigned requests + pending in their ward
+        [HttpGet("worker/{workerId}")]
+        public async Task<IActionResult> GetWorkerRequests(string workerId)
+        {
+            var requests = await _pickupService.GetWorkerRequestsAsync(workerId);
             return Ok(requests);
         }
 

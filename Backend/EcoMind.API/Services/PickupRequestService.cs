@@ -8,6 +8,7 @@ namespace EcoMind.API.Services
     {
         private readonly IPickupRequestRepository _pickupRepository;
         private readonly ICitizenRepository _citizenRepository;
+        private readonly IWorkerRepository _workerRepository;
 
         private static readonly HashSet<string> AllowedVolumes = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -18,10 +19,12 @@ namespace EcoMind.API.Services
 
         public PickupRequestService(
             IPickupRequestRepository pickupRepository,
-            ICitizenRepository citizenRepository)
+            ICitizenRepository citizenRepository,
+            IWorkerRepository workerRepository)
         {
             _pickupRepository = pickupRepository;
             _citizenRepository = citizenRepository;
+            _workerRepository = workerRepository;
         }
 
         public async Task<PickupRequest?> CreateAsync(CreatePickupRequestDto dto)
@@ -44,60 +47,36 @@ namespace EcoMind.API.Services
 
             if (existingMonthlyRequest != null)
             {
-                throw new InvalidOperationException("Your monthly plastic pickup request has already been submitted.");
+                throw new InvalidOperationException("Citizen has already submitted a plastic waste pickup request for this month.");
             }
 
-            // Citizen must have completed profile
-            if (!citizen.ProfileCompleted || string.IsNullOrWhiteSpace(citizen.HouseNumber))
-            {
-                throw new InvalidOperationException(
-                    "Please complete your profile details (House Number, Address, Ward) before requesting pickup.");
-            }
-
-            // Citizen must have location
-            if (citizen.Latitude == 0 && citizen.Longitude == 0)
-            {
-                throw new InvalidOperationException(
-                    "Please set your house location in your profile before requesting pickup.");
-            }
-
-            // Mandatory check: Citizen profile MUST be verified by Admin
-            if (!citizen.IsVerified && citizen.Status != "Verified")
-            {
-                throw new InvalidOperationException(
-                    "Your profile must be verified by an Admin before creating pickup requests. Current profile status: " + (string.IsNullOrWhiteSpace(citizen.Status) ? "Pending Verification" : citizen.Status));
-            }
-
-            // Validate Estimated Volume
-            string volume = (dto.EstimatedVolume ?? "").Trim();
+            // Parse estimated volume safely
+            var volume = string.IsNullOrWhiteSpace(dto.EstimatedVolume) ? "Medium" : dto.EstimatedVolume.Trim();
             if (!AllowedVolumes.Contains(volume))
             {
                 volume = "Medium";
             }
-            else
-            {
-                volume = char.ToUpper(volume[0]) + volume.Substring(1).ToLower();
-            }
 
             // Generate unique 4-digit verification code
-            string verificationCode;
+            string code;
             do
             {
-                verificationCode = Random.Shared.Next(1000, 10000).ToString();
-            } while (await _pickupRepository.VerificationCodeExistsAsync(verificationCode));
+                code = Random.Shared.Next(1000, 10000).ToString();
+            } while (await _pickupRepository.VerificationCodeExistsAsync(code));
 
-            // Create pickup request
             var request = new PickupRequest
             {
                 RequestId = "REQ" + Random.Shared.Next(100000, 999999),
                 CitizenId = citizen.CitizenId,
                 WardId = citizen.WardId,
                 EstimatedVolume = volume,
-                OverallCategory = "Recyclable Plastic",
+                OverallCategory = string.IsNullOrWhiteSpace(dto.OverallCategory) ? "Recyclable Plastic" : dto.OverallCategory.Trim(),
+                AIAnalyzed = dto.AIAnalyzed,
+                AIConfidence = dto.AIConfidence,
+                SegregationAdvice = dto.SegregationAdvice ?? string.Empty,
                 Status = "Pending",
-                CollectionDate = null,
                 RequestedAt = DateTime.UtcNow,
-                VerificationCode = verificationCode
+                VerificationCode = code
             };
 
             await _pickupRepository.CreateAsync(request);
@@ -108,44 +87,7 @@ namespace EcoMind.API.Services
         public async Task<List<WardPickupRequestResponseDto>> GetAllRequestsAsync()
         {
             var rawRequests = await _pickupRepository.GetAllAsync();
-            var allCitizens = await _citizenRepository.GetAllCitizensAsync();
-            var citizenDict = allCitizens.ToDictionary(
-                c => c.CitizenId, 
-                c => c, 
-                StringComparer.OrdinalIgnoreCase);
-
-            var responseList = new List<WardPickupRequestResponseDto>();
-
-            foreach (var req in rawRequests)
-            {
-                citizenDict.TryGetValue(req.CitizenId, out var citizen);
-
-                responseList.Add(new WardPickupRequestResponseDto
-                {
-                    Id = req.Id,
-                    RequestId = req.RequestId,
-                    CitizenId = req.CitizenId,
-                    WardId = req.WardId,
-                    EstimatedVolume = string.IsNullOrWhiteSpace(req.EstimatedVolume) ? "Medium" : req.EstimatedVolume,
-                    OverallCategory = req.OverallCategory,
-                    Status = req.Status,
-                    AcceptedByWorkerId = req.AcceptedByWorkerId,
-                    AcceptedAt = req.AcceptedAt,
-                    CollectionDate = req.CollectionDate,
-                    RequestedAt = req.RequestedAt,
-                    CollectedAt = req.CollectedAt,
-                    // Dynamic citizen details
-                    CitizenName = citizen?.FullName ?? "Citizen",
-                    HouseName = citizen?.HouseName ?? "",
-                    HouseNumber = citizen?.HouseNumber ?? "",
-                    Address = citizen?.Address ?? "",
-                    Latitude = citizen?.Latitude ?? 0,
-                    Longitude = citizen?.Longitude ?? 0,
-                    PhoneNumber = citizen?.PhoneNumber ?? ""
-                });
-            }
-
-            return responseList;
+            return await MapToResponseDtosAsync(rawRequests);
         }
 
         public async Task<PickupRequest?> GetCurrentMonthRequestAsync(string citizenId)
@@ -166,14 +108,64 @@ namespace EcoMind.API.Services
             return await _pickupRepository.GetByCitizenIdAsync(targetId);
         }
 
-        public async Task<List<WardPickupRequestResponseDto>> GetWardRequestsAsync(string wardId)
+        public async Task<List<WardPickupRequestResponseDto>> GetWardRequestsAsync(string wardId, string? workerId = null)
         {
-            var rawRequests = await _pickupRepository.GetWardRequestsAsync(wardId);
+            string? workerEmail = null;
+            string? workerCode = null;
+
+            if (!string.IsNullOrWhiteSpace(workerId))
+            {
+                var cleanWorker = workerId.Trim();
+                var worker = await _workerRepository.GetWorkerByEmailAsync(cleanWorker);
+                if (worker == null)
+                {
+                    var allWorkers = await _workerRepository.GetAllWorkersAsync();
+                    worker = allWorkers.FirstOrDefault(w =>
+                        w.WorkerId.Equals(cleanWorker, StringComparison.OrdinalIgnoreCase) ||
+                        w.Email.Equals(cleanWorker, StringComparison.OrdinalIgnoreCase));
+                }
+
+                workerEmail = worker?.Email ?? cleanWorker;
+                workerCode = worker?.WorkerId ?? cleanWorker;
+            }
+
+            var rawRequests = await _pickupRepository.GetWardRequestsAsync(wardId, workerEmail, workerCode);
+            return await MapToResponseDtosAsync(rawRequests);
+        }
+
+        public async Task<List<WardPickupRequestResponseDto>> GetWorkerRequestsAsync(string workerId)
+        {
+            if (string.IsNullOrWhiteSpace(workerId)) return new List<WardPickupRequestResponseDto>();
+
+            var cleanWorker = workerId.Trim();
+            var worker = await _workerRepository.GetWorkerByEmailAsync(cleanWorker);
+            if (worker == null)
+            {
+                var allWorkers = await _workerRepository.GetAllWorkersAsync();
+                worker = allWorkers.FirstOrDefault(w =>
+                    w.WorkerId.Equals(cleanWorker, StringComparison.OrdinalIgnoreCase) ||
+                    w.Email.Equals(cleanWorker, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var workerEmail = worker?.Email ?? cleanWorker;
+            var workerCode = worker?.WorkerId ?? cleanWorker;
+            var wardId = worker?.WardId;
+
+            var rawRequests = await _pickupRepository.GetWorkerRequestsAsync(workerEmail, workerCode, wardId);
+            return await MapToResponseDtosAsync(rawRequests);
+        }
+
+        private async Task<List<WardPickupRequestResponseDto>> MapToResponseDtosAsync(List<PickupRequest> rawRequests)
+        {
             var allCitizens = await _citizenRepository.GetAllCitizensAsync();
-            var citizenDict = allCitizens.ToDictionary(
-                c => c.CitizenId, 
-                c => c, 
-                StringComparer.OrdinalIgnoreCase);
+            var citizenDict = new Dictionary<string, Citizen>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in allCitizens)
+            {
+                if (!string.IsNullOrWhiteSpace(c.CitizenId))
+                {
+                    citizenDict[c.CitizenId] = c;
+                }
+            }
 
             var responseList = new List<WardPickupRequestResponseDto>();
 
@@ -189,12 +181,16 @@ namespace EcoMind.API.Services
                     WardId = req.WardId,
                     EstimatedVolume = string.IsNullOrWhiteSpace(req.EstimatedVolume) ? "Medium" : req.EstimatedVolume,
                     OverallCategory = req.OverallCategory,
-                    Status = req.Status,
+                    Status = req.Status.Equals("Collected", StringComparison.OrdinalIgnoreCase) ? "Completed" : req.Status,
                     AcceptedByWorkerId = req.AcceptedByWorkerId,
                     AcceptedAt = req.AcceptedAt,
                     CollectionDate = req.CollectionDate,
                     RequestedAt = req.RequestedAt,
                     CollectedAt = req.CollectedAt,
+                    AIAnalyzed = req.AIAnalyzed,
+                    AIConfidence = req.AIConfidence,
+                    SegregationAdvice = req.SegregationAdvice ?? "",
+                    VerificationCode = req.VerificationCode ?? "",
                     // Dynamic citizen details
                     CitizenName = citizen?.FullName ?? "Citizen",
                     HouseName = citizen?.HouseName ?? "",
@@ -255,9 +251,31 @@ namespace EcoMind.API.Services
 
             if (!string.IsNullOrWhiteSpace(workerId) && 
                 !string.IsNullOrWhiteSpace(request.AcceptedByWorkerId) &&
-                !request.AcceptedByWorkerId.Equals(workerId, StringComparison.OrdinalIgnoreCase))
+                !request.AcceptedByWorkerId.Equals(workerId.Trim(), StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException("Only the assigned worker can complete this pickup request.");
+                var cleanWorkerId = workerId.Trim();
+                var worker = await _workerRepository.GetWorkerByEmailAsync(cleanWorkerId);
+                bool matched = false;
+                if (worker != null)
+                {
+                    matched = request.AcceptedByWorkerId.Equals(worker.WorkerId, StringComparison.OrdinalIgnoreCase) ||
+                              request.AcceptedByWorkerId.Equals(worker.Email, StringComparison.OrdinalIgnoreCase);
+                }
+                else
+                {
+                    var allWorkers = await _workerRepository.GetAllWorkersAsync();
+                    var w = allWorkers.FirstOrDefault(x => x.WorkerId.Equals(cleanWorkerId, StringComparison.OrdinalIgnoreCase));
+                    if (w != null)
+                    {
+                        matched = request.AcceptedByWorkerId.Equals(w.WorkerId, StringComparison.OrdinalIgnoreCase) ||
+                                  request.AcceptedByWorkerId.Equals(w.Email, StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+
+                if (!matched)
+                {
+                    throw new InvalidOperationException("Only the assigned worker can complete this pickup request.");
+                }
             }
 
             // Verify unique verification code provided by citizen

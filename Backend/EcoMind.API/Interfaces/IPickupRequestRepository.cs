@@ -15,7 +15,14 @@ namespace EcoMind.API.Interfaces
             string citizenId);
 
         Task<List<PickupRequest>> GetWardRequestsAsync(
-            string wardId);
+            string wardId,
+            string? workerEmail = null,
+            string? workerCode = null);
+
+        Task<List<PickupRequest>> GetWorkerRequestsAsync(
+            string workerEmail,
+            string workerCode,
+            string? wardId = null);
 
         Task<List<PickupRequest>> GetPendingByWardAsync(
             string wardId);

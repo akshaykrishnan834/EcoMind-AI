@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle2, Clock, Truck, ShieldCheck, RefreshCw, FileText, AlertCircle, MapPin, Home, Info, Award, UserCheck, Check, DollarSign, Download, Printer } from 'lucide-react';
+import { Calendar, CheckCircle2, XCircle, Clock, Truck, ShieldCheck, RefreshCw, FileText, AlertCircle, MapPin, Home, Info, Award, UserCheck, Check, DollarSign, Download, Printer, FileSpreadsheet } from 'lucide-react';
 import { getCitizenRequests } from '../services/pickupRequestService';
 import { getCitizenPayments } from '../services/paymentService';
 
@@ -108,10 +108,160 @@ const CollectionRecords = ({ citizenData }) => {
     window.print();
   };
 
+  const handleExportExcel = () => {
+    const sanitize = (text) => (text || '').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const now = new Date();
+    const currentYearNow = now.getFullYear();
+    const currentMonthNow = now.getMonth() + 1;
+
+    let tableRows = '';
+    availableYears.forEach((year) => {
+      const visibleMonths = MONTH_NAMES.filter((m) => {
+        if (year === joinYear) return m.monthNum >= joinMonth;
+        return true;
+      });
+
+      visibleMonths.forEach((m) => {
+        const reqKey = `${year}-${m.monthNum}`;
+        const req = requestMap[reqKey];
+        const payRecord = paymentMap[reqKey];
+
+        const isCompleted = req && ((req.status || '').toLowerCase() === 'completed' || (req.status || '').toLowerCase() === 'collected');
+        const isScheduled = req && ((req.status || '').toLowerCase() === 'scheduled' || (req.status || '').toLowerCase() === 'accepted');
+        const isPaidFee = payRecord && (payRecord.status || '').toLowerCase() === 'paid';
+        const isPastMonth = year < currentYearNow || (year === currentYearNow && m.monthNum < currentMonthNow);
+        const isCurrentMonth = year === currentYearNow && m.monthNum === currentMonthNow;
+
+        let dateDisplay = '-';
+        if (req?.collectedAt) {
+          dateDisplay = new Date(req.collectedAt).toLocaleDateString('en-GB');
+        } else if (req?.collectionDate) {
+          dateDisplay = new Date(req.collectionDate).toLocaleDateString('en-GB');
+        } else if (req?.requestedAt) {
+          dateDisplay = new Date(req.requestedAt).toLocaleDateString('en-GB');
+        }
+
+        const rtNo = req?.requestId ? req.requestId.replace(/^REQ-?/, '') : '-';
+        const fee = '₹50';
+        const payment = isPaidFee ? 'Paid ₹50' : isPastMonth ? 'Pending Due ₹50' : 'Unpaid ₹50';
+        const paymentBg = isPaidFee ? '#d1fae5; color: #065f46;' : isPastMonth ? '#fee2e2; color: #991b1b;' : '#fef3c7; color: #92400e;';
+
+        const verified = isCompleted ? 'Verified by Worker' : isScheduled ? 'Scheduled' : req ? 'Pending' : '-';
+        const result = isCompleted ? 'Success' : isPastMonth ? 'Failed' : isCurrentMonth ? (req ? 'In Progress' : 'Pending') : '-';
+        const resultBg = isCompleted ? '#d1fae5; color: #065f46; font-weight: bold;' : isPastMonth ? '#fee2e2; color: #991b1b; font-weight: bold;' : '';
+
+        tableRows += `
+          <tr>
+            <td style="text-align: center; border: 1px solid #d1d5db; padding: 6px;">${year}</td>
+            <td style="text-align: center; border: 1px solid #d1d5db; padding: 6px; font-weight: bold; background: #ecfdf5; color: #065f46;">${m.full} (${m.short})</td>
+            <td style="text-align: center; border: 1px solid #d1d5db; padding: 6px; font-family: monospace;">${dateDisplay}</td>
+            <td style="text-align: center; border: 1px solid #d1d5db; padding: 6px; font-family: monospace;">${rtNo}</td>
+            <td style="text-align: center; border: 1px solid #d1d5db; padding: 6px; font-weight: bold; color: #065f46;">${fee}</td>
+            <td style="text-align: center; border: 1px solid #d1d5db; padding: 6px; font-weight: bold; background: ${paymentBg}">${payment}</td>
+            <td style="text-align: center; border: 1px solid #d1d5db; padding: 6px;">${verified}</td>
+            <td style="text-align: center; border: 1px solid #d1d5db; padding: 6px; background: ${resultBg}">${result}</td>
+          </tr>
+        `;
+      });
+    });
+
+    const excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8">
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Collection Card</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheet>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; }
+          .title { background-color: #0a4d2c; color: #ffffff; font-weight: bold; font-size: 14pt; text-align: center; }
+          .subtitle { background-color: #ecfdf5; color: #065f46; font-weight: bold; text-align: center; }
+          .meta-label { font-weight: bold; color: #4b5563; background: #f9fafb; border: 1px solid #e5e7eb; }
+          .meta-val { font-weight: bold; color: #111827; border: 1px solid #e5e7eb; }
+          th { background-color: #0a4d2c; color: #ffffff; font-weight: bold; border: 1px solid #064e3b; padding: 8px; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <tr>
+            <td colspan="8" class="title" height="38">
+              യൂസർ ഫീ കളക്ഷൻ കാർഡ് • HARITHA KARMA SENA DOORSTEP COLLECTION CARD
+            </td>
+          </tr>
+          <tr>
+            <td colspan="8" class="subtitle" height="24">
+              Local Self Government Department (LSGD) • ${sanitize(panchayatName)} Grama Panchayat • ${sanitize(wardId)}
+            </td>
+          </tr>
+          <tr><td></td></tr>
+          <tr>
+            <td class="meta-label">Citizen Name:</td>
+            <td class="meta-val">${sanitize(citizenName)}</td>
+            <td class="meta-label">Citizen ID:</td>
+            <td class="meta-val">${sanitize(citizenId)}</td>
+            <td class="meta-label">House:</td>
+            <td class="meta-val" colspan="3">${sanitize(houseName)} (No: ${sanitize(houseNumber)})</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Ward ID:</td>
+            <td class="meta-val">${sanitize(wardId)}</td>
+            <td class="meta-label">Joining Date:</td>
+            <td class="meta-val">${sanitize(joinMonthName)} ${sanitize(joinYear)}</td>
+            <td class="meta-label">User Fee:</td>
+            <td class="meta-val" colspan="3">₹ 50 / Month</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Export Date:</td>
+            <td class="meta-val" colspan="7">${new Date().toLocaleString()}</td>
+          </tr>
+          <tr><td></td></tr>
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Month</th>
+              <th>Pickup Date</th>
+              <th>Receipt / Rt.No</th>
+              <th>Fee</th>
+              <th>Payment Status</th>
+              <th>Verified by Worker</th>
+              <th>Collection Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Collection_Card_${citizenName.replace(/\s+/g, '_')}_${new Date().getFullYear()}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const joinMonthName = MONTH_NAMES.find(m => m.monthNum === joinMonth)?.full || '';
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn pb-12 print:p-0 print:m-0 print:space-y-4">
       {/* Top Banner & Print Action */}
       <div className="bg-gradient-to-r from-[#0a4d2c] via-[#0f5b37] to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
         <div className="space-y-2">
@@ -127,22 +277,32 @@ const CollectionRecords = ({ citizenData }) => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             onClick={fetchRecords}
             disabled={loading}
-            className="px-4 py-2.5 bg-emerald-900/80 hover:bg-emerald-950 border border-emerald-400/40 text-emerald-200 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            className="px-3.5 py-2.5 bg-emerald-900/80 hover:bg-emerald-950 border border-emerald-400/40 text-emerald-200 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
 
           <button
+            onClick={handleExportExcel}
+            className="px-4 py-2.5 bg-emerald-800 hover:bg-emerald-700 border border-emerald-400/50 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            title="Download formatted Excel spreadsheet of collection records"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-300" />
+            <span>Export Excel</span>
+          </button>
+
+          <button
             onClick={handlePrint}
-            className="px-5 py-2.5 bg-white text-[#0a4d2c] hover:bg-emerald-50 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2.5 bg-white text-[#0a4d2c] hover:bg-emerald-50 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            title="Print or Save Card as PDF"
           >
             <Printer className="w-4 h-4 text-[#0a4d2c]" />
-            <span>Print Card</span>
+            <span>Print / PDF Card</span>
           </button>
         </div>
       </div>
@@ -202,36 +362,36 @@ const CollectionRecords = ({ citizenData }) => {
           </div>
         </div>
 
-        {/* AUTHENTIC MULTI-YEAR PHYSICAL CARD GRID TABLE */}
-        <div className="overflow-x-auto bg-white rounded-2xl border-2 border-emerald-800 shadow-sm p-4 sm:p-6">
-          <div className={`min-w-[760px] grid gap-6 divide-x-2 divide-emerald-800/40 ${availableYears.length === 1 ? 'grid-cols-1' : availableYears.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-            }`}>
+        {/* AUTHENTIC MULTI-YEAR PHYSICAL CARD VERTICAL FORMAT */}
+        <div className="space-y-6">
+          {availableYears.slice(-3).map((year) => {
+            // For joining year (e.g. 2024), filter months starting strictly from joinMonth onwards (e.g. June to Dec)
+            const visibleMonths = MONTH_NAMES.filter((m) => {
+              if (year === joinYear) {
+                return m.monthNum >= joinMonth;
+              }
+              return true; // Subsequent years show all 12 months
+            });
 
-            {availableYears.slice(-3).map((year) => {
-              // For joining year (e.g. 2024), filter months starting strictly from joinMonth onwards (e.g. June to Dec)
-              const visibleMonths = MONTH_NAMES.filter((m) => {
-                if (year === joinYear) {
-                  return m.monthNum >= joinMonth;
-                }
-                return true; // Subsequent years show all 12 months
-              });
+            return (
+              <div key={year} className="bg-white rounded-2xl border-2 border-emerald-800 shadow-sm p-4 sm:p-6 space-y-4">
+                {/* Year Header */}
+                <div className="bg-[#0a4d2c] text-white text-center py-2.5 rounded-xl font-black text-lg sm:text-xl tracking-wider border-2 border-[#0a4d2c] shadow-xs">
+                  {year} {year === joinYear && <span className="text-xs font-normal opacity-90">(Joined {joinMonthName})</span>}
+                </div>
 
-              return (
-                <div key={year} className="space-y-3 px-2 first:pl-0 last:pr-0">
-                  {/* Year Header */}
-                  <div className="bg-[#0a4d2c] text-white text-center py-2 rounded-xl font-black text-lg tracking-wider border-2 border-[#0a4d2c] shadow-xs">
-                    {year} {year === joinYear && <span className="text-xs font-normal opacity-90">(Joined {joinMonthName})</span>}
-                  </div>
-
-                  {/* Monthly Table */}
-                  <table className="w-full border-collapse text-xs">
+                {/* Monthly Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-xs min-w-[680px]">
                     <thead>
-                      <tr className="bg-emerald-100/80 text-emerald-950 border-b-2 border-emerald-800">
-                        <th className="py-2 px-1 text-center font-extrabold border-r border-emerald-300 w-[12%]">Month</th>
-                        <th className="py-2 px-1 text-center font-extrabold border-r border-emerald-300 w-[20%]">Date</th>
-                        <th className="py-2 px-1 text-center font-extrabold border-r border-emerald-300 w-[18%]">Rt.No</th>
-                        <th className="py-2 px-1 text-center font-extrabold border-r border-emerald-300 w-[15%]">Fee</th>
-                        <th className="py-2 px-1 text-center font-extrabold w-[35%]">Status & Verification</th>
+                      <tr className="bg-emerald-100/90 text-emerald-950 border-b-2 border-emerald-800">
+                        <th className="py-2.5 px-2 text-center font-extrabold border-r border-emerald-300 w-[9%] uppercase tracking-wider text-[11px]">Month</th>
+                        <th className="py-2.5 px-2 text-center font-extrabold border-r border-emerald-300 w-[15%] uppercase tracking-wider text-[11px]">Pickup Date</th>
+                        <th className="py-2.5 px-2 text-center font-extrabold border-r border-emerald-300 w-[12%] uppercase tracking-wider text-[11px]">Rt.No</th>
+                        <th className="py-2.5 px-2 text-center font-extrabold border-r border-emerald-300 w-[8%] uppercase tracking-wider text-[11px]">Fee</th>
+                        <th className="py-2.5 px-2 text-center font-extrabold border-r border-emerald-300 w-[20%] uppercase tracking-wider text-[11px]">Payment</th>
+                        <th className="py-2.5 px-2 text-center font-extrabold border-r border-emerald-300 w-[21%] uppercase tracking-wider text-[11px]">Verified by Worker</th>
+                        <th className="py-2.5 px-2 text-center font-extrabold w-[15%] uppercase tracking-wider text-[11px]">Result</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-emerald-200">
@@ -241,6 +401,7 @@ const CollectionRecords = ({ citizenData }) => {
 
                         const isCompleted = req && ((req.status || '').toLowerCase() === 'completed' || (req.status || '').toLowerCase() === 'collected');
                         const isScheduled = req && ((req.status || '').toLowerCase() === 'scheduled' || (req.status || '').toLowerCase() === 'accepted');
+                        const isPending = req && ((req.status || '').toLowerCase() === 'pending');
 
                         // Format date string
                         let dateDisplay = '-';
@@ -253,6 +414,14 @@ const CollectionRecords = ({ citizenData }) => {
                             dateDisplay = new Date(req.requestedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
                           }
                         }
+
+                        const payRecord = paymentMap[reqKey];
+                        const isPaidFee = payRecord && (payRecord.status || '').toLowerCase() === 'paid';
+                        const now = new Date();
+                        const currentYearNow = now.getFullYear();
+                        const currentMonthNow = now.getMonth() + 1;
+                        const isPastMonth = year < currentYearNow || (year === currentYearNow && m.monthNum < currentMonthNow);
+                        const isCurrentMonth = year === currentYearNow && m.monthNum === currentMonthNow;
 
                         return (
                           <tr
@@ -267,71 +436,120 @@ const CollectionRecords = ({ citizenData }) => {
                               }`}
                           >
                             {/* Month Abbreviation */}
-                            <td className="py-1 px-1 font-extrabold text-[#0a4d2c] text-center border-r border-emerald-200 bg-emerald-50/80">
+                            <td className="py-2 px-2 font-extrabold text-[#0a4d2c] text-center border-r border-emerald-200 bg-emerald-50/80">
                               {m.short}
                             </td>
 
-                            {/* Collection Date */}
-                            <td className="py-1 px-1 text-center border-r border-emerald-200 font-mono text-[11px] text-gray-800">
+                            {/* Pickup Date */}
+                            <td className="py-2 px-2 text-center border-r border-emerald-200 font-mono text-[11px] text-gray-800">
                               {dateDisplay}
                             </td>
 
                             {/* Rt.No (Receipt / Request ID) */}
-                            <td className="py-1 px-1 text-center border-r border-emerald-200 font-mono text-[10px] font-bold text-gray-700 truncate max-w-[55px]">
+                            <td className="py-2 px-2 text-center border-r border-emerald-200 font-mono text-[11px] font-bold text-gray-700">
                               {req?.requestId ? req.requestId.replace(/^REQ-?/, '') : '-'}
                             </td>
 
                             {/* Amount */}
-                            <td className="py-1 px-1 text-center border-r border-emerald-200 font-extrabold text-[#0a4d2c] text-[11px]">
+                            <td className="py-2 px-2 text-center border-r border-emerald-200 font-extrabold text-[#0a4d2c] text-[11px]">
                               ₹50
                             </td>
 
-                            {/* Status & Verification (Delivery Complete + Payment Paid) */}
-                            <td className="py-1 px-1 text-center">
-                              {(() => {
-                                const payRecord = paymentMap[reqKey];
-                                const isPaidFee = payRecord && (payRecord.status || '').toLowerCase() === 'paid';
-                                const now = new Date();
-                                const isPastMonth = year < now.getFullYear() || (year === now.getFullYear() && m.monthNum < (now.getMonth() + 1));
+                            {/* Payment Column (Separate) */}
+                            <td className="py-2 px-2 text-center border-r border-emerald-200">
+                              {isPaidFee ? (
+                                <span
+                                  title={`User Fee Paid (₹50) via ${payRecord?.paymentMethod || 'Online'}`}
+                                  className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-emerald-700 text-white font-extrabold text-[10px] rounded-md shadow-2xs whitespace-nowrap"
+                                >
+                                  <Check className="w-3 h-3 text-white stroke-[3]" />
+                                  <span>Paid ₹50</span>
+                                </span>
+                              ) : isPastMonth ? (
+                                <span
+                                  title="Previous Month Unpaid - Pending Due"
+                                  className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-rose-100 text-rose-800 font-extrabold text-[10px] rounded-md border border-rose-300 whitespace-nowrap"
+                                >
+                                  <span>Pending Due ₹50</span>
+                                </span>
+                              ) : (
+                                <span
+                                  title="Current Month Fee Unpaid"
+                                  className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-amber-100 text-amber-900 font-bold text-[10px] rounded-md border border-amber-300 whitespace-nowrap"
+                                >
+                                  <span>Unpaid ₹50</span>
+                                </span>
+                              )}
+                            </td>
 
-                                return (
-                                  <div className="flex items-center justify-center gap-1 flex-wrap">
-                                    {isCompleted && (
-                                      <span
-                                        title={`Verified & Collected by HKS Worker ${req.acceptedByWorkerId || ''}`}
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-[#0a4d2c] font-extrabold text-[9px] rounded border border-emerald-300"
-                                      >
-                                        <Check className="w-2.5 h-2.5 text-[#0a4d2c] stroke-[3]" />
-                                        <span>Collected</span>
-                                      </span>
-                                    )}
+                            {/* Verified by Worker Column (Separate) */}
+                            <td className="py-2 px-2 text-center border-r border-emerald-200">
+                              {isCompleted ? (
+                                <span
+                                  title={`Verified & Collected by HKS Worker ${req?.acceptedByWorkerId || ''}`}
+                                  className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-emerald-100 text-[#0a4d2c] font-extrabold text-[10px] rounded-md border border-emerald-300 whitespace-nowrap shadow-2xs"
+                                >
+                                  <Check className="w-3 h-3 text-[#0a4d2c] stroke-[3]" />
+                                  <span>Verified</span>
+                                </span>
+                              ) : isScheduled ? (
+                                <span
+                                  title="Scheduled - Awaiting worker collection & verification"
+                                  className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-100 text-blue-900 font-bold text-[10px] rounded-md border border-blue-200 whitespace-nowrap"
+                                >
+                                  <Clock className="w-3 h-3 text-blue-700" />
+                                  <span>Scheduled</span>
+                                </span>
+                              ) : req ? (
+                                <span
+                                  title="Pickup Request Pending Worker Allocation"
+                                  className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-amber-50 text-amber-800 font-medium text-[10px] rounded-md border border-amber-200 whitespace-nowrap"
+                                >
+                                  <span>Pending</span>
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 font-mono text-xs">-</span>
+                              )}
+                            </td>
 
-                                    {isPaidFee ? (
-                                      <span
-                                        title={`User Fee Paid (₹50) via ${payRecord.paymentMethod || 'Online'}`}
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-700 text-white font-extrabold text-[9px] rounded shadow-2xs"
-                                      >
-                                        <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
-                                        <span>Paid ₹50</span>
-                                      </span>
-                                    ) : isPastMonth ? (
-                                      <span
-                                        title="Previous Month Unpaid - Pending Due"
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-rose-100 text-rose-800 font-extrabold text-[9px] rounded border border-rose-300"
-                                      >
-                                        <span>Pending Due ₹50</span>
-                                      </span>
-                                    ) : (
-                                      <span
-                                        title="Current Month Fee Unpaid"
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-900 font-extrabold text-[9px] rounded border border-amber-300"
-                                      >
-                                        <span>Unpaid ₹50</span>
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })()}
+                            {/* Result Column (Success or Failed) */}
+                            <td className="py-2 px-2 text-center">
+                              {isCompleted ? (
+                                <span
+                                  title="Pickup successfully completed and verified"
+                                  className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-emerald-100 text-[#0a4d2c] font-black text-[10px] rounded-md border border-emerald-300 shadow-2xs whitespace-nowrap"
+                                >
+                                  <CheckCircle2 className="w-3 h-3 text-[#0a4d2c] stroke-[2.5]" />
+                                  <span>Success</span>
+                                </span>
+                              ) : isPastMonth ? (
+                                <span
+                                  title="Month passed and scheduled pickup was not completed - Request Failed"
+                                  className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-800 font-black text-[10px] rounded-md border border-rose-300 shadow-2xs whitespace-nowrap"
+                                >
+                                  <XCircle className="w-3 h-3 text-rose-700 stroke-[2.5]" />
+                                  <span>Failed</span>
+                                </span>
+                              ) : isCurrentMonth ? (
+                                req ? (
+                                  <span
+                                    title="Pickup currently active / scheduled in current month"
+                                    className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-50 text-blue-900 font-bold text-[10px] rounded-md border border-blue-200 whitespace-nowrap"
+                                  >
+                                    <Clock className="w-3 h-3 text-blue-700" />
+                                    <span>In Progress</span>
+                                  </span>
+                                ) : (
+                                  <span
+                                    title="No pickup requested yet for current month"
+                                    className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-amber-50 text-amber-900 font-bold text-[10px] rounded-md border border-amber-200 whitespace-nowrap"
+                                  >
+                                    <span>Pending</span>
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-gray-400 font-mono text-xs">-</span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -339,10 +557,9 @@ const CollectionRecords = ({ citizenData }) => {
                     </tbody>
                   </table>
                 </div>
-              );
-            })}
-
-          </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Card Footer Guidelines & Instructions */}
@@ -359,10 +576,16 @@ const CollectionRecords = ({ citizenData }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-gray-700 leading-relaxed">
             <div>
-              • Haritha Karma Sena volunteers collect plastic waste every month between the 15th and 25th.
+              • <strong>Verified by Worker:</strong> Confirms dry waste handover authenticated by assigned Haritha Karma Sena worker.
             </div>
             <div>
-              • Please ensure plastic waste is cleaned, dried, and properly bundled prior to collection.
+              • <strong>Result (Success / Failed):</strong> Marked as <strong>Success</strong> upon verified collection. If a calendar month has passed and the scheduled pickup was not completed, it is marked as <strong>Failed</strong>.
+            </div>
+            <div>
+              • <strong>Payment Status:</strong> Reflects monthly user fee receipts recorded via online portal or direct collection receipt.
+            </div>
+            <div>
+              • <strong>Pickup Date:</strong> Scheduled or completed doorstep collection cycle (15th–25th window).
             </div>
           </div>
         </div>

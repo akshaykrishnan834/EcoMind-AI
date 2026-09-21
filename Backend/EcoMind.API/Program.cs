@@ -12,7 +12,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .AllowAnyOrigin()
-            .AllowAnyHeader()
+             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
@@ -51,6 +51,9 @@ builder.Services.AddScoped<IWorkerService, WorkerService>();
 builder.Services.AddScoped<ICitizenRepository, CitizenRepository>();
 builder.Services.AddScoped<ICitizenService, CitizenService>();
 
+builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+builder.Services.AddScoped<IMessageService, MessageService>();
+
 builder.Services.AddScoped<
     IPickupRequestRepository,
     PickupRequestRepository>();
@@ -58,6 +61,8 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IPickupRequestService,
     PickupRequestService>();
+
+builder.Services.AddHttpClient<IAIService, GeminiAIService>();
 
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();

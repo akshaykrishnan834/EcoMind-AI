@@ -56,8 +56,23 @@ namespace EcoMind.API.Repositories
                 return new List<Citizen>();
             }
 
+            var cleanWard = wardId.Trim();
+            var patterns = new List<string> { $"^{System.Text.RegularExpressions.Regex.Escape(cleanWard)}$" };
+            var digitsMatch = System.Text.RegularExpressions.Regex.Match(cleanWard, @"\d+");
+            if (digitsMatch.Success && int.TryParse(digitsMatch.Value, out int wardNum))
+            {
+                patterns.Add($"^W0*{wardNum}$");
+                patterns.Add($"^Ward\\s*0*{wardNum}$");
+                patterns.Add($"^{wardNum}$");
+            }
+
+            var regexPattern = string.Join("|", patterns.Distinct());
+            var filter = Builders<Citizen>.Filter.Regex(
+                x => x.WardId,
+                new MongoDB.Bson.BsonRegularExpression(regexPattern, "i"));
+
             return await _citizens
-                .Find(x => x.WardId == wardId)
+                .Find(filter)
                 .ToListAsync();
         }
 

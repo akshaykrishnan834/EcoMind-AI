@@ -3,7 +3,17 @@ import Header from '../components/Header';
 import WorkerSidebar from '../components/WorkerSidebar';
 import WorkerCitizens from './worker/WorkerCitizens';
 import WorkerPickups from './worker/WorkerPickups';
+import WorkerCollectionHistory from './worker/WorkerCollectionHistory';
+import WorkerCollectionMap from './worker/WorkerCollectionMap';
+import WorkerNotifications from './worker/WorkerNotifications';
+import WorkerLocationZone from './worker/WorkerLocationZone';
+import WorkerPaymentCollection from './worker/WorkerPaymentCollection';
+import WorkerPerformance from './worker/WorkerPerformance';
+import WorkerProfile from './worker/WorkerProfile';
+import WorkerSmartCollection from './worker/WorkerSmartCollection';
+import CitizenWorkerChat from '../components/CitizenWorkerChat';
 import Footer from '../components/Footer';
+import { getWardPickupRequests } from '../services/pickupRequestService';
 import { useNavigate } from 'react-router-dom';
 import {
   User,
@@ -30,7 +40,11 @@ import {
   Truck,
   Map as MapIcon,
   Target,
-  Compass
+  Compass,
+  History,
+  IndianRupee,
+  BarChart3,
+  Bell
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -92,8 +106,8 @@ const WorkerDashboard = () => {
   });
 
   // Ward & Citizen Summary Stats
-  // Ward & Citizen Summary Stats
   const [wardCitizens, setWardCitizens] = useState([]);
+  const [wardPickupRequests, setWardPickupRequests] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [wardDetails, setWardDetails] = useState(null);
   const [mapZoom, setMapZoom] = useState(15);
@@ -215,6 +229,18 @@ const WorkerDashboard = () => {
       );
 
       setWardCitizens(verifiedCitizensList);
+
+      // Fetch ward pickup requests for worker chat & tasks
+      const activeWorkerEmail = profile.email || initialUser.email || '';
+      try {
+        let reqs = await getWardPickupRequests(workerWard || 'Ward 1', activeWorkerEmail);
+        if (!Array.isArray(reqs) || reqs.length === 0) {
+          reqs = await getWardPickupRequests(workerWard || 'Ward 1');
+        }
+        setWardPickupRequests(Array.isArray(reqs) ? reqs : []);
+      } catch (reqErr) {
+        console.warn("Failed to load ward pickup requests:", reqErr);
+      }
     } catch (err) {
       console.error("Dashboard data load error:", err);
     } finally {
@@ -225,6 +251,28 @@ const WorkerDashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Re-fetch ward pickup requests whenever worker enters Chat tab so new requests immediately appear
+  useEffect(() => {
+    if (activeTab === 'Messages' || activeTab === 'Citizen Chat' || activeTab === 'Chat') {
+      const activeWorkerEmail = profile.email || initialUser.email || '';
+      const workerWard = profile.wardId || initialUser.wardId || '';
+      getWardPickupRequests(workerWard || 'Ward 1', activeWorkerEmail)
+        .then((reqs) => {
+          if (Array.isArray(reqs) && reqs.length > 0) {
+            setWardPickupRequests(reqs);
+          } else {
+            return getWardPickupRequests(workerWard || 'Ward 1');
+          }
+        })
+        .then((allReqs) => {
+          if (Array.isArray(allReqs) && allReqs.length > 0) {
+            setWardPickupRequests(allReqs);
+          }
+        })
+        .catch((e) => console.warn('Chat tab requests refresh error:', e));
+    }
+  }, [activeTab, profile.email, profile.wardId]);
 
   // Protect route & prevent back-button access after logout
   useEffect(() => {
@@ -368,163 +416,59 @@ const WorkerDashboard = () => {
             </div>
           )}
 
-          {activeTab === 'Profile' ? (
+          {activeTab === 'Profile' || activeTab === 'My Profile' ? (
             /* WORKER PROFILE SECTION */
-            <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn">
-              {/* Glassmorphic Profile Banner */}
-              <div className="bg-gradient-to-r from-[#0a4d2c] via-[#0f5b37] to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute right-0 top-0 translate-x-1/4 -translate-y-1/4 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
-                  <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-white/10 border-4 border-white/20 flex items-center justify-center text-3xl font-extrabold shadow-inner shrink-0 backdrop-blur-md text-emerald-200">
-                      {profile.fullName[0] ? profile.fullName[0].toUpperCase() : <User className="w-12 h-12" />}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-semibold">
-                        <BadgeCheck className="w-4 h-4 text-emerald-300" />
-                        <span>Haritha Karma Sena Worker</span>
-                      </div>
-
-                      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                        {profile.fullName}
-                      </h1>
-
-                      <p className="text-xs sm:text-sm text-emerald-100/90 font-medium">
-                        Assigned Ward: <span className="font-extrabold text-white underline">{wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : profile.wardId || 'Ward 1'}</span>
-                      </p>
-
-                      <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                        <span className="inline-flex items-center gap-1.5 text-xs bg-white/15 px-3 py-1 rounded-full text-emerald-100 font-medium border border-white/20">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" /> Active Service Duty
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleOpenEditModal}
-                    className="py-3 px-6 bg-white text-[#0a4d2c] hover:bg-emerald-50 font-extrabold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                    <span>Edit Profile</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Profile Information Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Personal Information */}
-                <div className="bg-white rounded-2xl p-6 border border-emerald-100 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2.5 rounded-xl bg-emerald-50 text-[#0a4d2c]">
-                        <User className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h2 className="text-base font-extrabold text-gray-900">Personal Information</h2>
-                        <p className="text-xs text-gray-500">Contact & personal profile details</p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={handleOpenEditModal}
-                      className="text-xs font-bold text-[#0a4d2c] hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> Edit
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 pt-1">
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Full Name</label>
-                      <p className="text-sm font-semibold text-gray-800 mt-0.5">{profile.fullName}</p>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Email Address</label>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Mail className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <p className="text-sm font-semibold text-gray-800">{profile.email}</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Mobile Number</label>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <p className="text-sm font-bold text-[#0a4d2c]">{profile.phone || 'N/A'}</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Assigned Ward & Service Boundary Zone</label>
-                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                        <Award className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <p className="text-sm font-bold text-gray-900">
-                          {wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : profile.wardId || 'Unassigned'}
-                        </p>
-                        {wardDetails?.boundary?.length >= 3 ? (
-                          <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                            Official Boundary Zone Active ({wardDetails.boundary.length} coordinates)
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                            Digital Boundary Pending
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Organization & Scope Info */}
-                <div className="bg-white rounded-2xl p-6 border border-emerald-100 shadow-xs space-y-4">
-                  <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
-                    <div className="p-2.5 rounded-xl bg-emerald-50 text-[#0a4d2c]">
-                      <Building2 className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-extrabold text-gray-900">Organization & Service Unit</h2>
-                      <p className="text-xs text-gray-500">Government service affiliation</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 pt-1">
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Organization</label>
-                      <p className="text-sm font-semibold text-gray-800 mt-0.5">Haritha Karma Sena (HKS)</p>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Department</label>
-                      <p className="text-sm font-semibold text-gray-800 mt-0.5">Local Self Government Department (LSGD), Kerala</p>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Service Scope</label>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <p className="text-sm font-semibold text-gray-800">Smart Waste Collection & Recycling Management</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</label>
-                      <div className="mt-0.5">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          Active Registered Worker
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <WorkerProfile
+              profile={profile}
+              wardDetails={wardDetails}
+              onOpenEditModal={handleOpenEditModal}
+            />
+          ) : activeTab === 'Smart Collection' ? (
+            /* SMART COLLECTION SEQUENTIAL ROUTE TAB */
+            <WorkerSmartCollection
+              wardId={profile.wardId || 'Ward 1'}
+              wardDetails={wardDetails}
+              workerProfile={profile}
+              initialCitizens={wardCitizens}
+            />
+          ) : activeTab === 'Collection Map' ? (
+            /* COLLECTION MAP & ROUTE NAVIGATOR TAB */
+            <WorkerCollectionMap
+              wardId={profile.wardId || 'Ward 1'}
+              wardDetails={wardDetails}
+              workerProfile={profile}
+              initialCitizens={wardCitizens}
+            />
           ) : activeTab === 'Pickup Requests' || activeTab === 'Plastic Pickups' ? (
             /* WARD PLASTIC PICKUPS TAB */
             <WorkerPickups wardId={profile.wardId || 'Ward 1'} workerId={profile.email || 'WORKER001'} />
+          ) : activeTab === 'Messages' || activeTab === 'Citizen Chat' || activeTab === 'Chat' ? (
+            /* CITIZEN DIRECT CHAT TAB */
+            <CitizenWorkerChat
+              currentUser={{
+                id: profile.email || profile.workerId || 'WORKER001',
+                name: profile.fullName || 'Worker',
+                role: 'Worker',
+                email: profile.email
+              }}
+              pickupRequests={wardPickupRequests}
+              onBack={() => setActiveTab('Dashboard')}
+            />
+          ) : activeTab === 'Collection History' ? (
+            /* COLLECTION HISTORY TAB */
+            <WorkerCollectionHistory wardId={profile.wardId || 'Ward 1'} workerId={profile.email || 'WORKER001'} />
+          ) : activeTab === 'Notifications' ? (
+            /* NOTIFICATIONS TAB */
+            <WorkerNotifications wardId={profile.wardId || 'Ward 1'} workerId={profile.email || 'WORKER001'} />
+          ) : activeTab === 'Payment Collection' ? (
+            /* CASH PAYMENT COLLECTION TAB */
+            <WorkerPaymentCollection wardId={profile.wardId || 'Ward 1'} workerProfile={profile} />
+          ) : activeTab === 'My Location' || activeTab === 'My Location / Zone' || activeTab === 'Current Zone' ? (
+            /* LIVE LOCATION & BOUNDARY ZONE TAB */
+            <WorkerLocationZone wardDetails={wardDetails} wardCitizens={wardCitizens} profile={profile} />
+          ) : activeTab === 'My Performance' ? (
+            /* PERFORMANCE ANALYTICS TAB */
+            <WorkerPerformance wardId={profile.wardId || 'Ward 1'} workerId={profile.email || 'WORKER001'} profile={profile} />
           ) : activeTab === 'Assigned Citizens' || activeTab === 'Ward Citizens' ? (
             /* WARD CITIZENS DIRECTORY TAB */
             <WorkerCitizens />
@@ -696,6 +640,15 @@ const WorkerDashboard = () => {
 
                     <button
                       type="button"
+                      onClick={() => setActiveTab('Collection Map')}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                    >
+                      <MapIcon className="w-3.5 h-3.5" />
+                      <span>Collection Route Map</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => setActiveTab('Assigned Citizens')}
                       className="flex items-center gap-1.5 px-4 py-2 bg-[#0a4d2c] hover:bg-[#063820] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
                     >
@@ -811,64 +764,185 @@ const WorkerDashboard = () => {
               </div>
 
               {/* Dashboard Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Ward Collection Summary Card */}
-                <div className="bg-white p-6 rounded-2xl border border-emerald-100 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2.5 rounded-xl bg-emerald-50 text-[#0a4d2c]">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* 1. Ward Citizens Directory */}
+                <div className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-2xs space-y-4 flex flex-col justify-between hover:shadow-md transition-all">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
+                      <div className="p-2.5 rounded-2xl bg-emerald-50 text-[#0a4d2c]">
                         <Users className="w-5 h-5" />
                       </div>
                       <div>
-                        <h2 className="text-base font-extrabold text-gray-900">Ward Citizens Management</h2>
-                        <p className="text-xs text-gray-500">Citizens registered under {profile.wardId || 'Assigned Ward'}</p>
+                        <h2 className="text-base font-extrabold text-gray-900">Ward Citizens Directory</h2>
+                        <p className="text-xs text-gray-500">Registered households in {profile.wardId || 'Ward 1'}</p>
                       </div>
                     </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Access the complete directory of registered households in your assigned ward. View house numbers, contact numbers, and navigate household GPS pins.
+                    </p>
                   </div>
 
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    Access the complete directory of registered households in your assigned ward. View house numbers, residential addresses, and navigate house location pins on live Leaflet maps.
-                  </p>
-
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('Assigned Citizens')}
-                      className="w-full sm:w-auto px-5 py-2.5 bg-[#0a4d2c] hover:bg-[#063820] text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Users className="w-4 h-4 text-emerald-300" />
-                      <span>Open Ward Citizens Directory</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('Assigned Citizens')}
+                    className="w-full py-2.5 px-4 bg-[#0a4d2c] hover:bg-[#063820] text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Users className="w-4 h-4 text-emerald-300" />
+                    <span>View Households</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
 
-                {/* Haritha Karma Sena Guidelines Card */}
-                <div className="bg-white p-6 rounded-2xl border border-emerald-100 shadow-2xs space-y-4">
-                  <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
-                    <div className="p-2.5 rounded-xl bg-emerald-50 text-[#0a4d2c]">
-                      <ShieldCheck className="w-5 h-5" />
+                {/* 2. Collection History */}
+                <div className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-2xs space-y-4 flex flex-col justify-between hover:shadow-md transition-all">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
+                      <div className="p-2.5 rounded-2xl bg-emerald-50 text-[#0a4d2c]">
+                        <History className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-extrabold text-gray-900">Collection History</h2>
+                        <p className="text-xs text-gray-500">Completed pickups & monthly logs</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-base font-extrabold text-gray-900">Collection Duty Protocol</h2>
-                      <p className="text-xs text-gray-500">Haritha Karma Sena standard operating guidelines</p>
-                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Browse previously completed plastic pickups with full citizen names, house numbers, request IDs, collection timestamps, and export CSV logs.
+                    </p>
                   </div>
 
-                  <ul className="space-y-2.5 text-xs text-gray-600 font-medium">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Ensure non-biodegradable waste segregation at household level.</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Use live GPS map location pins to locate hard-to-find houses.</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Report unassigned or new households to Panchayat admin.</span>
-                    </li>
-                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('Collection History')}
+                    className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <History className="w-4 h-4 text-emerald-700" />
+                    <span>View Collection History</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* 3. Doorstep Payment Collection */}
+                <div className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-2xs space-y-4 flex flex-col justify-between hover:shadow-md transition-all">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
+                      <div className="p-2.5 rounded-2xl bg-emerald-50 text-[#0a4d2c]">
+                        <IndianRupee className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-extrabold text-gray-900">Payment Collection</h2>
+                        <p className="text-xs text-gray-500">Doorstep ₹50 cash verification</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Collect monthly user fees for citizens choosing 'Pay Through Worker', mark payments as received, and generate instant printable receipts.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('Payment Collection')}
+                    className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <IndianRupee className="w-4 h-4 text-emerald-700" />
+                    <span>Collect Payments</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* 4. Real-time Location & Boundary */}
+                <div className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-2xs space-y-4 flex flex-col justify-between hover:shadow-md transition-all">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
+                      <div className="p-2.5 rounded-2xl bg-emerald-50 text-[#0a4d2c]">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-extrabold text-gray-900">My Location & Zone</h2>
+                        <p className="text-xs text-gray-500">Real-time GPS boundary verification</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Track your live GPS coordinates against the official delimitation polygon boundary to verify active coverage inside your assigned ward.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('My Location')}
+                    className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Compass className="w-4 h-4 text-emerald-700" />
+                    <span>Open Live Zone Map</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* 5. Performance Analytics */}
+                <div className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-2xs space-y-4 flex flex-col justify-between hover:shadow-md transition-all">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
+                      <div className="p-2.5 rounded-xl bg-emerald-50 text-[#0a4d2c]">
+                        <BarChart3 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-extrabold text-gray-900">My Performance</h2>
+                        <p className="text-xs text-gray-500">Monthly pickup completion metrics</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Monitor your monthly completed vs pending pickups, completion percentages, total households served, and unlocked service badges.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('My Performance')}
+                    className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <TrendingUp className="w-4 h-4 text-emerald-700" />
+                    <span>View Performance</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* 6. Haritha Karma Sena Guidelines */}
+                <div className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-2xs space-y-4 flex flex-col justify-between hover:shadow-md transition-all">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
+                      <div className="p-2.5 rounded-xl bg-emerald-50 text-[#0a4d2c]">
+                        <ShieldCheck className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-extrabold text-gray-900">Collection Duty Protocol</h2>
+                        <p className="text-xs text-gray-500">Standard operating guidelines</p>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-2 text-xs text-gray-600 font-medium">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Doorstep dry plastic collection from 15th to 25th.</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Verify doorstep cash fee payments and issue receipts.</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Enter citizen OTP verification code to complete pickup.</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('Notifications')}
+                    className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Bell className="w-4 h-4 text-emerald-700" />
+                    <span>View Notifications</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 

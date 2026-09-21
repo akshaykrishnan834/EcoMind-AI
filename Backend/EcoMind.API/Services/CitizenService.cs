@@ -175,7 +175,16 @@ namespace EcoMind.API.Services
         // ============================================================
         public async Task<List<Citizen>> GetAllCitizensAsync()
         {
-            return await _citizenRepository.GetAllCitizensAsync();
+            var raw = await _citizenRepository.GetAllCitizensAsync();
+            var allUsers = await _userRepository.GetAllAsync();
+            var registeredEmails = allUsers
+                .Where(u => string.Equals(u.Role, "Citizen", StringComparison.OrdinalIgnoreCase))
+                .Select(u => (u.Email ?? "").Trim().ToLowerInvariant())
+                .ToHashSet();
+
+            return raw
+                .Where(c => !string.IsNullOrWhiteSpace(c.Email) && registeredEmails.Contains(c.Email.Trim().ToLowerInvariant()))
+                .ToList();
         }
 
 
@@ -184,7 +193,16 @@ namespace EcoMind.API.Services
         // ============================================================
         public async Task<List<Citizen>> GetCitizensByWardAsync(string wardId)
         {
-            return await _citizenRepository.GetCitizensByWardAsync(wardId);
+            var raw = await _citizenRepository.GetCitizensByWardAsync(wardId);
+            var allUsers = await _userRepository.GetAllAsync();
+            var registeredEmails = allUsers
+                .Where(u => string.Equals(u.Role, "Citizen", StringComparison.OrdinalIgnoreCase))
+                .Select(u => (u.Email ?? "").Trim().ToLowerInvariant())
+                .ToHashSet();
+
+            return raw
+                .Where(c => !string.IsNullOrWhiteSpace(c.Email) && registeredEmails.Contains(c.Email.Trim().ToLowerInvariant()))
+                .ToList();
         }
 
 

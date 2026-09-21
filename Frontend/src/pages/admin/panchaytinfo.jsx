@@ -21,6 +21,9 @@ const PanchayatInfo = ({ initialEdit = false }) => {
     ]);
     const [existingWards, setExistingWards] = useState([]);
 
+    const [allPanchayats, setAllPanchayats] = useState([]);
+    const [selectedPanchayatIndex, setSelectedPanchayatIndex] = useState(0);
+
     useEffect(() => {
         if (!initialEdit) {
             fetchPanchayatInfo();
@@ -30,14 +33,21 @@ const PanchayatInfo = ({ initialEdit = false }) => {
         }
     }, [initialEdit]);
 
-    const fetchPanchayatInfo = async () => {
+    const fetchPanchayatInfo = async (selectIndex = 0) => {
         setLoading(true);
         try {
             const response = await axios.get("http://localhost:5214/api/Panchayat");
-            const data = response.data;
-            if (data && data.panchayatName) {
+            const rawData = response.data;
+            const list = Array.isArray(rawData) ? rawData : (rawData ? [rawData] : []);
+            setAllPanchayats(list);
+
+            if (list.length > 0) {
+                const targetIdx = selectIndex < list.length ? selectIndex : 0;
+                setSelectedPanchayatIndex(targetIdx);
+                const data = list[targetIdx];
                 const count = data.numberOfWards || 0;
                 setPanchayat({
+                    id: data.id || data.panchayatId,
                     panchayatName: data.panchayatName || "",
                     district: data.district || "",
                     numberOfWards: count.toString(),
@@ -46,7 +56,7 @@ const PanchayatInfo = ({ initialEdit = false }) => {
                 });
                 if (!initialEdit) setIsEdit(false);
 
-                fetchWards(data.panchayatName);
+                await fetchWards(data.panchayatName);
             }
         } catch (error) {
             console.error("Error fetching panchayat info from DB:", error);
@@ -59,10 +69,29 @@ const PanchayatInfo = ({ initialEdit = false }) => {
         try {
             const res = await axios.get("http://localhost:5214/api/Ward");
             const allWards = res.data || [];
-            const filtered = allWards.filter(w => (w.panchayatName || w.panchayat || "").toLowerCase() === (pName || "").toLowerCase());
-            setExistingWards(filtered);
+            const filtered = pName
+                ? allWards.filter(w => (w.panchayatName || w.panchayat || "").trim().toLowerCase() === pName.trim().toLowerCase())
+                : allWards;
+            setExistingWards(filtered.length > 0 ? filtered : allWards);
         } catch (err) {
             console.error("Error fetching wards:", err);
+        }
+    };
+
+    const handleSelectPanchayat = (idx) => {
+        setSelectedPanchayatIndex(idx);
+        const data = allPanchayats[idx];
+        if (data) {
+            const count = data.numberOfWards || 0;
+            setPanchayat({
+                id: data.id || data.panchayatId,
+                panchayatName: data.panchayatName || "",
+                district: data.district || "",
+                numberOfWards: count.toString(),
+                state: data.state || "Kerala",
+                status: data.status || "Active",
+            });
+            fetchWards(data.panchayatName);
         }
     };
 
@@ -396,6 +425,29 @@ const PanchayatInfo = ({ initialEdit = false }) => {
                     </form>
                 ) : (
                     <div className="space-y-8">
+                        {/* Panchayat Selector Pills if multiple panchayats exist */}
+                        {allPanchayats.length > 1 && (
+                            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">
+                                    Panchayat:
+                                </span>
+                                {allPanchayats.map((p, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => handleSelectPanchayat(idx)}
+                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer shrink-0 ${
+                                            selectedPanchayatIndex === idx
+                                                ? "bg-[#0a4d2c] text-white shadow-xs"
+                                                : "bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-[#0a4d2c]"
+                                        }`}
+                                    >
+                                        {p.panchayatName} ({p.district})
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
                         {/* Display Panchayat Details */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100/80">
                             <div>
@@ -421,7 +473,7 @@ const PanchayatInfo = ({ initialEdit = false }) => {
                                     Number of Wards
                                 </h3>
                                 <p className="font-bold text-xl text-emerald-900 mt-1">
-                                    {panchayat.numberOfWards} Wards Registered
+                                    {existingWards.length > 0 ? existingWards.length : panchayat.numberOfWards} Wards Registered
                                 </p>
                             </div>
 
@@ -459,15 +511,25 @@ const PanchayatInfo = ({ initialEdit = false }) => {
                                     {existingWards.map((w, idx) => (
                                         <div
                                             key={idx}
-                                            className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs hover:border-emerald-300 transition-colors flex items-center justify-between"
+                                            className="bg-white p-4 rounded-xl border border-emerald-100 shadow-2xs hover:border-emerald-300 transition-colors flex items-center justify-between"
                                         >
                                             <div>
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
-                                                    {w.wardId || `WARD-${idx + 1}`}
-                                                </span>
-                                                <h4 className="font-bold text-gray-800 text-sm mt-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                                                        {w.wardId || `WARD-${idx + 1}`}
+                                                    </span>
+                                                    {w.boundary && w.boundary.length > 0 && (
+                                                        <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                                            Delimited
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <h4 className="font-bold text-gray-800 text-sm mt-1.5">
                                                     {w.wardName}
                                                 </h4>
+                                                <p className="text-[11px] text-gray-400 mt-0.5">
+                                                    {w.panchayatName || panchayat.panchayatName}
+                                                </p>
                                             </div>
                                             <span className="text-xs text-emerald-700 font-semibold px-2 py-1 bg-emerald-50 rounded-lg">
                                                 {w.status || "Active"}

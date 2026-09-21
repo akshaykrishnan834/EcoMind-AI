@@ -1,8 +1,10 @@
+using EcoMind.API.Helpers;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace EcoMind.API.Models
 {
+    [BsonIgnoreExtraElements]
     public class PickupRequest
     {
         [BsonId]
@@ -37,15 +39,19 @@ namespace EcoMind.API.Models
         // Worker acceptance details
         public string? AcceptedByWorkerId { get; set; }
 
+        [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
         public DateTime? AcceptedAt { get; set; }
 
         // Scheduled collection date (Must be between 15th and 25th of month)
+        [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
         public DateTime? CollectionDate { get; set; }
 
         // Request timestamp
+        [BsonSerializer(typeof(FlexibleDateTimeSerializer))]
         public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
 
         // Filled when waste is collected by worker
+        [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
         public DateTime? CollectedAt { get; set; }
 
         // Unique 4-digit verification code shown only to citizen for pickup completion verification

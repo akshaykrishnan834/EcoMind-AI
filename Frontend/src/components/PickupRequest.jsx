@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, MapPin, Truck, CheckCircle2, AlertCircle, Clock, Calendar, Info, Send, Package, KeyRound } from 'lucide-react';
+import { Home, MapPin, Truck, CheckCircle2, XCircle, AlertCircle, Clock, Calendar, Info, Send, Package, KeyRound, ShieldCheck, Check, Sparkles } from 'lucide-react';
 import { createPickupRequest, getMonthlyStatus } from '../services/pickupRequestService';
 
 const PickupRequest = ({ citizenData }) => {
@@ -84,18 +84,39 @@ const PickupRequest = ({ citizenData }) => {
     }
   };
 
-  const getStatusBadgeClass = (status) => {
+  const getStatusBadgeClass = (status, isFailed) => {
+    if (isFailed) {
+      return 'bg-rose-100 text-rose-800 border-rose-300';
+    }
     switch ((status || '').toLowerCase()) {
       case 'scheduled':
       case 'accepted':
         return 'bg-[#0a4d2c] text-white border-emerald-800';
       case 'completed':
       case 'collected':
-        return 'bg-blue-100 text-blue-900 border-blue-300';
+        return 'bg-emerald-100 text-[#0a4d2c] border-emerald-300';
       default:
         return 'bg-amber-100 text-amber-900 border-amber-300';
     }
   };
+
+  const isCompleted = Boolean(
+    existingMonthlyRequest && (
+      (existingMonthlyRequest.status || '').toLowerCase() === 'completed' ||
+      (existingMonthlyRequest.status || '').toLowerCase() === 'collected'
+    )
+  );
+
+  const reqDate = new Date(existingMonthlyRequest?.collectionDate || existingMonthlyRequest?.requestedAt);
+  const now = new Date();
+  const isPastMonth = Boolean(
+    existingMonthlyRequest && !isNaN(reqDate.getTime()) && (
+      reqDate.getFullYear() < now.getFullYear() ||
+      (reqDate.getFullYear() === now.getFullYear() && reqDate.getMonth() < now.getMonth())
+    )
+  );
+
+  const isFailedToComplete = !isCompleted && isPastMonth;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn pb-12">
@@ -169,14 +190,12 @@ const PickupRequest = ({ citizenData }) => {
       </div>
 
       {!isProfileVerified ? (
-        /* PENDING ADMIN VERIFICATION BANNER */
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-amber-200 space-y-6">
-          <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4 text-amber-900">
-            <div className="p-3 bg-amber-500 text-white rounded-xl shrink-0 shadow-xs">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-base font-extrabold text-amber-900">
+        /* PROFILE VERIFICATION REQUIRED */
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-amber-200/80 space-y-4 animate-fadeIn">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-extrabold text-amber-900">
                 Profile Verification Required by Admin
               </h3>
               <p className="text-xs text-amber-800 leading-relaxed">
@@ -197,17 +216,34 @@ const PickupRequest = ({ citizenData }) => {
       ) : existingMonthlyRequest && step !== 'success' ? (
         /* MONTHLY LIMIT REACHED BANNER */
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-emerald-200/80 space-y-6">
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-900">
-            <Info className="w-5 h-5 text-[#0a4d2c] shrink-0 mt-0.5" />
-            <div>
-              <h3 className="text-base font-extrabold text-[#0a4d2c]">
-                Your monthly plastic pickup request has already been submitted.
-              </h3>
-              <p className="text-xs text-emerald-800 mt-1">
-                A citizen can submit only ONE plastic pickup request per month. Below are the details of your active request for the current calendar month.
-              </p>
+          {/* Top Status Notification Banner */}
+          {isCompleted ? (
+            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-start gap-3 text-emerald-900 shadow-2xs">
+              <div className="p-1.5 bg-[#0a4d2c] text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
+                <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-[#0a4d2c]">
+                  Monthly Plastic Pickup Completed!
+                </h3>
+                <p className="text-xs text-emerald-800 mt-1">
+                  Haritha Karma Sena has verified your code and completed the recyclable plastic waste pickup for this calendar month. Thank you for your contribution to clean waste management!
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-900">
+              <Info className="w-5 h-5 text-[#0a4d2c] shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-base font-extrabold text-[#0a4d2c]">
+                  Your monthly plastic pickup request has already been submitted.
+                </h3>
+                <p className="text-xs text-emerald-800 mt-1">
+                  A citizen can submit only ONE plastic pickup request per month. Below are the details of your active request for the current calendar month.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Active Monthly Request Status Card */}
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-4">
@@ -223,14 +259,73 @@ const PickupRequest = ({ citizenData }) => {
 
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-gray-500">Status:</span>
-                <span className={`px-3 py-1 text-xs font-extrabold rounded-full border ${getStatusBadgeClass(existingMonthlyRequest.status)}`}>
-                  {existingMonthlyRequest.status}
+                <span className={`px-3 py-1 text-xs font-extrabold rounded-full border flex items-center gap-1.5 ${getStatusBadgeClass(existingMonthlyRequest.status, isFailedToComplete)}`}>
+                  {isFailedToComplete ? (
+                    <>
+                      <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Failed to Complete</span>
+                    </>
+                  ) : isCompleted ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#0a4d2c]" />
+                      <span>Completed</span>
+                    </>
+                  ) : (
+                    existingMonthlyRequest.status
+                  )}
                 </span>
               </div>
             </div>
 
-            {/* Highlighted Scheduled Collection Date Banner */}
-            {existingMonthlyRequest.collectionDate ? (
+            {/* Highlighted Scheduled / Completed Collection Date Banner */}
+            {isCompleted ? (
+              <div className="p-4 bg-gradient-to-r from-emerald-100/90 to-teal-100/80 border border-emerald-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-[#0a4d2c] text-white rounded-xl shrink-0 shadow-xs">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0a4d2c] block">
+                      Collection Completed On
+                    </span>
+                    <span className="text-base font-extrabold text-[#0a4d2c]">
+                      {new Date(existingMonthlyRequest.collectedAt || existingMonthlyRequest.collectionDate || existingMonthlyRequest.requestedAt).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                </div>
+                <span className="px-3.5 py-1.5 bg-[#0a4d2c] text-white font-extrabold text-xs rounded-xl shrink-0 self-start sm:self-center shadow-xs flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                  Pickup Completed
+                </span>
+              </div>
+            ) : isFailedToComplete ? (
+              <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-rose-600 text-white rounded-xl shrink-0 shadow-xs">
+                    <XCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-800 block">
+                      Pickup Cycle Expired
+                    </span>
+                    <span className="text-base font-extrabold text-rose-950">
+                      Failed to Complete (Month Passed)
+                    </span>
+                    <p className="text-xs text-rose-700 font-medium mt-0.5">
+                      The scheduled collection cycle for this month has passed without waste handover.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3.5 py-1.5 bg-rose-600 text-white font-extrabold text-xs rounded-xl shrink-0 self-start sm:self-center shadow-xs">
+                  Failed
+                </span>
+              </div>
+            ) : existingMonthlyRequest.collectionDate ? (
               <div className="p-4 bg-emerald-100/90 border border-emerald-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#0a4d2c] text-white rounded-xl shrink-0">
@@ -268,28 +363,60 @@ const PickupRequest = ({ citizenData }) => {
 
             {/* 4-Digit Pickup Completion Verification Code (Shown only to Citizen) */}
             {existingMonthlyRequest.verificationCode && (
-              <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-500/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
-                <div className="flex items-center gap-3 text-left">
-                  <div className="p-2.5 bg-[#0a4d2c] text-white rounded-xl shrink-0">
-                    <KeyRound className="w-5 h-5 text-emerald-300" />
+              isCompleted ? (
+                <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-500/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                  <div className="flex items-center gap-3 text-left">
+                    <div className="p-2.5 bg-[#0a4d2c] text-white rounded-xl shrink-0 shadow-xs">
+                      <ShieldCheck className="w-5 h-5 text-emerald-300" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0a4d2c] block">
+                          Pickup Verification Code (Verified)
+                        </span>
+                        <span className="px-2 py-0.5 bg-emerald-200 text-[#0a4d2c] text-[10px] font-black rounded-md flex items-center gap-1">
+                          <Check className="w-3 h-3 text-[#0a4d2c]" /> Verified
+                        </span>
+                      </div>
+                      <p className="text-xs text-emerald-800 font-medium mt-0.5">
+                        Code verified by Haritha Karma Sena worker. Waste handover completed successfully.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0a4d2c] block">
-                      Pickup Verification Code
-                    </span>
-                    <p className="text-xs text-gray-600 font-medium">
-                      Provide this 4-digit code to the Haritha Karma Sena worker upon collection to complete pickup.
-                    </p>
-                  </div>
-                </div>
 
-                <div className="bg-white px-5 py-2.5 rounded-2xl border-2 border-[#0a4d2c] shadow-xs shrink-0 text-center">
-                  <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Your Code</span>
-                  <span className="text-2xl font-black tracking-[8px] font-mono text-[#0a4d2c]">
-                    {existingMonthlyRequest.verificationCode}
-                  </span>
+                  <div className="bg-white px-5 py-2.5 rounded-2xl border-2 border-[#0a4d2c] shadow-xs shrink-0 text-center">
+                    <span className="text-[10px] text-emerald-700 font-bold block uppercase tracking-wider flex items-center justify-center gap-1">
+                      <Check className="w-3 h-3 text-emerald-600" /> Verified Code
+                    </span>
+                    <span className="text-2xl font-black tracking-[8px] font-mono text-[#0a4d2c]">
+                      {existingMonthlyRequest.verificationCode}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-500/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                  <div className="flex items-center gap-3 text-left">
+                    <div className="p-2.5 bg-[#0a4d2c] text-white rounded-xl shrink-0">
+                      <KeyRound className="w-5 h-5 text-emerald-300" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0a4d2c] block">
+                        Pickup Verification Code
+                      </span>
+                      <p className="text-xs text-gray-600 font-medium">
+                        Provide this 4-digit code to the Haritha Karma Sena worker upon collection to complete pickup.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white px-5 py-2.5 rounded-2xl border-2 border-[#0a4d2c] shadow-xs shrink-0 text-center">
+                    <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Your Code</span>
+                    <span className="text-2xl font-black tracking-[8px] font-mono text-[#0a4d2c]">
+                      {existingMonthlyRequest.verificationCode}
+                    </span>
+                  </div>
+                </div>
+              )
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pt-1">
@@ -307,8 +434,12 @@ const PickupRequest = ({ citizenData }) => {
               </div>
 
               <div>
-                <span className="text-gray-500 font-medium block">Collection Window:</span>
-                <span className="font-extrabold text-[#0a4d2c]">15th – 25th of Month</span>
+                <span className="text-gray-500 font-medium block">
+                  {isCompleted ? 'Collection Status:' : 'Collection Window:'}
+                </span>
+                <span className="font-extrabold text-[#0a4d2c]">
+                  {isCompleted ? 'Collected & Verified' : '15th – 25th of Month'}
+                </span>
               </div>
 
               <div>
@@ -321,6 +452,19 @@ const PickupRequest = ({ citizenData }) => {
                 <span className="font-bold text-[#0a4d2c]">{wardId} • {panchayatName}</span>
               </div>
             </div>
+
+            {isCompleted && (
+              <div className="p-3.5 bg-emerald-100/60 border border-emerald-300 rounded-xl flex items-center justify-between text-xs text-[#0a4d2c]">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Sparkles className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span>Plastic waste collected for this monthly cycle. Next request window opens on the 1st of next month.</span>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1 font-extrabold text-emerald-900 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-700" />
+                  Card Logged
+                </span>
+              </div>
+            )}
           </div>
         </div>
       ) : (

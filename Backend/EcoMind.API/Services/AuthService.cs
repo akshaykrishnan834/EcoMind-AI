@@ -54,7 +54,7 @@ namespace EcoMind.API.Services
             var user = new User
             {
                 FullName = registerDto.FullName,
-                Email = registerDto.Email,
+                Email = cleanEmail,
                 PhoneNumber = registerDto.PhoneNumber,
                 Password = hashedPassword,
                 Role = role,
@@ -68,14 +68,14 @@ namespace EcoMind.API.Services
             // If registering a Citizen, also insert record into Citizens collection
             if (string.Equals(role, "Citizen", StringComparison.OrdinalIgnoreCase))
             {
-                var existingCitizen = await _citizenRepository.GetCitizenByEmailAsync(registerDto.Email);
+                var existingCitizen = await _citizenRepository.GetCitizenByEmailAsync(cleanEmail);
                 if (existingCitizen == null)
                 {
                     var citizen = new Citizen
                     {
                         CitizenId = "CIT" + Random.Shared.Next(1000, 9999),
                         FullName = registerDto.FullName,
-                        Email = registerDto.Email,
+                        Email = cleanEmail,
                         PhoneNumber = registerDto.PhoneNumber,
                         Address = string.Empty,
                         WardId = string.Empty,

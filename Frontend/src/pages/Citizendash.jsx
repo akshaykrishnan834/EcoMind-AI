@@ -5,6 +5,13 @@ import CitizenProfile from '../components/CitizenProfile';
 import PickupRequest from '../components/PickupRequest';
 import CollectionRecords from '../components/CollectionRecords';
 import MonthlyPaymentSection from '../components/MonthlyPaymentSection';
+import CitizenSchedule from '../components/CitizenSchedule';
+import CitizenLocation from '../components/CitizenLocation';
+import CitizenGuidelines from '../components/CitizenGuidelines';
+import AIChatBot from '../components/AIChatBot';
+import AIFloatingChat from '../components/AIFloatingChat';
+import CitizenSettings from '../components/CitizenSettings';
+import CitizenWorkerChat from '../components/CitizenWorkerChat';
 import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -30,7 +37,8 @@ import {
   RefreshCw,
   Leaf,
   CreditCard,
-  KeyRound
+  KeyRound,
+  Bot
 } from 'lucide-react';
 import { getCitizenByEmail } from '../services/citizenService';
 import { getCitizenRequests, getMonthlyStatus } from '../services/pickupRequestService';
@@ -195,23 +203,36 @@ const CitizenDashboard = () => {
 
   // Active / Current pickup request derived state
   const currentMonthRequest = monthlyStatusData?.request || realRequests.find(
-    (r) => (r.status || '').toLowerCase() === 'pending' || (r.status || '').toLowerCase() === 'scheduled'
+    (r) => (r.status || '').toLowerCase() === 'pending' || (r.status || '').toLowerCase() === 'scheduled' || (r.status || '').toLowerCase() === 'completed' || (r.status || '').toLowerCase() === 'collected'
+  );
+
+  const isRequestCompleted = Boolean(
+    currentMonthRequest && (
+      (currentMonthRequest.status || '').toLowerCase() === 'completed' ||
+      (currentMonthRequest.status || '').toLowerCase() === 'collected'
+    )
   );
 
   // Ongoing work mock/real state
   const ongoingWork = currentMonthRequest ? {
     id: currentMonthRequest.requestId || currentMonthRequest.id || 'REQ-8492',
     category: currentMonthRequest.overallCategory || 'Non-Biodegradable Plastic & Dry Waste',
-    scheduledDate: currentMonthRequest.collectionDate
-      ? new Date(currentMonthRequest.collectionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-      : '15th - 25th Collection Drive Window',
+    scheduledDate: isRequestCompleted
+      ? (currentMonthRequest.collectedAt
+          ? `Collected on ${new Date(currentMonthRequest.collectedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+          : currentMonthRequest.collectionDate
+            ? `Completed on ${new Date(currentMonthRequest.collectionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+            : 'Completed')
+      : (currentMonthRequest.collectionDate
+          ? new Date(currentMonthRequest.collectionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+          : '15th - 25th Collection Drive Window'),
     status: currentMonthRequest.status || 'Pending',
-    currentStep: (currentMonthRequest.status || '').toLowerCase() === 'scheduled' ? 2 :
-      (currentMonthRequest.status || '').toLowerCase() === 'completed' || (currentMonthRequest.status || '').toLowerCase() === 'collected' ? 4 : 1,
+    currentStep: isRequestCompleted ? 4 : (currentMonthRequest.status || '').toLowerCase() === 'scheduled' ? 2 : 1,
     workerName: currentMonthRequest.acceptedByWorkerId ? `Haritha Karma Sena (${currentMonthRequest.acceptedByWorkerId})` : senaWorkerName,
     workerPhone: senaWorkerPhone,
     verificationCode: currentMonthRequest.verificationCode || '',
-    notes: 'Please keep dried non-biodegradable plastics ready at the gate.'
+    isCompleted: isRequestCompleted,
+    notes: isRequestCompleted ? 'Plastic waste pickup verified and completed.' : 'Please keep dried non-biodegradable plastics ready at the gate.'
   } : {
     id: 'REQ-8492',
     category: 'Non-Biodegradable Plastic & Dry Waste',
@@ -220,6 +241,7 @@ const CitizenDashboard = () => {
     currentStep: 2, // 1: Requested, 2: Scheduled, 3: In Transit, 4: Completed
     workerName: senaWorkerName,
     workerPhone: senaWorkerPhone,
+    isCompleted: false,
     notes: 'Please keep dried non-biodegradable plastics ready at the gate.'
   };
 
@@ -267,35 +289,78 @@ const CitizenDashboard = () => {
   ];
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f3f7f5] font-sans">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f3f7f5] font-sans print:h-auto print:w-auto print:overflow-visible print:bg-white">
       {/* Top Header (Fixed at top) */}
-      <div className="shrink-0 z-40 border-b border-emerald-100/80 shadow-2xs">
+      <div className="shrink-0 z-40 border-b border-emerald-100/80 shadow-2xs print:hidden">
         <Header />
       </div>
 
       {/* Main Content Layout with Sidebar */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        <CitizenSidebar
-          activeItem={activeTab}
-          setActiveItem={setActiveTab}
-          onLogout={handleLogout}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          isOpen={isMobileSidebarOpen}
-          onClose={() => setIsMobileSidebarOpen(false)}
-        />
+      <div className="flex-1 flex overflow-hidden min-h-0 print:overflow-visible print:block">
+        <div className="print:hidden">
+          <CitizenSidebar
+            activeItem={activeTab}
+            setActiveItem={setActiveTab}
+            onLogout={handleLogout}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            isOpen={isMobileSidebarOpen}
+            onClose={() => setIsMobileSidebarOpen(false)}
+          />
+        </div>
 
         {/* Main Workspace (Scrolls Vertically) */}
-        <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f3f7f5] min-w-0">
-          <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
+        <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f3f7f5] min-w-0 print:overflow-visible print:h-auto print:p-0 print:bg-white print:block">
+          <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1 print:p-0 print:space-y-0">
             {activeTab === 'Profile' ? (
               <CitizenProfile />
             ) : activeTab === 'Monthly Payments' ? (
               <MonthlyPaymentSection citizenData={citizenData} />
             ) : activeTab === 'Pickup Request' ? (
               <PickupRequest citizenData={citizenData} />
+            ) : activeTab === 'Messages' || activeTab === 'Worker Chat' || activeTab === 'Chat' ? (
+              <CitizenWorkerChat
+                currentUser={{
+                  id: citizenData?.citizenId || citizenData?.id || citizenData?._id || userObj.citizenId || userObj.email,
+                  name: citizenData?.fullName || userObj.fullName || 'Citizen',
+                  role: 'Citizen',
+                  email: citizenData?.email || userObj.email
+                }}
+                pickupRequests={realRequests}
+                assignedContact={assignedWorker}
+                onBack={() => setActiveTab('Dashboard')}
+              />
             ) : activeTab === 'Collection Records' ? (
               <CollectionRecords citizenData={citizenData} />
+            ) : activeTab === 'Collection Schedule' || activeTab === 'My Collection Schedule' ? (
+              <CitizenSchedule
+                citizenData={citizenData}
+                monthlyStatusData={monthlyStatusData}
+                realRequests={realRequests}
+                assignedWorker={assignedWorker}
+                setActiveTab={setActiveTab}
+              />
+            ) : activeTab === 'My Location' ? (
+              <CitizenLocation
+                citizenData={citizenData}
+                setActiveTab={setActiveTab}
+              />
+            ) : activeTab === 'Help & Guidelines' || activeTab === 'Guidelines' ? (
+              <CitizenGuidelines
+                citizenData={citizenData}
+                assignedWorker={assignedWorker}
+                setActiveTab={setActiveTab}
+              />
+            ) : activeTab === 'Settings' || activeTab === 'Theme & Settings' ? (
+              <CitizenSettings citizenData={citizenData} setActiveTab={setActiveTab} />
+            ) : activeTab === 'AI Assistant' || activeTab === 'EcoMind AI Chat' ? (
+              <AIChatBot
+                citizenData={citizenData}
+                monthlyStatusData={monthlyStatusData}
+                realRequests={realRequests}
+                assignedWorker={assignedWorker}
+                setActiveTab={setActiveTab}
+              />
             ) : (
               /* CITIZEN DASHBOARD OVERVIEW */
               <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn pb-8">
@@ -347,6 +412,14 @@ const CitizenDashboard = () => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('AI Assistant')}
+                        className="px-4 py-3 bg-emerald-950/60 hover:bg-emerald-950/80 border border-emerald-400/40 text-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Bot className="w-4 h-4 text-emerald-300" />
+                        <span>Ask AI</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => setActiveTab('Monthly Payments')}
@@ -548,7 +621,7 @@ const CitizenDashboard = () => {
                               ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
                               : 'bg-gray-100 text-gray-400'
                             }`}>
-                            4
+                            {ongoingWork.currentStep >= 4 ? <Check className="w-4 h-4" /> : '4'}
                           </div>
                           <div>
                             <p className="text-xs font-extrabold text-gray-900">Completed</p>
@@ -566,7 +639,8 @@ const CitizenDashboard = () => {
                         <h4 className="text-sm font-extrabold text-[#0a4d2c]">{ongoingWork.category}</h4>
                         <p className="text-xs text-gray-600 font-medium flex items-center gap-1.5 pt-1">
                           <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                          Collection Schedule: <span className="font-extrabold text-gray-900">{ongoingWork.scheduledDate}</span>
+                          {ongoingWork.isCompleted ? 'Collection Status:' : 'Collection Schedule:'}{' '}
+                          <span className="font-extrabold text-gray-900">{ongoingWork.scheduledDate}</span>
                         </p>
                         <p className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5 text-emerald-700" />
@@ -575,15 +649,29 @@ const CitizenDashboard = () => {
                         {ongoingWork.verificationCode && (
                           <div className="mt-2 inline-flex items-center gap-2 bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-xl">
                             <KeyRound className="w-3.5 h-3.5 text-[#0a4d2c]" />
-                            <span className="text-[11px] font-bold text-[#0a4d2c]">Pickup Verification Code:</span>
+                            <span className="text-[11px] font-bold text-[#0a4d2c]">
+                              {ongoingWork.isCompleted ? 'Verification Code (Verified):' : 'Pickup Verification Code:'}
+                            </span>
                             <span className="text-sm font-black font-mono tracking-widest text-[#0a4d2c]">
                               {ongoingWork.verificationCode}
                             </span>
+                            {ongoingWork.isCompleted && (
+                              <span className="text-[10px] bg-emerald-700 text-white font-extrabold px-2 py-0.5 rounded-full ml-1 flex items-center gap-1">
+                                <Check className="w-3 h-3" /> Verified
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex flex-wrap items-center gap-3 shrink-0">
+                        <button
+                          onClick={() => setActiveTab('Collection Schedule')}
+                          className="px-3.5 py-2.5 bg-emerald-50 border border-emerald-300 text-[#0a4d2c] hover:bg-emerald-100 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Schedule</span>
+                        </button>
                         <button
                           onClick={() => setActiveTab('Pickup Request')}
                           className="px-4 py-2.5 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
@@ -774,8 +862,22 @@ const CitizenDashboard = () => {
             )}
           </div>
 
-          <Footer />
+          <div className="print:hidden">
+            <Footer />
+          </div>
         </main>
+      </div>
+
+      {/* Persistent Floating AI Chatbot Widget */}
+      <div className="print:hidden">
+        <AIFloatingChat
+          citizenData={citizenData}
+          monthlyStatusData={monthlyStatusData}
+          realRequests={realRequests}
+          assignedWorker={assignedWorker}
+          setActiveTab={setActiveTab}
+          onExpandFull={() => setActiveTab('AI Assistant')}
+        />
       </div>
     </div>
   );

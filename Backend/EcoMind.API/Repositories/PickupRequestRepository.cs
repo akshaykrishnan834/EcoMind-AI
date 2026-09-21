@@ -77,10 +77,116 @@ namespace EcoMind.API.Repositories
         }
 
         public async Task<List<PickupRequest>> GetWardRequestsAsync(
-            string wardId)
+            string wardId,
+            string? workerEmail = null,
+            string? workerCode = null)
         {
+            if (string.IsNullOrWhiteSpace(wardId)) return new List<PickupRequest>();
+            var cleanWard = wardId.Trim();
+            var wardFilter = Builders<PickupRequest>.Filter.Regex(
+                x => x.WardId,
+                new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(cleanWard)}$", "i"));
+
+            FilterDefinition<PickupRequest> finalFilter = wardFilter;
+
+            if (!string.IsNullOrWhiteSpace(workerEmail) || !string.IsNullOrWhiteSpace(workerCode))
+            {
+                var cleanEmail = (workerEmail ?? "").Trim();
+                var cleanCode = (workerCode ?? "").Trim();
+
+                var workerFilters = new List<FilterDefinition<PickupRequest>>();
+
+                if (!string.IsNullOrWhiteSpace(cleanEmail))
+                {
+                    workerFilters.Add(Builders<PickupRequest>.Filter.Regex(
+                        x => x.AcceptedByWorkerId,
+                        new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(cleanEmail)}$", "i")));
+                }
+                if (!string.IsNullOrWhiteSpace(cleanCode))
+                {
+                    workerFilters.Add(Builders<PickupRequest>.Filter.Regex(
+                        x => x.AcceptedByWorkerId,
+                        new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(cleanCode)}$", "i")));
+                }
+
+                // Also include pending requests in this ward that are not yet assigned to another worker
+                var pendingFilter = Builders<PickupRequest>.Filter.And(
+                    Builders<PickupRequest>.Filter.Regex(x => x.Status, new MongoDB.Bson.BsonRegularExpression("^Pending$", "i")),
+                    Builders<PickupRequest>.Filter.Or(
+                        Builders<PickupRequest>.Filter.Eq(x => x.AcceptedByWorkerId, null),
+                        Builders<PickupRequest>.Filter.Eq(x => x.AcceptedByWorkerId, ""),
+                        Builders<PickupRequest>.Filter.Or(workerFilters)
+                    )
+                );
+
+                var assignedToWorkerFilter = Builders<PickupRequest>.Filter.Or(workerFilters);
+                var combinedWorkerFilter = Builders<PickupRequest>.Filter.Or(assignedToWorkerFilter, pendingFilter);
+                finalFilter = Builders<PickupRequest>.Filter.And(wardFilter, combinedWorkerFilter);
+            }
+
             return await _requests
-                .Find(x => x.WardId == wardId)
+                .Find(finalFilter)
+                .SortByDescending(x => x.RequestedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<PickupRequest>> GetWorkerRequestsAsync(
+            string workerEmail,
+            string workerCode,
+            string? wardId = null)
+        {
+            var cleanEmail = (workerEmail ?? "").Trim();
+            var cleanCode = (workerCode ?? "").Trim();
+
+            var workerFilters = new List<FilterDefinition<PickupRequest>>();
+
+            if (!string.IsNullOrWhiteSpace(cleanEmail))
+            {
+                workerFilters.Add(Builders<PickupRequest>.Filter.Regex(
+                    x => x.AcceptedByWorkerId,
+                    new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(cleanEmail)}$", "i")));
+            }
+            if (!string.IsNullOrWhiteSpace(cleanCode))
+            {
+                workerFilters.Add(Builders<PickupRequest>.Filter.Regex(
+                    x => x.AcceptedByWorkerId,
+                    new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(cleanCode)}$", "i")));
+            }
+
+            FilterDefinition<PickupRequest> finalFilter;
+
+            if (!string.IsNullOrWhiteSpace(wardId))
+            {
+                var cleanWard = wardId.Trim();
+                var wardFilter = Builders<PickupRequest>.Filter.Regex(
+                    x => x.WardId,
+                    new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(cleanWard)}$", "i"));
+
+                var pendingFilter = Builders<PickupRequest>.Filter.And(
+                    wardFilter,
+                    Builders<PickupRequest>.Filter.Regex(x => x.Status, new MongoDB.Bson.BsonRegularExpression("^Pending$", "i")),
+                    Builders<PickupRequest>.Filter.Or(
+                        Builders<PickupRequest>.Filter.Eq(x => x.AcceptedByWorkerId, null),
+                        Builders<PickupRequest>.Filter.Eq(x => x.AcceptedByWorkerId, ""),
+                        Builders<PickupRequest>.Filter.Or(workerFilters)
+                    )
+                );
+
+                var assignedFilter = workerFilters.Count > 0
+                    ? Builders<PickupRequest>.Filter.Or(workerFilters)
+                    : Builders<PickupRequest>.Filter.Empty;
+
+                finalFilter = Builders<PickupRequest>.Filter.Or(assignedFilter, pendingFilter);
+            }
+            else
+            {
+                finalFilter = workerFilters.Count > 0
+                    ? Builders<PickupRequest>.Filter.Or(workerFilters)
+                    : Builders<PickupRequest>.Filter.Empty;
+            }
+
+            return await _requests
+                .Find(finalFilter)
                 .SortByDescending(x => x.RequestedAt)
                 .ToListAsync();
         }
@@ -88,8 +194,17 @@ namespace EcoMind.API.Repositories
         public async Task<List<PickupRequest>> GetPendingByWardAsync(
             string wardId)
         {
+            if (string.IsNullOrWhiteSpace(wardId)) return new List<PickupRequest>();
+            var cleanWard = wardId.Trim();
+            var wardFilter = Builders<PickupRequest>.Filter.Regex(
+                x => x.WardId,
+                new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(cleanWard)}$", "i"));
+            var statusFilter = Builders<PickupRequest>.Filter.Regex(
+                x => x.Status,
+                new MongoDB.Bson.BsonRegularExpression("^Pending$", "i"));
+
             return await _requests
-                .Find(x => x.WardId == wardId && x.Status == "Pending")
+                .Find(Builders<PickupRequest>.Filter.And(wardFilter, statusFilter))
                 .SortBy(x => x.RequestedAt)
                 .ToListAsync();
         }
@@ -97,8 +212,26 @@ namespace EcoMind.API.Repositories
         public async Task<PickupRequest?> GetByRequestIdAsync(
             string requestId)
         {
+            if (string.IsNullOrWhiteSpace(requestId)) return null;
+            var clean = requestId.Trim();
+
+            FilterDefinition<PickupRequest> filter;
+            if (MongoDB.Bson.ObjectId.TryParse(clean, out _))
+            {
+                filter = Builders<PickupRequest>.Filter.Or(
+                    Builders<PickupRequest>.Filter.Regex(x => x.RequestId, new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(clean)}$", "i")),
+                    Builders<PickupRequest>.Filter.Eq(x => x.Id, clean)
+                );
+            }
+            else
+            {
+                filter = Builders<PickupRequest>.Filter.Regex(
+                    x => x.RequestId,
+                    new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(clean)}$", "i"));
+            }
+
             var req = await _requests
-                .Find(x => x.RequestId == requestId)
+                .Find(filter)
                 .FirstOrDefaultAsync();
 
             if (req != null && string.IsNullOrWhiteSpace(req.VerificationCode))
@@ -151,7 +284,7 @@ namespace EcoMind.API.Repositories
             if (string.IsNullOrWhiteSpace(code)) return false;
 
             return await _requests
-                .Find(x => x.VerificationCode == code && x.Status != "Completed" && x.Status != "Cancelled")
+                .Find(x => x.VerificationCode == code && x.Status != "Completed" && x.Status != "Collected" && x.Status != "Cancelled")
                 .AnyAsync();
         }
 

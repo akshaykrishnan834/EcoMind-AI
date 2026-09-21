@@ -25,5 +25,16 @@ dist-ssr
 
 **/bin/
 **/obj/
+bin/
+obj/
 .vs/
 **/.vs/
+*.user
+
+# Sensitive Environment & Configuration Files
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.local.json

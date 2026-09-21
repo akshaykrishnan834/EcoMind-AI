@@ -8,6 +8,9 @@ namespace EcoMind.API.DTOs
         public string EstimatedVolume { get; set; } = "Medium";
 
         public string OverallCategory { get; set; } = "Recyclable Plastic";
+        public bool AIAnalyzed { get; set; } = false;
+        public double AIConfidence { get; set; } = 0;
+        public string SegregationAdvice { get; set; } = string.Empty;
     }
 
     public class SchedulePickupRequestDto
@@ -38,6 +41,11 @@ namespace EcoMind.API.DTOs
         public DateTime? CollectionDate { get; set; }
         public DateTime RequestedAt { get; set; }
         public DateTime? CollectedAt { get; set; }
+
+        public bool AIAnalyzed { get; set; } = false;
+        public double AIConfidence { get; set; } = 0;
+        public string SegregationAdvice { get; set; } = string.Empty;
+        public string VerificationCode { get; set; } = string.Empty;
 
         // Dynamic Citizen details fetched from Citizen collection
         public string CitizenName { get; set; } = string.Empty;
