@@ -11,147 +11,184 @@ namespace EcoMind.API.Controllers
     {
         private readonly IMessageService _messageService;
 
-        public MessageController(
-            IMessageService messageService)
+        public MessageController(IMessageService messageService)
         {
             _messageService = messageService;
         }
 
+        // 1. Send Message in Citizen <-> Worker conversation
         [HttpPost]
-        public async Task<IActionResult> SendMessage(
-            [FromBody] SendMessageRequest request)
+        public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
         {
-            if (request == null ||
-                string.IsNullOrWhiteSpace(request.Text))
+            if (request == null || string.IsNullOrWhiteSpace(request.Text))
             {
-                return BadRequest(new
-                {
-                    message = "Message is required."
-                });
+                return BadRequest(new { message = "Message text is required." });
             }
 
-            var senderId =
-                Request.Headers["X-User-Id"].FirstOrDefault()
-                ?? request.SenderId;
+            var senderId = Request.Headers["X-User-Id"].FirstOrDefault() ?? request.SenderId;
+            var senderRole = Request.Headers["X-User-Type"].FirstOrDefault() ?? request.SenderRole;
 
-            var senderType =
-                Request.Headers["X-User-Type"].FirstOrDefault()
-                ?? request.SenderRole;
-
-            if (string.IsNullOrWhiteSpace(senderId) ||
-                string.IsNullOrWhiteSpace(senderType))
+            if (string.IsNullOrWhiteSpace(senderId) || string.IsNullOrWhiteSpace(senderRole))
             {
-                return Unauthorized(new
-                {
-                    message = "User information is missing."
-                });
+                return Unauthorized(new { message = "User information (X-User-Id / X-User-Type) is missing." });
             }
 
             try
             {
-                var message =
-                    await _messageService.SendMessageAsync(
-                        request,
-                        senderId,
-                        senderType);
+                var message = await _messageService.SendMessageAsync(
+                    request,
+                    senderId,
+                    senderRole);
 
                 return Ok(message);
             }
             catch (Exception ex)
             {
-                return BadRequest(new
-                {
-                    message = ex.Message
-                });
+                return BadRequest(new { message = ex.Message });
             }
         }
 
-        [HttpGet("{pickupRequestId}")]
-        [HttpGet("pickup/{pickupRequestId}")]
-        public async Task<IActionResult> GetMessages(
-            string pickupRequestId,
-            [FromQuery] string? userId = null)
+        // 2. Get active conversation between Citizen and Worker
+        [HttpGet("conversation")]
+        public async Task<IActionResult> GetConversation(
+            [FromQuery] string citizenId,
+            [FromQuery] string workerId)
         {
-            var headerUserId = Request.Headers["X-User-Id"].FirstOrDefault();
-            var effectiveUserId = !string.IsNullOrWhiteSpace(headerUserId)
-                ? headerUserId
-                : !string.IsNullOrWhiteSpace(userId)
-                    ? userId
-                    : "user";
+            if (string.IsNullOrWhiteSpace(citizenId) || string.IsNullOrWhiteSpace(workerId))
+            {
+                return BadRequest(new { message = "Both citizenId and workerId are required." });
+            }
 
             try
             {
-                var messages =
-                    await _messageService
-                        .GetMessagesAsync(
-                            pickupRequestId,
-                            effectiveUserId);
-
-                return Ok(messages);
+                var conv = await _messageService.GetOrCreateConversationAsync(citizenId, workerId);
+                return Ok(conv);
             }
             catch (Exception ex)
             {
-                return BadRequest(new
-                {
-                    message = ex.Message
-                });
+                return BadRequest(new { message = ex.Message });
             }
         }
 
-        [HttpPut("read/{pickupRequestId}")]
+        // 3. Get conversation by ConversationId
+        [HttpGet("conversation/{conversationId}")]
+        public async Task<IActionResult> GetConversationById(string conversationId)
+        {
+            var conv = await _messageService.GetConversationByIdAsync(conversationId);
+            if (conv == null)
+            {
+                return NotFound(new { message = "Conversation not found." });
+            }
+            return Ok(conv);
+        }
+
+        // 4. Worker views list of all assigned citizens / conversations (with latest message and unread count)
+        [HttpGet("worker/{workerId}")]
+        [HttpGet("worker/{workerId}/conversations")]
+        public async Task<IActionResult> GetWorkerConversations(string workerId)
+        {
+            if (string.IsNullOrWhiteSpace(workerId))
+            {
+                return BadRequest(new { message = "Worker ID is required." });
+            }
+
+            var list = await _messageService.GetWorkerConversationsAsync(workerId);
+            return Ok(list);
+        }
+
+        // 5. Citizen views their conversation with assigned worker
+        [HttpGet("citizen/{citizenId}")]
+        [HttpGet("citizen/{citizenId}/conversation")]
+        public async Task<IActionResult> GetCitizenConversation(
+            string citizenId,
+            [FromQuery] string? workerId = null)
+        {
+            if (string.IsNullOrWhiteSpace(citizenId))
+            {
+                return BadRequest(new { message = "Citizen ID is required." });
+            }
+
+            var conv = await _messageService.GetCitizenConversationAsync(citizenId, workerId);
+            if (conv == null)
+            {
+                return NotFound(new { message = "No conversation found or assigned worker unavailable." });
+            }
+
+            return Ok(conv);
+        }
+
+        // 6. Mark conversation as read
+        [HttpPut("conversation/{conversationId}/read")]
         [HttpPut("read")]
         public async Task<IActionResult> MarkAsRead(
-            string? pickupRequestId,
+            string? conversationId,
             [FromBody] MarkReadRequest? body = null)
         {
-            var reqId = !string.IsNullOrEmpty(pickupRequestId)
-                ? pickupRequestId
-                : body?.RequestId ?? string.Empty;
+            var convId = !string.IsNullOrEmpty(conversationId)
+                ? conversationId
+                : body?.ConversationId;
 
-            var userId =
-                Request.Headers["X-User-Id"].FirstOrDefault()
-                ?? body?.UserId;
+            var userId = Request.Headers["X-User-Id"].FirstOrDefault() ?? body?.UserId ?? "user";
+            var userRole = Request.Headers["X-User-Type"].FirstOrDefault() ?? body?.UserRole ?? "Citizen";
 
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(reqId))
+            // If conversationId not directly provided, find by citizenId & workerId
+            if (string.IsNullOrEmpty(convId) && !string.IsNullOrEmpty(body?.CitizenId) && !string.IsNullOrEmpty(body?.WorkerId))
             {
-                return Unauthorized();
+                var conv = await _messageService.GetOrCreateConversationAsync(body.CitizenId, body.WorkerId);
+                convId = conv.ConversationId;
+            }
+            // If requestId provided, resolve conversation
+            else if (string.IsNullOrEmpty(convId) && !string.IsNullOrEmpty(body?.RequestId))
+            {
+                var conv = await _messageService.GetConversationByPickupRequestIdAsync(body.RequestId);
+                convId = conv?.ConversationId;
             }
 
-            await _messageService.MarkAsReadAsync(
-                reqId,
-                userId);
-
-            return Ok(new
+            if (string.IsNullOrEmpty(convId))
             {
-                message = "Messages marked as read."
-            });
+                return BadRequest(new { message = "Conversation identifier is required." });
+            }
+
+            await _messageService.MarkAsReadAsync(convId, userId, userRole);
+            return Ok(new { message = "Conversation marked as read." });
         }
 
+        // 7. Get total unread count for badge
         [HttpGet("unread-count")]
         public async Task<IActionResult> GetUnreadCount()
         {
-            var userId =
-                Request.Headers["X-User-Id"].FirstOrDefault();
+            var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+            var userRole = Request.Headers["X-User-Type"].FirstOrDefault() ?? "Citizen";
 
-            var userType =
-                Request.Headers["X-User-Type"].FirstOrDefault();
-
-            if (string.IsNullOrWhiteSpace(userId) ||
-                string.IsNullOrWhiteSpace(userType))
+            if (string.IsNullOrWhiteSpace(userId))
             {
                 return Unauthorized();
             }
 
-            var count =
-                await _messageService
-                    .GetUnreadCountAsync(
-                        userId,
-                        userType);
+            var count = await _messageService.GetUnreadCountAsync(userId, userRole);
+            return Ok(new { unreadCount = count });
+        }
 
-            return Ok(new
+        // 8. Backward Compatibility: /api/Message/{requestId}
+        // Instead of creating a separate chat, it resolves the Citizen & Worker from the pickup request and returns their unified conversation!
+        [HttpGet("{pickupRequestId}")]
+        [HttpGet("pickup/{pickupRequestId}")]
+        public async Task<IActionResult> GetMessagesByPickupRequest(string pickupRequestId)
+        {
+            try
             {
-                unreadCount = count
-            });
+                var conv = await _messageService.GetConversationByPickupRequestIdAsync(pickupRequestId);
+                if (conv == null)
+                {
+                    return Ok(new List<MessageItem>());
+                }
+
+                return Ok(conv);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

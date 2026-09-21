@@ -4,21 +4,35 @@ namespace EcoMind.API.Interfaces
 {
     public interface IMessageService
     {
-        Task<Message> SendMessageAsync(
+        Task<MessageItem> SendMessageAsync(
             SendMessageRequest request,
             string senderId,
-            string senderType);
+            string senderRole);
 
-        Task<List<Message>> GetMessagesAsync(
-            string pickupRequestId,
-            string userId);
+        Task<Conversation> GetOrCreateConversationAsync(
+            string citizenId,
+            string workerId);
+
+        Task<Conversation?> GetConversationByIdAsync(
+            string conversationId);
+
+        Task<List<ConversationSummaryDto>> GetWorkerConversationsAsync(
+            string workerId);
+
+        Task<Conversation?> GetCitizenConversationAsync(
+            string citizenId,
+            string? workerId = null);
 
         Task MarkAsReadAsync(
-            string pickupRequestId,
-            string userId);
+            string conversationId,
+            string userId,
+            string userRole);
 
         Task<long> GetUnreadCountAsync(
             string userId,
-            string userType);
+            string userRole);
+
+        Task<Conversation?> GetConversationByPickupRequestIdAsync(
+            string pickupRequestId);
     }
 }

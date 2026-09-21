@@ -16,49 +16,95 @@ const getAuthHeaders = (userId = '', userType = '') => {
 };
 
 /**
- * Fetch all messages for a specific pickup request conversation
- * @param {string} requestId - Public Pickup Request ID
- * @param {string} userId - ID/Email of the current user
- * @param {string} [userType] - "Citizen" or "Worker"
- * @returns {Promise<Array>} List of messages
+ * Fetch the single persistent conversation between a Citizen and Worker
+ * @param {string} citizenId
+ * @param {string} workerId
+ * @returns {Promise<Object>} Conversation document with Messages[]
  */
-export const getMessages = async (requestId, userId, userType = '') => {
-  if (!requestId) return [];
+export const getConversation = async (citizenId, workerId) => {
+  if (!citizenId || !workerId) return null;
   try {
-    const response = await axios.get(`${API_URL}/${encodeURIComponent(requestId)}`, {
-      params: userId ? { userId } : {},
-      headers: getAuthHeaders(userId, userType)
+    const response = await axios.get(`${API_URL}/conversation`, {
+      params: { citizenId: citizenId.trim(), workerId: workerId.trim() },
+      headers: getAuthHeaders(citizenId || workerId)
     });
-    const data = response.data;
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.data)) return data.data;
-    if (Array.isArray(data?.messages)) return data.messages;
-    return [];
+    return response.data;
   } catch (err) {
-    console.warn(`[getMessages] Failed to fetch messages for request ${requestId}:`, err);
+    console.warn(`[getConversation] Error loading conversation for citizen=${citizenId} worker=${workerId}:`, err);
     throw err;
   }
 };
 
 /**
- * Send a new message in a pickup request thread
- * @param {Object} payload - { requestId, senderId, senderRole, message }
- * @returns {Promise<Object>} Created message
+ * Fetch all conversations for a Worker (includes citizen summary, latest message, unread count)
+ * @param {string} workerId
+ * @returns {Promise<Array>} List of ConversationSummaryDto
  */
-export const sendMessage = async ({ requestId, senderId, senderRole, message }) => {
-  if (!requestId || !message?.trim()) {
-    throw new Error('Request ID and message text are required.');
+export const getWorkerConversations = async (workerId) => {
+  if (!workerId) return [];
+  try {
+    const response = await axios.get(`${API_URL}/worker/${encodeURIComponent(workerId.trim())}`, {
+      headers: getAuthHeaders(workerId, 'Worker')
+    });
+    const data = response.data;
+    if (Array.isArray(data)) return data;
+    return [];
+  } catch (err) {
+    console.warn(`[getWorkerConversations] Failed to load worker conversations:`, err);
+    return [];
+  }
+};
+
+/**
+ * Fetch the Citizen's conversation with their assigned worker
+ * @param {string} citizenId
+ * @param {string} [workerId]
+ * @returns {Promise<Object>} Conversation document
+ */
+export const getCitizenConversation = async (citizenId, workerId = '') => {
+  if (!citizenId) return null;
+  try {
+    const params = workerId ? { workerId: workerId.trim() } : {};
+    const response = await axios.get(`${API_URL}/citizen/${encodeURIComponent(citizenId.trim())}`, {
+      params,
+      headers: getAuthHeaders(citizenId, 'Citizen')
+    });
+    return response.data;
+  } catch (err) {
+    console.warn(`[getCitizenConversation] Failed to load citizen conversation:`, err);
+    return null;
+  }
+};
+
+/**
+ * Send a new message in the Citizen <-> Worker conversation
+ * @param {Object} payload - { citizenId, workerId, senderId, senderRole, text, pickupRequestId }
+ * @returns {Promise<Object>} Created MessageItem
+ */
+export const sendMessage = async ({
+  citizenId,
+  workerId,
+  senderId,
+  senderRole,
+  text,
+  message,
+  pickupRequestId,
+  requestId,
+  conversationId
+}) => {
+  const cleanText = (text || message || '').trim();
+  if (!cleanText) {
+    throw new Error('Message text is required.');
   }
 
-  const cleanText = message.trim();
   const body = {
-    requestId: requestId.trim(),
-    senderId: senderId?.trim(),
-    senderRole: senderRole?.trim(),
-    message: cleanText,
-    // Aliases for compatibility
-    pickupRequestId: requestId.trim(),
-    text: cleanText
+    citizenId: (citizenId || '').trim(),
+    workerId: (workerId || '').trim(),
+    conversationId: (conversationId || '').trim() || undefined,
+    senderId: (senderId || '').trim(),
+    senderRole: (senderRole || '').trim(),
+    text: cleanText,
+    pickupRequestId: (pickupRequestId || requestId || '').trim() || undefined
   };
 
   const response = await axios.post(API_URL, body, {
@@ -68,30 +114,43 @@ export const sendMessage = async ({ requestId, senderId, senderRole, message }) 
 };
 
 /**
- * Mark messages as read for a given pickup request
- * @param {Object} payload - { requestId, userId }
- * @returns {Promise<Object>} Status response
+ * Mark a conversation as read
+ * @param {Object} payload - { conversationId, citizenId, workerId, requestId, userId, userRole }
+ * @returns {Promise<Object>}
  */
-export const markAsRead = async ({ requestId, userId }) => {
-  if (!requestId || !userId) return;
+export const markAsRead = async ({
+  conversationId,
+  citizenId,
+  workerId,
+  requestId,
+  userId,
+  userRole
+}) => {
   try {
-    const response = await axios.put(`${API_URL}/read`, {
-      requestId: requestId.trim(),
-      userId: userId.trim()
-    }, {
-      headers: getAuthHeaders(userId)
+    const body = {
+      conversationId: conversationId || undefined,
+      citizenId: citizenId || undefined,
+      workerId: workerId || undefined,
+      requestId: requestId || undefined,
+      userId: userId || undefined,
+      userRole: userRole || undefined
+    };
+
+    const endpoint = conversationId ? `${API_URL}/conversation/${encodeURIComponent(conversationId)}/read` : `${API_URL}/read`;
+    const response = await axios.put(endpoint, body, {
+      headers: getAuthHeaders(userId, userRole)
     });
     return response.data;
   } catch (err) {
-    console.warn(`[markAsRead] Error marking messages as read for request ${requestId}:`, err);
+    console.warn('[markAsRead] Error marking conversation as read:', err);
   }
 };
 
 /**
- * Fetch total unread messages count for the current user
- * @param {string} userId - User ID or Email
+ * Fetch total unread messages count for current user
+ * @param {string} userId
  * @param {string} userType - "Citizen" or "Worker"
- * @returns {Promise<number>} Unread message count
+ * @returns {Promise<number>}
  */
 export const getUnreadCount = async (userId, userType) => {
   if (!userId || !userType) return 0;
@@ -106,9 +165,31 @@ export const getUnreadCount = async (userId, userType) => {
   }
 };
 
+/**
+ * Legacy / Backward compatibility: Get messages by pickup request ID
+ */
+export const getMessages = async (requestId, userId, userType = '') => {
+  if (!requestId) return [];
+  try {
+    const response = await axios.get(`${API_URL}/${encodeURIComponent(requestId)}`, {
+      headers: getAuthHeaders(userId, userType)
+    });
+    const data = response.data;
+    if (data?.messages && Array.isArray(data.messages)) return data.messages;
+    if (Array.isArray(data)) return data;
+    return [];
+  } catch (err) {
+    console.warn(`[getMessages] Failed for request ${requestId}:`, err);
+    return [];
+  }
+};
+
 export default {
-  getMessages,
+  getConversation,
+  getWorkerConversations,
+  getCitizenConversation,
   sendMessage,
   markAsRead,
-  getUnreadCount
+  getUnreadCount,
+  getMessages
 };

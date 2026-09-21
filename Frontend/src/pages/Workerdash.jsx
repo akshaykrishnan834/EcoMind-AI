@@ -451,6 +451,7 @@ const WorkerDashboard = () => {
                 role: 'Worker',
                 email: profile.email
               }}
+              wardCitizens={wardCitizens}
               pickupRequests={wardPickupRequests}
               onBack={() => setActiveTab('Dashboard')}
             />
