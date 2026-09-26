@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Bot, X, Sparkles, Maximize2, MessageSquare } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import AIChatBot from './AIChatBot';
+import EmoRobot from './EmoRobot';
 
 const AIFloatingChat = ({
   citizenData,
@@ -16,67 +17,57 @@ const AIFloatingChat = ({
     <div className="fixed bottom-6 right-6 z-50">
       {/* Floating Popup Window */}
       {isOpen && (
-        <div className="mb-4 w-[92vw] sm:w-[420px] max-w-lg shadow-2xl rounded-3xl overflow-hidden border-2 border-emerald-500/40 bg-white animate-scaleUp">
-          <div className="flex items-center justify-between bg-[#0a4d2c] px-4 py-2 text-white border-b border-emerald-800">
-            <span className="text-xs font-bold flex items-center gap-1.5">
-              <Bot className="w-4 h-4 text-emerald-300" />
-              EcoMind AI Assistant
-            </span>
-
-            <div className="flex items-center gap-2">
-              {onExpandFull && (
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    onExpandFull();
-                  }}
-                  className="p-1 text-emerald-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                  title="Open Fullscreen Page"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 text-emerald-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                title="Close chat"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="h-[480px]">
-            <AIChatBot
-              citizenData={citizenData}
-              monthlyStatusData={monthlyStatusData}
-              realRequests={realRequests}
-              assignedWorker={assignedWorker}
-              setActiveTab={setActiveTab}
-              isFloating={true}
-              onClose={() => setIsOpen(false)}
-            />
-          </div>
+        <div className="mb-3 w-[92vw] sm:w-[450px] max-w-lg h-[580px] sm:h-[620px] shadow-2xl rounded-3xl overflow-hidden border border-emerald-100/90 bg-white animate-scaleUp">
+          <AIChatBot
+            citizenData={citizenData}
+            monthlyStatusData={monthlyStatusData}
+            realRequests={realRequests}
+            assignedWorker={assignedWorker}
+            setActiveTab={setActiveTab}
+            isFloating={true}
+            onClose={() => setIsOpen(false)}
+            onExpandFull={onExpandFull ? () => {
+              setIsOpen(false);
+              onExpandFull();
+            } : undefined}
+          />
         </div>
       )}
 
-      {/* Floating Trigger Bubble Button */}
+      {/* Floating Animated EMO Robot Launcher */}
       {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-[#0a4d2c] via-[#0f5b37] to-emerald-800 hover:from-emerald-800 hover:to-[#0a4d2c] text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-emerald-400/40"
-          title="Chat with EcoMind AI"
-        >
-          <div className="relative">
-            <Bot className="w-5 h-5 text-emerald-300 group-hover:rotate-12 transition-transform duration-300" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full" />
+        <div className="relative group flex flex-col items-end">
+          {/* Floating Compact Speech Bubble Tag */}
+          <div className="mb-1.5 bg-[#0a4d2c]/95 text-white border border-emerald-400/50 text-[11px] font-bold px-3 py-1 rounded-xl shadow-lg flex items-center gap-1.5 group-hover:scale-105 transition-all duration-300 pointer-events-none backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="tracking-wide">Ask Mittu</span>
+            <Sparkles className="w-3 h-3 text-emerald-300" />
+            <div className="absolute -bottom-1 right-6 w-2 h-2 bg-[#0a4d2c] border-r border-b border-emerald-400/50 rotate-45" />
           </div>
-          <span className="text-xs font-extrabold tracking-wide hidden sm:inline">Ask EcoMind AI</span>
-          <span className="p-1 bg-white/15 rounded-full">
-            <Sparkles className="w-3 h-3 text-emerald-200" />
-          </span>
-        </button>
+
+          {/* Clickable Animated EMO Robot Trigger */}
+          <button
+            onClick={() => setIsOpen(true)}
+            className="relative flex items-center justify-center p-1 cursor-pointer transition-all duration-300 transform hover:scale-110 active:scale-95 focus:outline-none filter drop-shadow-[0_8px_20px_rgba(5,150,105,0.4)]"
+            title="Click to chat with Mittu AI"
+          >
+            {/* Ambient glowing radial blur */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/30 to-teal-400/30 rounded-full blur-xl -z-10 group-hover:blur-2xl transition-all" />
+
+            <EmoRobot
+              size="pet"
+              pose="running"
+              state="idle"
+              interactive={false}
+            />
+
+            {/* Online Live Status Pulse */}
+            <span className="absolute bottom-1 right-1 flex h-3.5 w-3.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white shadow-xs" />
+            </span>
+          </button>
+        </div>
       )}
     </div>
   );

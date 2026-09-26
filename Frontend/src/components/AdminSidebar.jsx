@@ -105,67 +105,60 @@ const AdminSidebar = ({
       <aside
         className={`${
           isCollapsed ? 'w-20' : 'w-[260px]'
-        } bg-white text-gray-800 flex flex-col justify-between border-r border-emerald-100/90 shadow-sm shrink-0 h-full overflow-hidden transition-all duration-300 ease-in-out ${
+        } bg-white dark:bg-[#181b20] border-r border-gray-200/80 dark:border-white/10 text-gray-800 dark:text-gray-100 flex flex-col justify-between shrink-0 h-full overflow-hidden transition-all duration-300 ease-in-out ${
           isOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden lg:flex'
         }`}
       >
-        {/* Top Fixed Section: Collapse Button & Admin Profile */}
-        <div className="shrink-0 px-3 pt-2.5 pb-2 space-y-2 border-b border-gray-100/60 bg-white">
-          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-            {!isCollapsed && (
-              <span className="text-[10.5px] font-bold tracking-wider uppercase text-emerald-800/60 px-1">
-                Admin Menu
-              </span>
-            )}
-            <div className="flex items-center">
-              <button
-                onClick={toggleCollapse}
-                className="hidden lg:flex items-center justify-center p-1.5 rounded-lg hover:bg-emerald-50 text-[#064e3b] transition-colors cursor-pointer"
-                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                <Menu className="w-4 h-4 text-[#064e3b]" />
-              </button>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 lg:hidden ml-auto shrink-0"
-                title="Close menu"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Admin Profile Card */}
+        {/* Top Fixed Section: Admin Profile & Menu Toggle in One Line */}
+        <div className="shrink-0 px-2.5 pt-3 pb-2 bg-white dark:bg-[#181b20]">
           <div
-            className={`w-full bg-[#f4f9f5] border border-emerald-100/70 rounded-xl ${
-              isCollapsed ? 'p-1.5 flex justify-center' : 'p-2.5 flex items-center justify-between'
-            } transition-all shadow-2xs`}
+            className={`w-full bg-gray-50/80 dark:bg-[#20252b]/80 border border-gray-200/70 dark:border-white/5 rounded-2xl ${
+              isCollapsed ? 'p-1.5 flex flex-col items-center gap-2' : 'p-2 flex items-center justify-between gap-2'
+            } transition-all`}
           >
-            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5 min-w-0'}`}>
+            {/* User Info (Avatar + Administrator) */}
+            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5 min-w-0 flex-1'}`}>
               <div className="relative shrink-0">
-                <div className="w-9 h-9 rounded-full bg-[#0a4d2c] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                <div className="w-8.5 h-8.5 rounded-full bg-[#0a4d2c] text-white flex items-center justify-center font-bold text-xs shadow-xs">
                   <User className="w-4 h-4 text-white" />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#65a30d] text-white flex items-center justify-center border border-white shadow-2xs">
-                  <Leaf className="w-2 h-2 fill-current text-white" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#65a30d] text-white flex items-center justify-center border-2 border-white dark:border-[#16271e] shadow-xs">
+                  <Leaf className="w-1.5 h-1.5 fill-current text-white" />
                 </div>
               </div>
 
               {!isCollapsed && (
                 <div className="min-w-0 text-left">
-                  <p className="text-[13px] font-bold text-gray-900 truncate leading-tight">
+                  <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100 truncate leading-tight">
                     Administrator
                   </p>
-                  <p className="text-[11px] text-gray-500 font-medium leading-tight mt-0.5">
-                    Admin Panel
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 truncate">
+                      Executive Admin
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
 
-            {!isCollapsed && (
-              <ChevronRight className="w-3.5 h-3.5 text-gray-400 shrink-0 ml-1" />
-            )}
+            {/* Three Bars Collapse / Close Toggle */}
+            <div className="flex items-center shrink-0">
+              <button
+                onClick={toggleCollapse}
+                className="hidden lg:flex items-center justify-center p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-white/5 text-[#064e3b] dark:text-emerald-400 transition-colors cursor-pointer"
+                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                <Menu className="w-4 h-4 text-[#064e3b] dark:text-emerald-400" />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 lg:hidden shrink-0"
+                title="Close menu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -188,21 +181,10 @@ const AdminSidebar = ({
                     isCollapsed ? 'justify-center p-2' : 'justify-between px-2.5 py-1.5'
                   } rounded-xl transition-all duration-200 cursor-pointer overflow-hidden ${
                     isActive
-                      ? 'bg-gradient-to-r from-[#064e3b] via-[#06543f] to-[#047857] text-white shadow-sm'
-                      : 'text-gray-800 hover:bg-emerald-50/70'
+                      ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-xs font-bold'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#20252b] hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
-                  {isActive && (
-                    <div className="absolute right-5 -bottom-2 pointer-events-none opacity-20 text-emerald-200">
-                      <svg
-                        className="w-12 h-12 fill-current transform -rotate-12"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-11 5-4 4-4 8-4 8s2-5 10-8Z" />
-                      </svg>
-                    </div>
-                  )}
-
                   <div
                     className={`flex items-center ${
                       isCollapsed ? 'justify-center' : 'gap-2.5 min-w-0'
@@ -213,8 +195,8 @@ const AdminSidebar = ({
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 rounded-lg bg-[#e8f5ec] text-[#0a4d2c] flex items-center justify-center shrink-0 group-hover:bg-[#d8eedf] transition-colors">
-                        <Icon className="w-4 h-4 text-[#0a4d2c]" />
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:bg-emerald-100/80 dark:group-hover:bg-emerald-500/20 transition-colors">
+                        <Icon className="w-4 h-4" />
                       </div>
                     )}
 
@@ -223,7 +205,7 @@ const AdminSidebar = ({
                         className={`text-[12.5px] font-semibold truncate ${
                           isActive
                             ? 'text-white font-bold'
-                            : 'text-gray-800 group-hover:text-emerald-950'
+                            : 'text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white'
                         }`}
                       >
                         {item.label}
@@ -302,26 +284,26 @@ const AdminSidebar = ({
         </nav>
 
         {/* Fixed Bottom Section: Scenic Card & Log Out Button */}
-        <div className="shrink-0 px-3 pt-2 pb-2.5 space-y-2 border-t border-emerald-50 bg-white">
+        <div className="shrink-0 px-3 pt-2 pb-3 space-y-2 bg-white dark:bg-[#111e17]">
           {/* Compact Scenic Card */}
           {!isCollapsed && (
-            <div className="relative rounded-xl bg-gradient-to-b from-[#eaf6ee] via-[#dff2e5] to-[#cfe6d6] border border-emerald-200/60 p-2.5 overflow-hidden shadow-2xs">
+            <div className="relative rounded-2xl bg-gradient-to-b from-[#eaf6ee] via-[#dff2e5] to-[#cfe6d6] dark:from-[#162a1f] dark:via-[#13231a] dark:to-[#0f1b14] p-3 overflow-hidden">
               <div className="flex items-center gap-2 relative z-10">
-                <div className="w-7 h-7 rounded-full bg-[#d2ebd7] flex items-center justify-center text-[#065f46] shrink-0 shadow-2xs">
-                  <Leaf className="w-3.5 h-3.5 fill-current text-[#065f46]" />
+                <div className="w-7 h-7 rounded-full bg-[#d2ebd7] dark:bg-[#1f3a2b] flex items-center justify-center text-[#065f46] dark:text-emerald-400 shrink-0">
+                  <Leaf className="w-3.5 h-3.5 fill-current" />
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-[11.5px] font-bold text-[#064e3b] leading-tight">
+                  <h4 className="text-[11.5px] font-bold text-[#064e3b] dark:text-emerald-300 leading-tight">
                     Together for a Cleaner Tomorrow
                   </h4>
-                  <p className="text-[9.5px] font-medium text-emerald-800/80 mt-0.5">
+                  <p className="text-[9.5px] font-medium text-emerald-800/80 dark:text-emerald-400/80 mt-0.5">
                     Reduce • Reuse • Recycle
                   </p>
                 </div>
               </div>
 
               {/* Compact Kerala Backwaters Vector Silhouette */}
-              <div className="relative -mx-2.5 -mb-2.5 mt-1 overflow-hidden select-none pointer-events-none">
+              <div className="relative -mx-3 -mb-3 mt-1.5 overflow-hidden select-none pointer-events-none opacity-80 dark:opacity-40">
                 <svg
                   viewBox="0 0 320 52"
                   className="w-full h-auto block"
@@ -398,12 +380,12 @@ const AdminSidebar = ({
           {/* Log Out Button */}
           <button
             onClick={onLogout}
-            className={`w-full rounded-full border border-emerald-300/80 bg-[#f4faf6] hover:bg-emerald-100/70 text-[#064e3b] font-bold text-xs ${
-              isCollapsed ? 'py-2.5 px-2 justify-center' : 'py-2 px-3 justify-center gap-2'
-            } flex items-center transition-all cursor-pointer shadow-2xs group`}
+            className={`w-full rounded-xl bg-gray-50 hover:bg-red-50 dark:bg-[#20252b] dark:hover:bg-red-950/30 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 border border-gray-200/70 dark:border-white/5 font-bold text-xs ${
+              isCollapsed ? 'py-2.5 px-2 justify-center' : 'py-2.5 px-3 justify-center gap-2'
+            } flex items-center transition-all cursor-pointer group`}
             title="Log Out"
           >
-            <LogOut className="w-3.5 h-3.5 text-[#064e3b] group-hover:-translate-x-0.5 transition-transform shrink-0" />
+            <LogOut className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
             {!isCollapsed && <span>Log Out</span>}
           </button>
 

@@ -18,7 +18,7 @@ namespace EcoMind.API.Services
         }
 
         private const string EcoMindInstructions = """
-            You are EcoMind AI, an AI assistant for the EcoMind waste
+            You are Mittu, a friendly, helpful, and intelligent AI assistant for the EcoMind waste
             management platform.
 
             Your main purpose is to help citizens with:
@@ -86,7 +86,7 @@ namespace EcoMind.API.Services
             pickup schedules and EcoMind payments.
 
             If the user asks an unrelated question, politely explain that
-            the question is outside the scope of EcoMind AI.
+            the question is outside the scope of Mittu / EcoMind AI.
 
             If the user asks for personal information such as their pickup
             date or payment status, do not guess. The application backend
@@ -105,7 +105,7 @@ namespace EcoMind.API.Services
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 return GenerateLocalSummaryFallback(message) ??
-                       "EcoMind AI is currently operating in offline mode. Please configure the Gemini API key.";
+                       "Mittu AI is currently operating in offline mode. Please configure the Gemini API key.";
             }
 
             // Build candidate models list prioritizing configured model
@@ -224,7 +224,7 @@ namespace EcoMind.API.Services
                 return fallbackSummary;
             }
 
-            throw lastException ?? new Exception("Unable to get response from EcoMind AI models.");
+            throw lastException ?? new Exception("Unable to get response from Mittu AI models.");
         }
 
         /// <summary>
@@ -252,7 +252,7 @@ namespace EcoMind.API.Services
                 var duesTotal = ExtractField(message, "Total Outstanding Dues: ");
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"Hello {residentName}! Here is the complete summary and analysis of your current schedule, pickup request updates, and dues:\n");
+                sb.AppendLine($"Hello {residentName}! 👋 I am Mittu, your personal AI assistant. Here is the complete summary and analysis of your current schedule, pickup request updates, and dues:\n");
                 
                 sb.AppendLine("### 1. Live Pickup Request & Schedule Updates");
                 sb.AppendLine($"* **Request Status:** {requestStatus}");
@@ -265,7 +265,7 @@ namespace EcoMind.API.Services
 
                 sb.AppendLine("### 2. Live Monthly User Fee & Payment Dues");
                 sb.AppendLine($"* **Total Outstanding Dues:** {duesTotal}");
-                sb.AppendLine("* **Payment Methods:** Online via EcoMind AI (UPI, Card, QR) or Cash to Haritha Karma Sena worker upon pickup with instant digital receipt.");
+                sb.AppendLine("* **Payment Methods:** Online via EcoMind AI / Mittu (UPI, Card, QR) or Cash to Haritha Karma Sena worker upon pickup with instant digital receipt.");
                 sb.AppendLine();
 
                 sb.AppendLine("### 3. Collection Rules & Instructions");

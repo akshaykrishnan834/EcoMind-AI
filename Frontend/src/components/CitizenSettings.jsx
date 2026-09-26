@@ -21,23 +21,23 @@ export const CitizenSettings = ({ citizenData, setActiveTab }) => {
   const themeOptions = [
     {
       id: 'light',
-      title: 'White (Light) Mode',
-      desc: 'Crisp emerald accents with clean light surfaces. Ideal for daytime usage and well-lit environments.',
+      title: 'Light (Enterprise White)',
+      desc: 'Clean white background with dark slate typography and subtle EcoMind green accents. Modern enterprise SaaS design.',
       icon: Sun,
       iconColor: 'text-amber-500',
-      badge: 'Default',
-      previewBg: 'bg-[#f4f9f5] border-gray-200',
-      previewCard: 'bg-white border-emerald-200 text-gray-800'
+      badge: 'Crisp & Clean',
+      previewBg: 'bg-slate-50 border-gray-200',
+      previewCard: 'bg-white border-gray-200 text-slate-800'
     },
     {
       id: 'dark',
-      title: 'Dark Mode',
-      desc: 'Obsidian & deep emerald tones designed to minimize screen glare and eye strain at night.',
+      title: 'Dark (Deep Charcoal)',
+      desc: 'Deep charcoal surfaces with soft white text and subtle borders inspired by Instagram & Facebook dark modes.',
       icon: Moon,
       iconColor: 'text-indigo-400',
-      badge: 'Popular',
-      previewBg: 'bg-[#0c1510] border-emerald-900',
-      previewCard: 'bg-[#14231b] border-emerald-800 text-gray-200'
+      badge: 'Modern Charcoal',
+      previewBg: 'bg-[#121417] border-white/10',
+      previewCard: 'bg-[#1f2329] border-white/10 text-slate-100'
     },
     {
       id: 'system',
@@ -45,9 +45,9 @@ export const CitizenSettings = ({ citizenData, setActiveTab }) => {
       desc: 'Automatically matches your device or operating system appearance settings.',
       icon: Monitor,
       iconColor: 'text-emerald-500',
-      badge: 'Auto',
-      previewBg: 'bg-gradient-to-r from-[#f4f9f5] to-[#0c1510] border-gray-300',
-      previewCard: 'bg-white/90 dark:bg-[#14231b]/90 border-emerald-400 text-gray-800 dark:text-gray-200'
+      badge: 'Auto Sync',
+      previewBg: 'bg-gradient-to-r from-slate-50 to-[#121417] border-gray-300 dark:border-white/10',
+      previewCard: 'bg-white/90 dark:bg-[#1f2329]/90 border-emerald-500/30 text-slate-800 dark:text-slate-100'
     }
   ];
 

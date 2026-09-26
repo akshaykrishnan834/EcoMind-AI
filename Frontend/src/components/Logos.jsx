@@ -1,5 +1,5 @@
 import React from 'react';
-import KeralaGovImg from "../assets/images/Government-of-kerala.jpg";
+import KeralaGovImg from "../assets/images/Government-of-kerala.png";
 import HarithaKarmaSenaImg from "../assets/images/harithaKarma-sena.jpg";
 import wokersimg from "../assets/images/harithakarmasena-workers.jpg";
 import ecomindlogo from "../assets/images/logo-ecomind.png";

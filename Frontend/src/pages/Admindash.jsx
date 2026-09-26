@@ -61,6 +61,18 @@ const Admin = () => {
         sessionStorage.setItem('adminActiveTab', tab);
     };
 
+    // Listen for navigation requests from Header search
+    useEffect(() => {
+        const handleNav = (e) => {
+            if (e.detail) {
+                setActiveTab(e.detail);
+                setIsMobileSidebarOpen(false);
+            }
+        };
+        window.addEventListener('ecomind:navigate-tab', handleNav);
+        return () => window.removeEventListener('ecomind:navigate-tab', handleNav);
+    }, []);
+
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const navigate = useNavigate();
@@ -442,7 +454,7 @@ const Admin = () => {
         <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f4f9f5] dark:bg-[#0c1510] font-sans transition-colors duration-200">
             {/* Main Top Header (Fixed at top) */}
             <div className="shrink-0 z-40 border-b border-emerald-100/80 dark:border-emerald-800/60 shadow-2xs">
-                <Header />
+                <Header onSelectTab={setActiveTab} activeTab={activeTab} role="admin" onLogout={handleLogout} />
             </div>
 
             {/* Body Container (Flex below Header) */}
@@ -459,25 +471,25 @@ const Admin = () => {
                 />
 
                 {/* Workspace Content Area (Scrolls Vertically) */}
-                <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f3f7f5] dark:bg-[#0a120e] min-w-0">
+                <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f6faf7] dark:bg-[#09110d] min-w-0">
                     <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
                         {activeTab === 'Dashboard' && (
                             <div className="max-w-7xl mx-auto space-y-6 animate-fadeIn pb-12">
 
                                 {/* 1. EXECUTIVE COMMAND CENTER BANNER */}
-                                <div className="bg-gradient-to-r from-[#0a4d2c] via-[#0b5c35] to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-emerald-700/40">
+                                <div className="bg-gradient-to-r from-[#0a4d2c] via-[#0b5c35] to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                                     <div className="absolute right-0 top-0 translate-x-1/4 -translate-y-1/4 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
 
                                     <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                                         <div className="space-y-2.5">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-semibold backdrop-blur-xs">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 text-xs font-semibold backdrop-blur-xs">
                                                 <Shield className="w-3.5 h-3.5 text-emerald-300" />
                                                 <span>Local Self Government Department • Kerala State</span>
                                             </div>
 
                                             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
                                                 <span>EcoMind AI Executive Command Center</span>
-                                                <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 uppercase tracking-widest">
+                                                <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-400/20 text-emerald-300 uppercase tracking-widest">
                                                     Live System
                                                 </span>
                                             </h1>
@@ -501,7 +513,7 @@ const Admin = () => {
                                                 type="button"
                                                 onClick={loadAllDashboardData}
                                                 disabled={loading}
-                                                className="px-3.5 py-2.5 bg-emerald-800/60 hover:bg-emerald-800 text-emerald-100 font-bold text-xs uppercase tracking-wider rounded-xl border border-emerald-600/40 shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                                                className="px-3.5 py-2.5 bg-emerald-800/60 hover:bg-emerald-800 text-emerald-100 font-bold text-xs uppercase tracking-wider rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                                                 title="Sync and refresh all dashboard metrics"
                                             >
                                                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-300' : ''}`} />
@@ -518,7 +530,7 @@ const Admin = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveTab('Panchayat Desk > Add Ward')}
-                                                className="px-4 py-2.5 bg-emerald-900 hover:bg-emerald-950 border border-emerald-400/40 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                                                className="px-4 py-2.5 bg-emerald-900 hover:bg-emerald-950 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
                                             >
                                                 <Building2 className="w-4 h-4 text-emerald-300" />
                                                 <span>Add Ward</span>
@@ -532,10 +544,10 @@ const Admin = () => {
                                     {/* Alert 1: Missed Pickups */}
                                     <div
                                         onClick={() => setActiveTab('Pickup Management')}
-                                        className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex items-start gap-3.5 group ${
+                                        className={`p-4 rounded-2xl transition-all cursor-pointer shadow-xs flex items-start gap-3.5 group ${
                                             missedPickups > 0
-                                                ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 hover:border-rose-400'
-                                                : 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40'
+                                                ? 'bg-rose-50/80 dark:bg-rose-950/30'
+                                                : 'bg-emerald-50/70 dark:bg-emerald-950/20'
                                         }`}
                                     >
                                         <div className={`p-2.5 rounded-xl shrink-0 ${
@@ -566,7 +578,7 @@ const Admin = () => {
                                     {/* Alert 2: Pending User Fees */}
                                     <div
                                         onClick={() => setActiveTab('Payments')}
-                                        className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 hover:border-amber-400 transition-all cursor-pointer shadow-xs flex items-start gap-3.5 group"
+                                        className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 transition-all cursor-pointer shadow-xs flex items-start gap-3.5 group"
                                     >
                                         <div className="p-2.5 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300 shrink-0">
                                             <IndianRupee className="w-4 h-4" />
@@ -590,10 +602,10 @@ const Admin = () => {
                                     {/* Alert 3: Unassigned Ward Coverage */}
                                     <div
                                         onClick={() => setActiveTab('Panchayat Desk > All Wards')}
-                                        className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex items-start gap-3.5 group ${
+                                        className={`p-4 rounded-2xl transition-all cursor-pointer shadow-xs flex items-start gap-3.5 group ${
                                             unassignedWardsCount > 0
-                                                ? 'bg-blue-50/80 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/50 hover:border-blue-400'
-                                                : 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40'
+                                                ? 'bg-blue-50/80 dark:bg-blue-950/30'
+                                                : 'bg-emerald-50/70 dark:bg-emerald-950/20'
                                         }`}
                                     >
                                         <div className={`p-2.5 rounded-xl shrink-0 ${
@@ -619,7 +631,7 @@ const Admin = () => {
                                     {/* Alert 4: Citizen KYC Status */}
                                     <div
                                         onClick={() => setActiveTab('Users')}
-                                        className="p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50 hover:border-indigo-400 transition-all cursor-pointer shadow-xs flex items-start gap-3.5 group"
+                                        className="p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/30 transition-all cursor-pointer shadow-xs flex items-start gap-3.5 group"
                                     >
                                         <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 shrink-0">
                                             <UserCheck className="w-4 h-4" />
@@ -648,11 +660,11 @@ const Admin = () => {
                                     {/* KPI 1: Total Citizens */}
                                     <div
                                         onClick={() => setActiveTab('Users')}
-                                        className="bg-white dark:bg-[#14231b] p-5 rounded-2xl border-2 border-emerald-800/20 dark:border-emerald-700/30 shadow-sm hover:shadow-md hover:border-emerald-600 transition-all cursor-pointer space-y-3"
+                                        className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 cursor-pointer space-y-3"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Citizens</span>
-                                            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
+                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Total Citizens</span>
+                                            <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
                                                 <Users className="w-4 h-4" />
                                             </div>
                                         </div>
@@ -668,11 +680,11 @@ const Admin = () => {
                                     {/* KPI 2: Karma Sena Workers */}
                                     <div
                                         onClick={() => setActiveTab('Worker Desk > Worker Details')}
-                                        className="bg-white dark:bg-[#14231b] p-5 rounded-2xl border-2 border-emerald-800/20 dark:border-emerald-700/30 shadow-sm hover:shadow-md hover:border-emerald-600 transition-all cursor-pointer space-y-3"
+                                        className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 cursor-pointer space-y-3"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Karma Sena</span>
-                                            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
+                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Karma Sena</span>
+                                            <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
                                                 <UserCheck className="w-4 h-4" />
                                             </div>
                                         </div>
@@ -688,11 +700,11 @@ const Admin = () => {
                                     {/* KPI 3: Panchayat Wards */}
                                     <div
                                         onClick={() => setActiveTab('Panchayat Desk > All Wards')}
-                                        className="bg-white dark:bg-[#14231b] p-5 rounded-2xl border-2 border-emerald-800/20 dark:border-emerald-700/30 shadow-sm hover:shadow-md hover:border-emerald-600 transition-all cursor-pointer space-y-3"
+                                        className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 cursor-pointer space-y-3"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Wards</span>
-                                            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
+                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Total Wards</span>
+                                            <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
                                                 <Building2 className="w-4 h-4" />
                                             </div>
                                         </div>
@@ -708,11 +720,11 @@ const Admin = () => {
                                     {/* KPI 4: Total Pickup Requests */}
                                     <div
                                         onClick={() => setActiveTab('Pickup Management')}
-                                        className="bg-white dark:bg-[#14231b] p-5 rounded-2xl border-2 border-emerald-800/20 dark:border-emerald-700/30 shadow-sm hover:shadow-md hover:border-emerald-600 transition-all cursor-pointer space-y-3"
+                                        className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 cursor-pointer space-y-3"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pickup Requests</span>
-                                            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
+                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Pickup Requests</span>
+                                            <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
                                                 <Truck className="w-4 h-4" />
                                             </div>
                                         </div>
@@ -728,11 +740,11 @@ const Admin = () => {
                                     {/* KPI 5: Completed Pickups */}
                                     <div
                                         onClick={() => setActiveTab('Pickup Management')}
-                                        className="bg-white dark:bg-[#14231b] p-5 rounded-2xl border-2 border-emerald-800/20 dark:border-emerald-700/30 shadow-sm hover:shadow-md hover:border-emerald-600 transition-all cursor-pointer space-y-3"
+                                        className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 cursor-pointer space-y-3"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Completed Pickups</span>
-                                            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
+                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Completed Pickups</span>
+                                            <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
                                                 <ShieldCheck className="w-4 h-4" />
                                             </div>
                                         </div>
@@ -748,11 +760,11 @@ const Admin = () => {
                                     {/* KPI 6: Monthly Revenue */}
                                     <div
                                         onClick={() => setActiveTab('Payments')}
-                                        className="bg-white dark:bg-[#14231b] p-5 rounded-2xl border-2 border-emerald-800/20 dark:border-emerald-700/30 shadow-sm hover:shadow-md hover:border-emerald-600 transition-all cursor-pointer space-y-3"
+                                        className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 cursor-pointer space-y-3"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Monthly Revenue</span>
-                                            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
+                                            <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-400">Monthly Revenue</span>
+                                            <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 rounded-xl">
                                                 <IndianRupee className="w-4 h-4" />
                                             </div>
                                         </div>

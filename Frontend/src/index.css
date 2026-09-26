@@ -4,19 +4,82 @@
 
 @layer base {
   :root {
-    --bg-primary: #f4f9f5;
-    --bg-surface: #ffffff;
-    --text-primary: #1f2937;
-    --text-secondary: #4b5563;
-    --border-subtle: #e5e7eb;
+    /* ========================================================
+       LIGHT MODE: MODERN ENTERPRISE SAAS DASHBOARD (INSTAGRAM/GMAIL INSPIRED)
+       ======================================================== */
+    --bg-primary: #f8fafc;        /* Crisp neutral canvas (Slate-50) */
+    --bg-secondary: #ffffff;      /* Clean white headers & sidebars */
+    --bg-card: #ffffff;           /* Clean white card surfaces */
+    --bg-card-hover: #f8fafc;     /* Subtle card hover state */
+    --bg-elevated: #ffffff;       /* Modals, popups, dropdowns */
+    --bg-subtle: #f1f5f9;         /* Inset containers, secondary badges */
+
+    /* Typography */
+    --text-primary: #0f172a;      /* Dark slate (Slate-900) - high contrast & crisp */
+    --text-secondary: #475569;    /* Muted slate (Slate-600) */
+    --text-muted: #94a3b8;        /* Slate-400 */
+
+    /* EcoMind Green Accents */
+    --accent-color: #059669;      /* EcoMind Emerald-600 */
+    --accent-hover: #047857;      /* Emerald-700 */
+    --accent-light: #ecfdf5;      /* Subtle emerald tint (Emerald-50) */
+    --accent-text: #065f46;       /* Deep emerald text (Emerald-800) */
+
+    /* Borders & Dividers */
+    --border-color: #e2e8f0;      /* Slate-200: soft, professional border */
+    --border-subtle: #f1f5f9;     /* Slate-100 */
+    --border-accent: #a7f3d0;     /* Emerald-200 */
+
+    /* Inputs & Forms */
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
+    --input-focus-ring: rgba(16, 185, 129, 0.2);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+    --shadow-hover: 0 4px 12px -2px rgba(0, 0, 0, 0.07);
+    --shadow-dropdown: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
   }
 
   html.dark {
-    --bg-primary: #0c1510;
-    --bg-surface: #14231b;
-    --text-primary: #f9fafb;
-    --text-secondary: #9ca3af;
-    --border-subtle: #233e31;
+    /* ========================================================
+       DARK MODE: DEEP CHARCOAL (INSTAGRAM/FACEBOOK/GMAIL INSPIRED)
+       ======================================================== */
+    --bg-primary: #121417;        /* Deep charcoal canvas (never pitch black #000 or muddy green) */
+    --bg-secondary: #181b20;      /* Sidebar & Header: Distinct dark charcoal */
+    --bg-card: #1f2329;           /* Cards & Panels: Elevated dark gray (Facebook hierarchy) */
+    --bg-card-hover: #262b32;     /* Card hover state */
+    --bg-elevated: #242930;       /* Dropdowns, modals, floating elements */
+    --bg-subtle: #181b20;         /* Inset containers */
+
+    /* Typography */
+    --text-primary: #f8fafc;      /* Soft white (Slate-50) - comfortable & crisp */
+    --text-secondary: #94a3b8;    /* Muted gray (Slate-400) */
+    --text-muted: #64748b;        /* Slate-500 */
+
+    /* EcoMind Green Accents (Vivid for visibility) */
+    --accent-color: #10b981;      /* Vivid Emerald-500 */
+    --accent-hover: #34d399;      /* Emerald-400 */
+    --accent-light: rgba(16, 185, 129, 0.12); /* Refined green highlight */
+    --accent-text: #6ee7b7;       /* Bright emerald text */
+
+    /* Borders & Dividers (Subtle crisp borders instead of heavy shadows) */
+    --border-color: rgba(255, 255, 255, 0.08); /* Crisp, elegant 1px edge */
+    --border-subtle: rgba(255, 255, 255, 0.04);
+    --border-accent: rgba(16, 185, 129, 0.3);
+
+    /* Inputs & Forms */
+    --input-bg: #181b20;
+    --input-border: rgba(255, 255, 255, 0.12);
+    --input-focus-ring: rgba(16, 185, 129, 0.3);
+
+    /* Shadows */
+    --shadow-sm: none;
+    --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+    --shadow-hover: 0 4px 16px 0 rgba(0, 0, 0, 0.45);
+    --shadow-dropdown: 0 12px 30px 0 rgba(0, 0, 0, 0.6), 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+
     color-scheme: dark;
   }
 
@@ -24,95 +87,292 @@
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Global Dark Mode Overrides for EcoMind Theme */
+/* ========================================================
+   LIGHT MODE SURFACE & CARD ARCHITECTURE
+   ======================================================== */
+
+.bg-white {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+}
+
+/* Base border classes in light mode */
+.border-emerald-100,
+.border-emerald-200,
+.border-gray-100,
+.border-gray-200 {
+  border-color: var(--border-color);
+}
+
+/* Form inputs & controls in light mode */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 0 3px var(--input-focus-ring) !important;
+  outline: none;
+}
+
+/* Interactive card transitions */
+.hover\:shadow-md:hover {
+  box-shadow: var(--shadow-hover);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ========================================================
+   GLOBAL DARK MODE SYSTEM (INSTAGRAM / FACEBOOK / GMAIL SPEC)
+   ======================================================== */
+
 html.dark body {
-  background-color: #0c1510;
-  color: #f3f4f6;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
 }
 
-html.dark .bg-white {
-  background-color: #14231b !important;
+/* Card & Surface Overrides in Dark Mode */
+html.dark .bg-white,
+html.dark .bg-\[\#111e17\],
+html.dark .bg-\[\#121e17\],
+html.dark .bg-\[\#14231b\],
+html.dark .bg-\[\#16251e\],
+html.dark .bg-\[\#162720\],
+html.dark .bg-\[\#162920\],
+html.dark .bg-\[\#16271e\],
+html.dark .bg-\[\#1b3126\] {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
+/* Canvas & Page Backgrounds in Dark Mode */
+html.dark .bg-\[\#09110d\],
+html.dark .bg-\[\#f6faf7\],
 html.dark .bg-\[\#f4f9f5\],
 html.dark .bg-\[\#f3f7f5\],
 html.dark .bg-\[\#f2faf5\],
-html.dark .bg-\[\#f8fbf9\] {
-  background-color: #0c1510 !important;
+html.dark .bg-\[\#f8fbf9\],
+html.dark .bg-gray-50,
+html.dark .bg-slate-50 {
+  background-color: var(--bg-primary) !important;
 }
 
+/* Refined Subtle Green Highlights in Dark Mode (Pills, Badges, Active States) */
 html.dark .bg-emerald-50,
 html.dark .bg-emerald-50\/50,
 html.dark .bg-emerald-50\/60,
 html.dark .bg-emerald-50\/70,
 html.dark .bg-emerald-50\/80,
-html.dark .bg-emerald-50\/90 {
-  background-color: #1a2e24 !important;
-}
-
+html.dark .bg-emerald-50\/90,
 html.dark .bg-emerald-100,
-html.dark .bg-emerald-100\/90 {
-  background-color: #213d2f !important;
+html.dark .bg-emerald-100\/70,
+html.dark .bg-emerald-100\/90,
+html.dark .bg-emerald-950\/30,
+html.dark .bg-emerald-950\/40,
+html.dark .bg-emerald-950\/50,
+html.dark .bg-emerald-950\/60,
+html.dark .bg-\[\#15271d\],
+html.dark .bg-\[\#1a3325\],
+html.dark .bg-\[\#1c3527\],
+html.dark .bg-\[\#e8f5ec\],
+html.dark .bg-\[\#dcf2e3\],
+html.dark .bg-\[\#d2ebd7\] {
+  background-color: var(--accent-light) !important;
+  color: var(--accent-text) !important;
+  border-color: var(--border-accent) !important;
 }
 
+/* Subtle Gray Inset Containers in Dark Mode */
+html.dark .bg-gray-100,
+html.dark .bg-gray-100\/70,
+html.dark .bg-gray-100\/80,
+html.dark .bg-gray-200 {
+  background-color: var(--bg-subtle) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Typography Hierarchy in Dark Mode */
 html.dark .text-gray-900,
-html.dark .text-gray-800 {
-  color: #f3f4f6 !important;
+html.dark .text-gray-800,
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: var(--text-primary) !important;
 }
 
 html.dark .text-gray-700,
-html.dark .text-gray-600 {
+html.dark .text-gray-600,
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
   color: #cbd5e1 !important;
 }
 
-html.dark .text-gray-500 {
-  color: #94a3b8 !important;
+html.dark .text-gray-500,
+html.dark .text-gray-400,
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: var(--text-secondary) !important;
 }
 
-html.dark .text-\[\#0a4d2c\] {
-  color: #34d399 !important;
+/* Accent Typography in Dark Mode */
+html.dark .text-\[\#0a4d2c\],
+html.dark .text-\[\#064e3b\],
+html.dark .text-emerald-800,
+html.dark .text-emerald-700,
+html.dark .text-emerald-600 {
+  color: var(--accent-color) !important;
 }
 
+/* Crisp Subtle Borders in Dark Mode (Instagram/Facebook Style) */
+html.dark .border,
+html.dark .border-2,
+html.dark .border-t,
+html.dark .border-b,
+html.dark .border-l,
+html.dark .border-r,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300,
+html.dark .border-gray-700,
+html.dark .border-gray-800,
 html.dark .border-emerald-100,
 html.dark .border-emerald-200,
 html.dark .border-emerald-300,
-html.dark .border-gray-200,
-html.dark .border-gray-100 {
-  border-color: #223e30 !important;
+html.dark .border-emerald-400,
+html.dark .border-emerald-500,
+html.dark .border-emerald-600,
+html.dark .border-emerald-700,
+html.dark .border-emerald-800,
+html.dark .border-emerald-900,
+html.dark .border-emerald-800\/40,
+html.dark .border-emerald-800\/60,
+html.dark .border-emerald-800\/80,
+html.dark .border-emerald-900\/40,
+html.dark .border-emerald-900\/60 {
+  border-color: var(--border-color) !important;
 }
 
-html.dark .border-emerald-800 {
-  border-color: #2b5640 !important;
-}
-
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
 html.dark .divide-emerald-200 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #223e30 !important;
+  border-color: var(--border-subtle) !important;
 }
 
+/* Dark Mode Inputs & Controls */
 html.dark input:not([type="checkbox"]):not([type="radio"]),
 html.dark select,
 html.dark textarea {
-  background-color: #172920;
-  color: #f3f4f6;
-  border-color: #2a4c3a;
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--input-border) !important;
+}
+
+html.dark input:not([type="checkbox"]):not([type="radio"]):focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 0 3px var(--input-focus-ring) !important;
 }
 
 html.dark input::placeholder,
 html.dark textarea::placeholder {
-  color: #6b7280;
+  color: var(--text-muted) !important;
 }
 
+/* ========================================================
+   TABLES & LISTS SYSTEM
+   ======================================================== */
+
+thead tr {
+  background-color: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-color);
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 0.15s ease;
+}
+
+tbody tr:hover {
+  background-color: var(--bg-card-hover);
+}
+
+html.dark thead tr {
+  background-color: var(--bg-subtle) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+html.dark tbody tr {
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+html.dark tbody tr:hover {
+  background-color: var(--bg-card-hover) !important;
+}
+
+/* ========================================================
+   MODALS & FLOATING DIALOGS
+   ======================================================== */
+
+.modal-content,
+[role="dialog"] {
+  background-color: var(--bg-elevated) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-dropdown) !important;
+}
+
+/* ========================================================
+   POLISHED SCROLLBARS
+   ======================================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #2d3239;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3f454e;
+}
+
+/* ========================================================
+   KEYFRAME ANIMATIONS
+   ======================================================== */
+
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.96); }
+  from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -122,16 +382,94 @@ html.dark textarea::placeholder {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-spin-slow {
   animation: spinSlow 20s linear infinite;
 }
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(7deg);
+  }
+}
+
+@keyframes floatReverse {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(12px) rotate(-6deg);
+  }
+}
+
+.animate-float-slow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatReverse 7s ease-in-out infinite;
+}
+
+@keyframes scanline {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 96%;
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.8;
+  }
+}
+
+.animate-scanline {
+  animation: scanline 3.2s ease-in-out infinite;
+}
+
+@keyframes radarPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+.animate-radar-pulse {
+  animation: radarPulse 2.4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.animate-dash-flow {
+  animation: dashFlow 1.8s linear infinite;
+}
+
+/* ========================================================
+   PRINT STYLES
+   ======================================================== */
 
 @media print {
   * {

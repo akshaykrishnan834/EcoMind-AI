@@ -14,7 +14,6 @@ import {
   Home,
   ArrowLeft,
   ShieldCheck,
-  Phone,
   Tag,
   ChevronRight
 } from 'lucide-react';
@@ -582,16 +581,6 @@ const CitizenWorkerChat = ({
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {partnerInfo.phone && (
-              <a
-                href={`tel:${partnerInfo.phone}`}
-                className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition cursor-pointer"
-                title={`Call ${partnerInfo.phone}`}
-              >
-                <Phone className="w-4 h-4" />
-              </a>
-            )}
-
             <button
               onClick={() => loadConversationMessages(true)}
               className="p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-emerald-800 transition cursor-pointer"

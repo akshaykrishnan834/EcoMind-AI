@@ -381,6 +381,18 @@ const WorkerDashboard = () => {
     }
   };
 
+  // Listen for navigation requests from Header search
+  useEffect(() => {
+    const handleNav = (e) => {
+      if (e.detail) {
+        setActiveTab(e.detail);
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener('ecomind:navigate-tab', handleNav);
+    return () => window.removeEventListener('ecomind:navigate-tab', handleNav);
+  }, []);
+
   // Stats calculation
   const totalCitizensCount = wardCitizens.length;
   const mapPinCount = wardCitizens.filter((c) => c.latitude && c.longitude && (c.latitude !== 0 || c.longitude !== 0)).length;
@@ -388,10 +400,16 @@ const WorkerDashboard = () => {
   const completionRate = totalCitizensCount > 0 ? Math.round((completedProfilesCount / totalCitizensCount) * 100) : 0;
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f3f7f5] font-sans">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f6faf7] dark:bg-[#09110d] font-sans">
       {/* Top Header (Fixed at top) */}
-      <div className="shrink-0 z-40 border-b border-emerald-100/80 shadow-2xs">
-        <Header />
+      <div className="shrink-0 z-40">
+        <Header
+          onSelectTab={setActiveTab}
+          activeTab={activeTab}
+          role="worker"
+          onLogout={handleLogout}
+          user={profile}
+        />
       </div>
 
       {/* Main Content Layout with Sidebar */}
@@ -407,7 +425,7 @@ const WorkerDashboard = () => {
         />
 
         {/* Main Workspace (Scrolls Vertically) */}
-        <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f3f7f5] min-w-0">
+        <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f6faf7] dark:bg-[#09110d] min-w-0">
           <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
             {successMsg && (
             <div className="max-w-5xl mx-auto p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-sm font-bold rounded-xl flex items-center gap-3 shadow-xs animate-fadeIn">
@@ -497,17 +515,17 @@ const WorkerDashboard = () => {
                     </p>
 
                     <div className="pt-2 flex flex-wrap items-center gap-3">
-                      <span className="px-3.5 py-1.5 bg-emerald-900/80 border border-emerald-400/40 text-emerald-200 font-extrabold text-xs rounded-xl flex items-center gap-2">
+                      <span className="px-3.5 py-1.5 bg-emerald-900/80 text-emerald-200 font-extrabold text-xs rounded-xl flex items-center gap-2">
                         <Award className="w-3.5 h-3.5 text-emerald-300" />
                         <span>Zone: {wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : profile.wardId || 'Assigned Ward'}</span>
                         {wardDetails?.panchayatName && (
-                          <span className="bg-emerald-800 text-emerald-100 text-[10px] px-2 py-0.5 rounded-full border border-emerald-400/30">
+                          <span className="bg-emerald-800 text-emerald-100 text-[10px] px-2 py-0.5 rounded-full">
                             {wardDetails.panchayatName}
                           </span>
                         )}
                       </span>
                       {wardDetails?.boundary?.length >= 3 && (
-                        <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 font-semibold text-xs rounded-xl flex items-center gap-1.5">
+                        <span className="px-3 py-1 bg-emerald-500/20 text-emerald-200 font-semibold text-xs rounded-xl flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                           Official Boundary Polygon Active
                         </span>
@@ -519,7 +537,7 @@ const WorkerDashboard = () => {
                     <button
                       type="button"
                       onClick={() => setActiveTab('Pickup Requests')}
-                      className="px-6 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="px-6 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Truck className="w-4 h-4 text-[#0a4d2c]" />
                       <span>Plastic Pickups</span>
@@ -528,7 +546,7 @@ const WorkerDashboard = () => {
                     <button
                       type="button"
                       onClick={() => setActiveTab('Assigned Citizens')}
-                      className="px-6 py-3 bg-emerald-900/80 hover:bg-emerald-950 border border-emerald-400/40 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="px-6 py-3 bg-emerald-900/90 hover:bg-emerald-950 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Users className="w-4 h-4 text-emerald-300" />
                       <span>Ward Citizens</span>
@@ -540,86 +558,86 @@ const WorkerDashboard = () => {
               {/* Interactive KPI Stats Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Metric 1: Assigned Citizens */}
-                <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-2xs hover:shadow-md transition-all space-y-2 group">
+                <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 space-y-2 group">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Assigned Citizens</span>
-                    <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-700 group-hover:scale-110 transition-transform">
+                    <div className="p-2.5 bg-emerald-50 dark:bg-[#1a3325] rounded-xl text-emerald-700 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                       <Users className="w-5 h-5" />
                     </div>
                   </div>
-                  <p className="text-2xl font-extrabold text-gray-900">{totalCitizensCount}</p>
-                  <p className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                  <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{totalCitizensCount}</p>
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> Citizens in {profile.wardId || 'Assigned Ward'}
                   </p>
                 </div>
 
                 {/* Metric 2: GPS Map Locations Set */}
-                <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-2xs hover:shadow-md transition-all space-y-2 group">
+                <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 space-y-2 group">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">GPS Map Pins Set</span>
-                    <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-700 group-hover:scale-110 transition-transform">
+                    <div className="p-2.5 bg-emerald-50 dark:bg-[#1a3325] rounded-xl text-emerald-700 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                       <LocateFixed className="w-5 h-5" />
                     </div>
                   </div>
-                  <p className="text-2xl font-extrabold text-gray-900">{mapPinCount}</p>
-                  <p className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                  <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{mapPinCount}</p>
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                     <MapPin className="w-3 h-3" /> Ready for live map navigation
                   </p>
                 </div>
 
                 {/* Metric 3: Profile Completion Rate */}
-                <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-2xs hover:shadow-md transition-all space-y-2 group">
+                <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 space-y-2 group">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Profile Completion</span>
-                    <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-700 group-hover:scale-110 transition-transform">
+                    <div className="p-2.5 bg-emerald-50 dark:bg-[#1a3325] rounded-xl text-emerald-700 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                       <TrendingUp className="w-5 h-5" />
                     </div>
                   </div>
-                  <p className="text-2xl font-extrabold text-gray-900">{completionRate}%</p>
-                  <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                  <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{completionRate}%</p>
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden">
                     <div className="bg-emerald-600 h-full rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }} />
                   </div>
                 </div>
 
                 {/* Metric 4: Duty Status */}
-                <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-2xs hover:shadow-md transition-all space-y-2 group">
+                <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 space-y-2 group">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Collection Duty</span>
-                    <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-700 group-hover:scale-110 transition-transform">
+                    <div className="p-2.5 bg-emerald-50 dark:bg-[#1a3325] rounded-xl text-emerald-700 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                       <ShieldCheck className="w-5 h-5" />
                     </div>
                   </div>
-                  <p className="text-lg font-extrabold text-emerald-800">Active</p>
-                  <p className="text-[11px] font-semibold text-gray-500 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-emerald-600" /> Daily collection active
+                  <p className="text-lg font-extrabold text-emerald-800 dark:text-emerald-400">Active</p>
+                  <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Daily collection active
                   </p>
                 </div>
               </div>
 
               {/* ASSIGNED WARD BOUNDARY ZONE & HOUSEHOLD COLLECTION MAP */}
-              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-emerald-100 shadow-md space-y-5 animate-fadeIn">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+              <div className="bg-white dark:bg-[#121e17] rounded-3xl p-6 sm:p-7 shadow-xs space-y-5 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-emerald-50 text-[#0a4d2c] shadow-2xs">
+                    <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400">
                       <MapIcon className="w-6 h-6" />
                     </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">
+                        <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-gray-100">
                           Assigned Ward Boundary Zone
                         </h2>
                         {wardDetails?.boundary?.length >= 3 ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             Official Delimitation Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
                             Digital Boundary Pending
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         Official service boundary polygon for {wardDetails?.wardName ? `${wardDetails.wardName} (${wardDetails.wardId})` : profile.wardId || 'Assigned Ward'}
                         {wardDetails?.panchayatName ? ` • ${wardDetails.panchayatName} Panchayat` : ''}
                       </p>
@@ -631,10 +649,10 @@ const WorkerDashboard = () => {
                       <button
                         type="button"
                         onClick={handleRecenterBoundary}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-[#1a3325] dark:hover:bg-[#203f2e] text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-bold transition cursor-pointer"
                         title="Reset map view to assigned ward boundary"
                       >
-                        <Target className="w-3.5 h-3.5 text-emerald-700" />
+                        <Target className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                         <span>Center Boundary</span>
                       </button>
                     )}

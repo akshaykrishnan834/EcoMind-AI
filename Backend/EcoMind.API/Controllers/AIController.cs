@@ -1,4 +1,4 @@
-﻿using EcoMind.API.Interfaces;
+using EcoMind.API.Interfaces;
 using EcoMind.API.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -44,7 +44,7 @@ namespace EcoMind.API.Controllers
             {
                 return StatusCode(500, new
                 {
-                    message = "Unable to connect to EcoMind AI.",
+                    message = "Unable to connect to Mittu AI.",
                     error = ex.Message
                 });
             }

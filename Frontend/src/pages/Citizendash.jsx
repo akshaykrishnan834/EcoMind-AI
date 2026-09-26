@@ -144,6 +144,18 @@ const CitizenDashboard = () => {
     }
   }, [citizenData, citizenEmail]);
 
+  // Listen for navigation requests from Header search
+  useEffect(() => {
+    const handleNav = (e) => {
+      if (e.detail) {
+        setActiveTab(e.detail);
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener('ecomind:navigate-tab', handleNav);
+    return () => window.removeEventListener('ecomind:navigate-tab', handleNav);
+  }, []);
+
   // Protect route & prevent back-button access after logout
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -289,10 +301,16 @@ const CitizenDashboard = () => {
   ];
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f3f7f5] font-sans print:h-auto print:w-auto print:overflow-visible print:bg-white">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f6faf7] dark:bg-[#09110d] font-sans print:h-auto print:w-auto print:overflow-visible print:bg-white">
       {/* Top Header (Fixed at top) */}
-      <div className="shrink-0 z-40 border-b border-emerald-100/80 shadow-2xs print:hidden">
-        <Header />
+      <div className="shrink-0 z-40 print:hidden">
+        <Header
+          onSelectTab={setActiveTab}
+          activeTab={activeTab}
+          role="citizen"
+          onLogout={handleLogout}
+          user={citizenData || userObj}
+        />
       </div>
 
       {/* Main Content Layout with Sidebar */}
@@ -310,7 +328,7 @@ const CitizenDashboard = () => {
         </div>
 
         {/* Main Workspace (Scrolls Vertically) */}
-        <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f3f7f5] min-w-0 print:overflow-visible print:h-auto print:p-0 print:bg-white print:block">
+        <main className="flex-1 h-full overflow-y-auto flex flex-col justify-between bg-[#f6faf7] dark:bg-[#09110d] min-w-0 print:overflow-visible print:h-auto print:p-0 print:bg-white print:block">
           <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1 print:p-0 print:space-y-0">
             {activeTab === 'Profile' ? (
               <CitizenProfile />
@@ -353,7 +371,7 @@ const CitizenDashboard = () => {
               />
             ) : activeTab === 'Settings' || activeTab === 'Theme & Settings' ? (
               <CitizenSettings citizenData={citizenData} setActiveTab={setActiveTab} />
-            ) : activeTab === 'AI Assistant' || activeTab === 'EcoMind AI Chat' ? (
+            ) : activeTab === 'AI Assistant' || activeTab === 'EcoMind AI Chat' || activeTab === 'Mittu AI Chat' || activeTab === 'Mittu AI' || activeTab === 'Mittu' ? (
               <AIChatBot
                 citizenData={citizenData}
                 monthlyStatusData={monthlyStatusData}
@@ -371,7 +389,7 @@ const CitizenDashboard = () => {
 
                   <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-200 text-xs font-semibold">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-semibold">
                         <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
                         <span>{getGreeting()}, {citizenName}!</span>
                       </div>
@@ -385,21 +403,21 @@ const CitizenDashboard = () => {
                       </p>
 
                       <div className="pt-2 flex flex-wrap items-center gap-3 text-xs">
-                        <span className="px-3 py-1 bg-emerald-900/80 border border-emerald-400/40 text-emerald-200 font-extrabold rounded-xl flex items-center gap-1.5">
+                        <span className="px-3 py-1 bg-emerald-900/80 text-emerald-200 font-extrabold rounded-xl flex items-center gap-1.5">
                           <Home className="w-3.5 h-3.5 text-emerald-300" />
                           House No: {houseNo} {houseName ? `(${houseName})` : ''}
                         </span>
 
-                        <span className="px-3 py-1 bg-emerald-900/80 border border-emerald-400/40 text-emerald-200 font-extrabold rounded-xl flex items-center gap-1.5">
+                        <span className="px-3 py-1 bg-emerald-900/80 text-emerald-200 font-extrabold rounded-xl flex items-center gap-1.5">
                           <MapPin className="w-3.5 h-3.5 text-emerald-300" />
                           {wardId} • {panchayat}
                         </span>
 
-                        <span className={`px-3 py-1 border font-extrabold rounded-xl flex items-center gap-1.5 ${isVerified
-                            ? 'bg-emerald-500/30 border-emerald-400/60 text-emerald-100'
+                        <span className={`px-3 py-1 font-extrabold rounded-xl flex items-center gap-1.5 ${isVerified
+                            ? 'bg-emerald-500/30 text-emerald-100'
                             : isProfileComplete
-                              ? 'bg-amber-500/30 border-amber-400/60 text-amber-100'
-                              : 'bg-red-500/30 border-red-400/60 text-red-100'
+                              ? 'bg-amber-500/30 text-amber-100'
+                              : 'bg-red-500/30 text-red-100'
                           }`}>
                           <ShieldCheck className="w-3.5 h-3.5" />
                           {isVerified
@@ -415,15 +433,15 @@ const CitizenDashboard = () => {
                       <button
                         type="button"
                         onClick={() => setActiveTab('AI Assistant')}
-                        className="px-4 py-3 bg-emerald-950/60 hover:bg-emerald-950/80 border border-emerald-400/40 text-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        className="px-4 py-3 bg-emerald-950/60 hover:bg-emerald-950/80 text-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Bot className="w-4 h-4 text-emerald-300" />
-                        <span>Ask AI</span>
+                        <span>Ask Mittu</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setActiveTab('Monthly Payments')}
-                        className="px-5 py-3 bg-emerald-400 text-emerald-950 hover:bg-emerald-300 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        className="px-5 py-3 bg-emerald-400 text-emerald-950 hover:bg-emerald-300 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <CreditCard className="w-4 h-4 text-emerald-950" />
                         <span>Monthly Payments</span>
@@ -431,7 +449,7 @@ const CitizenDashboard = () => {
                       <button
                         type="button"
                         onClick={() => setActiveTab('Pickup Request')}
-                        className="px-5 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        className="px-5 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Truck className="w-4 h-4 text-[#0a4d2c]" />
                         <span>Request Pickup</span>
@@ -442,14 +460,14 @@ const CitizenDashboard = () => {
 
                 {/* Profile Completion Warning Banner */}
                 {!isProfileComplete && (
-                  <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                  <div className="bg-amber-50 dark:bg-[#20180d] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-amber-500 text-white rounded-xl shrink-0">
                         <AlertCircle className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-extrabold text-amber-900">Residence Profile Incomplete</h4>
-                        <p className="text-xs text-amber-700 font-medium">Please set your House Number & complete address so Haritha Karma Sena can locate your house for pickup.</p>
+                        <h4 className="text-sm font-extrabold text-amber-900 dark:text-amber-200">Residence Profile Incomplete</h4>
+                        <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Please set your House Number & complete address so Haritha Karma Sena can locate your house for pickup.</p>
                       </div>
                     </div>
                     <button
@@ -465,104 +483,103 @@ const CitizenDashboard = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
                   {/* Card 1: Monthly Pickup Request Status */}
-                  <div className="bg-white p-5 rounded-2xl border-2 border-emerald-800/20 shadow-sm space-y-3 relative overflow-hidden">
+                  <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 space-y-3 relative overflow-hidden">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Monthly Request</span>
-                      <div className="p-2 bg-emerald-50 text-[#0a4d2c] rounded-xl">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Monthly Request</span>
+                      <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400 rounded-xl">
                         <Truck className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-base font-black ${currentMonthRequest ? 'text-[#0a4d2c]' : 'text-amber-600'
+                        <span className={`text-base font-black ${currentMonthRequest ? 'text-[#0a4d2c] dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
                           }`}>
                           {currentMonthRequest ? (currentMonthRequest.status || 'Submitted') : 'Window Open'}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#0a4d2c]">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400">
                           Aug 2026
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">Collection drive: 15th to 25th</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Collection drive: 15th to 25th</p>
                     </div>
                   </div>
 
                   {/* Card 2: User Fee Record Status */}
-                  <div className="bg-white p-5 rounded-2xl border-2 border-emerald-800/20 shadow-sm space-y-3 relative overflow-hidden">
+                  <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 space-y-3 relative overflow-hidden">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">User Fee Record</span>
-                      <div className="p-2 bg-emerald-50 text-[#0a4d2c] rounded-xl">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">User Fee Record</span>
+                      <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400 rounded-xl">
                         <FileText className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-base font-black text-gray-900">₹ 50 / Month</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#0a4d2c]">
+                        <span className="text-base font-black text-gray-900 dark:text-gray-100">₹ 50 / Month</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400">
                           Household Card
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">Recorded on physical card</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Recorded on physical card</p>
                     </div>
                   </div>
 
                   {/* Card 3: Total Recycled Dry Plastics */}
-                  <div className="bg-white p-5 rounded-2xl border-2 border-emerald-800/20 shadow-sm space-y-3 relative overflow-hidden">
+                  <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 space-y-3 relative overflow-hidden">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Waste Recycled</span>
-                      <div className="p-2 bg-emerald-50 text-[#0a4d2c] rounded-xl">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Waste Recycled</span>
+                      <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400 rounded-xl">
                         <Recycle className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-base font-black text-[#0a4d2c]">14.6 kg Plastics</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                        <span className="text-base font-black text-[#0a4d2c] dark:text-emerald-400">14.6 kg Plastics</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300">
                           +250 Points
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">{completedWorkHistory.length} collection drives completed</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">{completedWorkHistory.length} collection drives completed</p>
                     </div>
                   </div>
 
                   {/* Card 4: Service Ward & Haritha Karma Sena */}
-                  <div className="bg-white p-5 rounded-2xl border-2 border-emerald-800/20 shadow-sm space-y-3 relative overflow-hidden">
+                  <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 space-y-3 relative overflow-hidden">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Service Ward</span>
-                      <div className="p-2 bg-emerald-50 text-[#0a4d2c] rounded-xl">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Service Ward</span>
+                      <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400 rounded-xl">
                         <MapPin className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-base font-black text-gray-900">{wardId}</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#0a4d2c]">
+                        <span className="text-base font-black text-gray-900 dark:text-gray-100">{wardId}</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400">
                           {panchayat}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">Haritha Karma Sena Unit Active</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Haritha Karma Sena Unit Active</p>
                     </div>
                   </div>
-
                 </div>
 
                 {/* ACTIVE HOUSEHOLD PICKUP STATUS & LIVE TRACKER / VERIFICATION PENDING */}
                 {isVerified ? (
-                  <div className="bg-white rounded-3xl p-6 border-2 border-emerald-800/30 shadow-md space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                  <div className="bg-white dark:bg-[#121e17] rounded-3xl p-6 shadow-xs space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="p-2 bg-emerald-100 text-[#0a4d2c] rounded-xl font-bold">
+                          <span className="p-2 bg-emerald-100 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400 rounded-xl font-bold">
                             <Truck className="w-5 h-5" />
                           </span>
                           <div>
-                            <h2 className="text-lg font-black text-gray-900">Active Monthly Pickup Tracker</h2>
-                            <p className="text-xs text-gray-500 font-medium">Status for current month waste collection drive</p>
+                            <h2 className="text-lg font-black text-gray-900 dark:text-gray-100">Active Monthly Pickup Tracker</h2>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Status for current month waste collection drive</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-emerald-100 border border-emerald-300 text-[#0a4d2c] text-xs font-black rounded-full">
+                        <span className="px-3 py-1 bg-emerald-100 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 text-xs font-black rounded-full">
                           Status: {ongoingWork.status}
                         </span>
                         <span className="text-xs font-bold text-gray-400">ID: {ongoingWork.id}</span>
@@ -576,56 +593,56 @@ const CitizenDashboard = () => {
                         {/* Step 1: Requested */}
                         <div className="space-y-2">
                           <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 1
-                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
-                              : 'bg-gray-100 text-gray-400'
+                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 dark:ring-emerald-950/60'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                             }`}>
                             {ongoingWork.currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
                           </div>
                           <div>
-                            <p className="text-xs font-extrabold text-gray-900">Requested</p>
-                            <p className="text-[10px] text-gray-500 font-medium">Request Logged</p>
+                            <p className="text-xs font-extrabold text-gray-900 dark:text-gray-100">Requested</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Request Logged</p>
                           </div>
                         </div>
 
                         {/* Step 2: Scheduled */}
                         <div className="space-y-2">
                           <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 2
-                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
-                              : 'bg-gray-100 text-gray-400'
+                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 dark:ring-emerald-950/60'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                             }`}>
                             {ongoingWork.currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
                           </div>
                           <div>
-                            <p className="text-xs font-extrabold text-gray-900">Scheduled</p>
-                            <p className="text-[10px] text-gray-500 font-medium">15th - 25th Window</p>
+                            <p className="text-xs font-extrabold text-gray-900 dark:text-gray-100">Scheduled</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">15th - 25th Window</p>
                           </div>
                         </div>
 
                         {/* Step 3: Out for Collection */}
                         <div className="space-y-2">
                           <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 3
-                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 animate-pulse'
-                              : 'bg-gray-100 text-gray-400'
+                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 dark:ring-emerald-950/60 animate-pulse'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                             }`}>
                             {ongoingWork.currentStep > 3 ? <Check className="w-4 h-4" /> : '3'}
                           </div>
                           <div>
-                            <p className="text-xs font-extrabold text-gray-900">In Transit</p>
-                            <p className="text-[10px] text-gray-500 font-medium">Haritha Sena Active</p>
+                            <p className="text-xs font-extrabold text-gray-900 dark:text-gray-100">In Transit</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Haritha Sena Active</p>
                           </div>
                         </div>
 
                         {/* Step 4: Completed */}
                         <div className="space-y-2">
                           <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 4
-                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100'
-                              : 'bg-gray-100 text-gray-400'
+                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 dark:ring-emerald-950/60'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                             }`}>
                             {ongoingWork.currentStep >= 4 ? <Check className="w-4 h-4" /> : '4'}
                           </div>
                           <div>
-                            <p className="text-xs font-extrabold text-gray-900">Completed</p>
-                            <p className="text-[10px] text-gray-500 font-medium">Card & Fee Logged</p>
+                            <p className="text-xs font-extrabold text-gray-900 dark:text-gray-100">Completed</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Card & Fee Logged</p>
                           </div>
                         </div>
 
@@ -633,26 +650,26 @@ const CitizenDashboard = () => {
                     </div>
 
                     {/* Detailed Request Box */}
-                    <div className="bg-[#f2faf5] rounded-2xl p-4 sm:p-5 border border-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="bg-[#f2faf5] dark:bg-[#16291e] rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="space-y-1">
-                        <span className="text-[10px] uppercase font-bold text-gray-500">Waste Category</span>
-                        <h4 className="text-sm font-extrabold text-[#0a4d2c]">{ongoingWork.category}</h4>
-                        <p className="text-xs text-gray-600 font-medium flex items-center gap-1.5 pt-1">
-                          <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                        <span className="text-[10px] uppercase font-bold text-gray-400">Waste Category</span>
+                        <h4 className="text-sm font-extrabold text-[#0a4d2c] dark:text-emerald-400">{ongoingWork.category}</h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 font-medium flex items-center gap-1.5 pt-1">
+                          <Calendar className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                           {ongoingWork.isCompleted ? 'Collection Status:' : 'Collection Schedule:'}{' '}
-                          <span className="font-extrabold text-gray-900">{ongoingWork.scheduledDate}</span>
+                          <span className="font-extrabold text-gray-900 dark:text-gray-100">{ongoingWork.scheduledDate}</span>
                         </p>
-                        <p className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-emerald-700" />
-                          Assigned Team: <span className="font-extrabold text-gray-800">{ongoingWork.workerName}</span> ({ongoingWork.workerPhone})
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                          Assigned Team: <span className="font-extrabold text-gray-800 dark:text-gray-200">{ongoingWork.workerName}</span> ({ongoingWork.workerPhone})
                         </p>
                         {ongoingWork.verificationCode && (
-                          <div className="mt-2 inline-flex items-center gap-2 bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-xl">
-                            <KeyRound className="w-3.5 h-3.5 text-[#0a4d2c]" />
-                            <span className="text-[11px] font-bold text-[#0a4d2c]">
+                          <div className="mt-2 inline-flex items-center gap-2 bg-emerald-100 dark:bg-[#1f3a2b] px-3 py-1.5 rounded-xl">
+                            <KeyRound className="w-3.5 h-3.5 text-[#0a4d2c] dark:text-emerald-400" />
+                            <span className="text-[11px] font-bold text-[#0a4d2c] dark:text-emerald-400">
                               {ongoingWork.isCompleted ? 'Verification Code (Verified):' : 'Pickup Verification Code:'}
                             </span>
-                            <span className="text-sm font-black font-mono tracking-widest text-[#0a4d2c]">
+                            <span className="text-sm font-black font-mono tracking-widest text-[#0a4d2c] dark:text-emerald-300">
                               {ongoingWork.verificationCode}
                             </span>
                             {ongoingWork.isCompleted && (
@@ -667,9 +684,9 @@ const CitizenDashboard = () => {
                       <div className="flex flex-wrap items-center gap-3 shrink-0">
                         <button
                           onClick={() => setActiveTab('Collection Schedule')}
-                          className="px-3.5 py-2.5 bg-emerald-50 border border-emerald-300 text-[#0a4d2c] hover:bg-emerald-100 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-[#1a3325] dark:hover:bg-[#224431] text-[#0a4d2c] dark:text-emerald-300 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                         >
-                          <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                          <Calendar className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                           <span>Schedule</span>
                         </button>
                         <button
@@ -681,9 +698,9 @@ const CitizenDashboard = () => {
                         </button>
                         <button
                           onClick={() => setActiveTab('Collection Records')}
-                          className="px-4 py-2.5 bg-white border border-emerald-300 text-[#0a4d2c] hover:bg-emerald-50 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          className="px-4 py-2.5 bg-white dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 hover:bg-emerald-50 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                         >
-                          <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                          <FileText className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                           <span>Card History</span>
                         </button>
                       </div>
@@ -691,36 +708,36 @@ const CitizenDashboard = () => {
                   </div>
                 ) : (
                   /* VERIFICATION PENDING CONTAINER */
-                  <div className="bg-white rounded-3xl p-6 border-2 border-amber-300/80 shadow-md space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                  <div className="bg-white dark:bg-[#121e17] rounded-3xl p-6 shadow-xs space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4">
                       <div className="flex items-center gap-2">
-                        <span className="p-2 bg-amber-100 text-amber-800 rounded-xl font-bold">
+                        <span className="p-2 bg-amber-100 dark:bg-[#2a2012] text-amber-800 dark:text-amber-400 rounded-xl font-bold">
                           <Clock className="w-5 h-5" />
                         </span>
                         <div>
-                          <h2 className="text-lg font-black text-gray-900">Verification Pending</h2>
-                          <p className="text-xs text-gray-500 font-medium">Account verification required to access monthly pickup tracker</p>
+                          <h2 className="text-lg font-black text-gray-900 dark:text-gray-100">Verification Pending</h2>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Account verification required to access monthly pickup tracker</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-amber-100 border border-amber-300 text-amber-800 text-xs font-black rounded-full flex items-center gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                        <span className="px-3 py-1 bg-amber-100 dark:bg-[#2a2012] text-amber-800 dark:text-amber-400 text-xs font-black rounded-full flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                           Status: Verification Pending
                         </span>
                       </div>
                     </div>
 
-                    <div className="bg-amber-50/70 border border-amber-200/90 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="bg-amber-50/70 dark:bg-[#20180e] rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                       <div className="space-y-2 max-w-2xl">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-200/60 text-amber-900 text-[11px] font-bold">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[11px] font-bold">
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>Admin Approval Required</span>
                         </div>
-                        <h3 className="text-base font-extrabold text-amber-950">
+                        <h3 className="text-base font-extrabold text-amber-950 dark:text-amber-100">
                           Pickup Tracker Unavailable
                         </h3>
-                        <p className="text-xs text-amber-900/90 leading-relaxed font-medium">
+                        <p className="text-xs text-amber-900/90 dark:text-amber-200/90 leading-relaxed font-medium">
                           {isProfileComplete
                             ? "Your residence profile has been submitted and is currently pending verification by the Panchayat Administrator. Once verified, your active monthly pickup tracker and collection schedules will appear here."
                             : "Your residence profile is incomplete. Please set your House Number and address details so your account can be verified by the Administrator."}
@@ -744,38 +761,38 @@ const CitizenDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                   {/* Segregation Rules Card */}
-                  <div className="bg-white rounded-3xl p-6 border-2 border-emerald-800/20 shadow-sm space-y-4">
-                    <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
-                      <div className="p-2 bg-emerald-50 text-[#0a4d2c] rounded-xl">
+                  <div className="bg-white dark:bg-[#121e17] rounded-3xl p-6 shadow-xs space-y-4">
+                    <div className="flex items-center gap-2 pb-3">
+                      <div className="p-2 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400 rounded-xl">
                         <Leaf className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="text-base font-extrabold text-gray-900">Plastic Segregation Rules</h3>
-                        <p className="text-xs text-gray-500 font-medium">Haritha Karma Sena collection guidelines</p>
+                        <h3 className="text-base font-extrabold text-gray-900 dark:text-gray-100">Plastic Segregation Rules</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Haritha Karma Sena collection guidelines</p>
                       </div>
                     </div>
 
-                    <div className="space-y-3 text-xs font-medium text-gray-700">
-                      <div className="flex items-start gap-2.5 p-2.5 bg-emerald-50/60 rounded-xl border border-emerald-200">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="space-y-3 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex items-start gap-2.5 p-2.5 bg-emerald-50/60 dark:bg-[#162b1e] rounded-xl">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-extrabold text-[#0a4d2c] block">Rinse & Dry Plastics</span>
+                          <span className="font-extrabold text-[#0a4d2c] dark:text-emerald-400 block">Rinse & Dry Plastics</span>
                           Ensure milk packets, covers, and containers are cleaned and dried before handing over.
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-2.5 p-2.5 bg-emerald-50/60 rounded-xl border border-emerald-200">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="flex items-start gap-2.5 p-2.5 bg-emerald-50/60 dark:bg-[#162b1e] rounded-xl">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-extrabold text-[#0a4d2c] block">15th - 25th Collection Drive</span>
+                          <span className="font-extrabold text-[#0a4d2c] dark:text-emerald-400 block">15th - 25th Collection Drive</span>
                           Haritha Karma Sena visits households every month between 15th and 25th dates.
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-2.5 p-2.5 bg-amber-50 rounded-xl border border-amber-200">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="flex items-start gap-2.5 p-2.5 bg-amber-50 dark:bg-[#20180d] rounded-xl">
+                        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-extrabold text-amber-900 block">No Wet Waste</span>
+                          <span className="font-extrabold text-amber-900 dark:text-amber-200 block">No Wet Waste</span>
                           Do not mix wet food remnants or bio-waste with dry plastics.
                         </div>
                       </div>
@@ -785,7 +802,7 @@ const CitizenDashboard = () => {
                   {/* Panchayath Helpdesk Card */}
                   <div className="bg-gradient-to-br from-[#0a4d2c] to-emerald-900 text-white rounded-3xl p-6 shadow-md space-y-4 relative overflow-hidden flex flex-col justify-between">
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2.5 border-b border-white/15 pb-3">
+                      <div className="flex items-center gap-2.5 pb-3">
                         <Phone className="w-5 h-5 text-emerald-300 shrink-0" />
                         <div>
                           <h4 className="font-extrabold text-sm tracking-wide">Grama Panchayat Helpdesk</h4>
@@ -795,10 +812,10 @@ const CitizenDashboard = () => {
 
                       <div className="space-y-2.5 pt-1 text-xs">
                         {/* Haritha Karma Sena Worker Name & Phone */}
-                        <div className="bg-white/10 p-3 rounded-2xl border border-white/20 space-y-1">
+                        <div className="bg-white/10 p-3 rounded-2xl space-y-1">
                           <div className="flex items-center justify-between text-[10px] text-emerald-200 font-extrabold uppercase tracking-wider">
                             <span>Haritha Karma Sena Field Worker</span>
-                            <span className="px-2 py-0.5 bg-emerald-500/30 text-emerald-100 rounded-md border border-emerald-400/40">{wardId}</span>
+                            <span className="px-2 py-0.5 bg-emerald-500/30 text-emerald-100 rounded-md">{wardId}</span>
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 font-bold pt-1">
                             <span className="text-white font-extrabold text-sm">{senaWorkerName}</span>
@@ -810,9 +827,9 @@ const CitizenDashboard = () => {
                         </div>
 
                         {/* Grama Panchayat Office Details */}
-                        <div className="bg-white/10 p-3.5 rounded-2xl border border-white/20 space-y-2">
-                          <div className="flex items-center justify-between text-[10px] text-emerald-200 font-extrabold uppercase tracking-wider border-b border-white/10 pb-1">
-                            <span>For Compliants and Feedback</span>
+                        <div className="bg-white/10 p-3.5 rounded-2xl space-y-2">
+                          <div className="flex items-center justify-between text-[10px] text-emerald-200 font-extrabold uppercase tracking-wider pb-1">
+                            <span>For Complaints and Feedback</span>
                             <span>Chirakkadavu Grama Panchayat</span>
                           </div>
 
@@ -848,7 +865,7 @@ const CitizenDashboard = () => {
                     <div className="pt-2">
                       <button
                         onClick={() => setActiveTab('Collection Records')}
-                        className="w-full py-2.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                        className="w-full py-2.5 bg-white/15 hover:bg-white/25 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                       >
                         <FileText className="w-4 h-4 text-emerald-300" />
                         <span>View Full Collection Records</span>
