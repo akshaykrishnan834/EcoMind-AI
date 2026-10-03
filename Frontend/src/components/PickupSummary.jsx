@@ -117,7 +117,7 @@ const PickupSummary = ({
             <div className="flex justify-between text-xs py-1 border-b border-emerald-100">
               <span className="text-gray-500 font-medium">Collection Window:</span>
               <span className="font-extrabold text-[#0a4d2c]">
-                15th – 25th of Month
+                20th – 25th of Month
               </span>
             </div>
 
@@ -137,7 +137,7 @@ const PickupSummary = ({
 
             <div className="p-3 bg-white border border-emerald-200 rounded-xl text-[11px] text-emerald-900 mt-2">
               <span className="font-bold block text-emerald-800">Notice:</span>
-              Haritha Karma Sena workers will collect recyclable plastic waste during the 15th–25th monthly collection window.
+              Haritha Karma Sena workers will collect recyclable plastic waste during the 20th–25th monthly collection window.
             </div>
           </div>
         </div>

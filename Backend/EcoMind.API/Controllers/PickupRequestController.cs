@@ -1,5 +1,6 @@
 using EcoMind.API.DTOs;
 using EcoMind.API.Interfaces;
+using EcoMind.API.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EcoMind.API.Controllers
@@ -34,6 +35,9 @@ namespace EcoMind.API.Controllers
                     requestId = request.RequestId,
                     status = request.Status,
                     collectionDate = request.CollectionDate,
+                    collectionMonth = request.CollectionMonth,
+                    collectionYear = request.CollectionYear,
+                    collectionPeriodName = request.CollectionPeriodName,
                     verificationCode = request.VerificationCode
                 });
             }
@@ -60,18 +64,35 @@ namespace EcoMind.API.Controllers
         public async Task<IActionResult> GetCitizenRequests(string citizenId)
         {
             var requests = await _pickupService.GetCitizenRequestsAsync(citizenId);
-            var response = requests.Select(r => new
+            var response = requests.Select(r =>
             {
-                r.RequestId,
-                r.Status,
-                r.EstimatedVolume,
-                r.OverallCategory,
-                r.RequestedAt,
-                r.CollectionDate,
-                r.AcceptedByWorkerId,
-                r.AcceptedAt,
-                r.CollectedAt,
-                r.VerificationCode
+                var (targetYear, targetMonth, periodName) = PickupRequestService.GetRequestCollectionPeriod(r);
+                return new
+                {
+                    Id = r.Id,
+                    r.RequestId,
+                    r.Status,
+                    r.EstimatedVolume,
+                    r.OverallCategory,
+                    r.RequestedAt,
+                    r.CollectionDate,
+                    ScheduledDate = r.ScheduledDate ?? r.CollectionDate,
+                    CollectionMonth = r.CollectionMonth ?? targetMonth,
+                    CollectionYear = r.CollectionYear ?? targetYear,
+                    CollectionPeriodName = r.CollectionPeriodName ?? periodName,
+                    r.DueStatus,
+                    r.DueReason,
+                    r.DueReasonSubmittedAt,
+                    r.DueReasonSubmittedBy,
+                    r.CitizenApprovalStatus,
+                    r.CitizenApprovedAt,
+                    r.AdminApprovalStatus,
+                    r.AdminApprovedAt,
+                    r.AcceptedByWorkerId,
+                    r.AcceptedAt,
+                    r.CollectedAt,
+                    r.VerificationCode
+                };
             });
             return Ok(response);
         }
@@ -81,10 +102,14 @@ namespace EcoMind.API.Controllers
         public async Task<IActionResult> GetMonthlyStatus(string citizenId)
         {
             var request = await _pickupService.GetCurrentMonthRequestAsync(citizenId);
+            var (targetYear, targetMonth, targetPeriodName) = PickupRequestService.CalculateAssignedCollectionPeriod(DateTime.UtcNow);
             return Ok(new
             {
                 hasMonthlyRequest = request != null,
-                request = request
+                request = request,
+                targetCollectionMonth = targetMonth,
+                targetCollectionYear = targetYear,
+                targetPeriodName = targetPeriodName
             });
         }
 
@@ -117,12 +142,13 @@ namespace EcoMind.API.Controllers
                     return BadRequest(new { message = "Worker ID is required to schedule pickup." });
                 }
 
-                if (dto.CollectionDate == default)
+                var targetDate = dto.ScheduledDate ?? dto.CollectionDate;
+                if (!targetDate.HasValue || targetDate.Value == default)
                 {
-                    return BadRequest(new { message = "Valid CollectionDate is required." });
+                    return BadRequest(new { message = "Valid ScheduledDate or CollectionDate is required." });
                 }
 
-                var updated = await _pickupService.ScheduleRequestAsync(requestId, dto.WorkerId, dto.CollectionDate);
+                var updated = await _pickupService.ScheduleRequestAsync(requestId, dto.WorkerId, targetDate.Value);
                 if (!updated)
                 {
                     return NotFound(new { message = "Pickup request not found." });
@@ -130,9 +156,77 @@ namespace EcoMind.API.Controllers
 
                 return Ok(new
                 {
-                    message = $"Pickup request scheduled successfully for {dto.CollectionDate:yyyy-MM-dd}.",
+                    message = $"Pickup request scheduled successfully for {targetDate.Value:yyyy-MM-dd}.",
                     status = "Scheduled",
-                    collectionDate = dto.CollectionDate
+                    collectionDate = targetDate.Value,
+                    scheduledDate = targetDate.Value
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // 3b. Citizen or Worker submits reason for Due pickup request
+        [HttpPut("{requestId}/due-reason")]
+        public async Task<IActionResult> SubmitDueReason(
+            string requestId,
+            [FromBody] SubmitDueReasonDto dto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto?.Reason))
+                {
+                    return BadRequest(new { message = "Due reason is required." });
+                }
+
+                var updated = await _pickupService.SubmitDueReasonAsync(requestId, dto.Reason, dto.SubmittedBy);
+                if (!updated)
+                {
+                    return NotFound(new { message = "Pickup request not found or not in Due state." });
+                }
+
+                return Ok(new
+                {
+                    message = "Reason submitted successfully.",
+                    dueStatus = "Reason Submitted",
+                    dueReason = dto.Reason.Trim()
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // 3c. Admin reviews (approves or rejects) missed pickup reason
+        [HttpPut("{requestId}/approve-reason")]
+        public async Task<IActionResult> ApproveDueReason(
+            string requestId,
+            [FromBody] ApproveDueReasonDto dto)
+        {
+            try
+            {
+                var approver = string.IsNullOrWhiteSpace(dto?.ApprovedBy) ? "Admin" : dto.ApprovedBy.Trim();
+                var action = string.IsNullOrWhiteSpace(dto?.Action) ? "Approve" : dto.Action.Trim();
+                var updated = await _pickupService.ApproveDueReasonAsync(requestId, approver, action);
+                if (!updated)
+                {
+                    return NotFound(new { message = "Pickup request not found or not eligible for approval." });
+                }
+
+                return Ok(new
+                {
+                    message = $"Admin {action.ToLower()}d missed pickup reason successfully."
                 });
             }
             catch (ArgumentException ex)

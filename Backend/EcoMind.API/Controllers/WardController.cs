@@ -42,11 +42,7 @@ namespace EcoMind.API.Controllers
         public async Task<IActionResult> IdentifyWard([FromQuery] double lat, [FromQuery] double lng)
         {
             var wardId = await _wardService.IdentifyWardByLocationAsync(lat, lng);
-            if (wardId != null)
-            {
-                return Ok(new { wardId });
-            }
-            return NotFound(new { message = "Location is outside all ward boundaries." });
+            return Ok(new { wardId, message = wardId != null ? "Ward identified" : "Location is outside all ward boundaries." });
         }
 
         [HttpGet("official-boundary")]

@@ -25,9 +25,20 @@ import {
   List,
   AlertTriangle,
   Layers,
-  Sparkles
+  Sparkles,
+  Check,
+  X,
+  XCircle,
+  CalendarDays,
+  Timer
 } from 'lucide-react';
-import { getAllPickupRequests } from '../../services/pickupRequestService';
+import {
+  getAllPickupRequests,
+  approveDueReason,
+  getPickupScheduleStatus,
+  formatPickupDate,
+  getAssignedCollectionPeriod
+} from '../../services/pickupRequestService';
 import { getAllCitizens } from '../../services/citizenService';
 import { getAllWorkers } from '../../services/workerService';
 
@@ -41,6 +52,8 @@ const AdminPickups = () => {
   // Filtering State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [periodFilter, setPeriodFilter] = useState('All');
+  const [timelineFilter, setTimelineFilter] = useState('All');
   const [wardFilter, setWardFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
   const [volumeFilter, setVolumeFilter] = useState('All');
@@ -51,6 +64,19 @@ const AdminPickups = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  const handleAdminApproval = async (requestId, action = 'Approve') => {
+    setActionLoadingId(requestId);
+    try {
+      await approveDueReason(requestId, 'Admin', action);
+      await fetchAllData();
+    } catch (err) {
+      console.error('Failed to submit admin approval:', err);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -97,46 +123,82 @@ const AdminPickups = () => {
     fetchAllData();
   }, []);
 
-  // Compute stats
-  const totalCount = requests.length;
-  const pendingCount = requests.filter(r => (r.status || '').toLowerCase() === 'pending').length;
-  const scheduledCount = requests.filter(r => {
-    const s = (r.status || '').toLowerCase();
-    return s === 'scheduled' || s === 'accepted';
-  }).length;
-  const completedCount = requests.filter(r => {
-    const s = (r.status || '').toLowerCase();
-    return s === 'completed' || s === 'collected';
-  }).length;
-  const failedCount = requests.filter(r => {
-    const s = (r.status || '').toLowerCase();
-    return s === 'failed' || s === 'missed';
-  }).length;
+  // Enrich requests with timeline schedule status and assigned monthly collection period
+  const enrichedRequests = useMemo(() => {
+    return requests.map(req => {
+      const scheduleStatus = getPickupScheduleStatus(req);
+      const assignedPeriodInfo = getAssignedCollectionPeriod(req.requestedAt);
+      const assignedPeriod = req.collectionPeriodName || assignedPeriodInfo.periodName;
+      return {
+        ...req,
+        scheduleStatus,
+        assignedPeriodInfo,
+        assignedPeriod
+      };
+    });
+  }, [requests]);
+
+  // Compute timeline-accurate stats
+  const totalCount = enrichedRequests.length;
+  const pendingCount = enrichedRequests.filter(r => r.scheduleStatus.isPending).length;
+  const scheduledCount = enrichedRequests.filter(r => r.scheduleStatus.isScheduled || r.scheduleStatus.isToday).length;
+  const completedCount = enrichedRequests.filter(r => r.scheduleStatus.isCompleted).length;
+  const dueCount = enrichedRequests.filter(r => r.scheduleStatus.isDue).length;
 
   // Extract unique wards for dropdown
   const uniqueWards = Array.from(
     new Set(requests.map(r => r.wardId).filter(Boolean))
   ).sort();
 
+  // Extract unique collection periods for dropdown (chronologically ordered)
+  const uniquePeriods = useMemo(() => {
+    const periodMap = new Map();
+    enrichedRequests.forEach(r => {
+      if (r.assignedPeriod) {
+        if (!periodMap.has(r.assignedPeriod)) {
+          const reqTime = r.requestedAt ? new Date(r.requestedAt).getTime() : 0;
+          periodMap.set(r.assignedPeriod, { name: r.assignedPeriod, time: reqTime });
+        }
+      }
+    });
+    return Array.from(periodMap.values())
+      .sort((a, b) => b.time - a.time)
+      .map(p => p.name);
+  }, [enrichedRequests]);
+
   // Extract unique collection dates for dropdown
   const uniqueDates = Array.from(
     new Set(
       requests
-        .map(r => r.collectionDate ? r.collectionDate.substring(0, 10) : null)
+        .map(r => (r.collectionDate || r.scheduledDate ? (r.collectionDate || r.scheduledDate).substring(0, 10) : null))
         .filter(Boolean)
     )
-  ).sort();
+  ).sort().reverse();
 
-  // Filter requests
+  // Filter requests based on status, period, timeline state, ward, date, volume, search query
   const filteredRequests = useMemo(() => {
-    return requests.filter(req => {
+    return enrichedRequests.filter(req => {
       // Status filter
       if (statusFilter !== 'All') {
-        const s = (req.status || '').toLowerCase();
-        if (statusFilter === 'Scheduled' && !(s === 'scheduled' || s === 'accepted')) return false;
-        if (statusFilter === 'Pending' && s !== 'pending') return false;
-        if (statusFilter === 'Completed' && !(s === 'completed' || s === 'collected')) return false;
-        if (statusFilter === 'Failed' && !(s === 'failed' || s === 'missed')) return false;
+        if (statusFilter === 'Scheduled' && !(req.scheduleStatus.isScheduled || req.scheduleStatus.isToday)) return false;
+        if (statusFilter === 'Pending' && !req.scheduleStatus.isPending) return false;
+        if (statusFilter === 'Completed' && !req.scheduleStatus.isCompleted) return false;
+        if (statusFilter === 'Due' && !req.scheduleStatus.isDue) return false;
+        if (statusFilter === 'Failed' && !req.scheduleStatus.isDue) return false;
+      }
+
+      // Period filter
+      if (periodFilter !== 'All' && req.assignedPeriod !== periodFilter) {
+        return false;
+      }
+
+      // Timeline state filter
+      if (timelineFilter !== 'All') {
+        if (timelineFilter === 'Overdue' && !req.scheduleStatus.isDue) return false;
+        if (timelineFilter === 'Today' && !req.scheduleStatus.isToday) return false;
+        if (timelineFilter === 'Upcoming' && !(req.scheduleStatus.isScheduled && !req.scheduleStatus.isToday)) return false;
+        if (timelineFilter === 'Pending' && !req.scheduleStatus.isPending) return false;
+        if (timelineFilter === 'Completed' && !req.scheduleStatus.isCompleted) return false;
       }
 
       // Ward filter
@@ -146,7 +208,7 @@ const AdminPickups = () => {
 
       // Date filter
       if (dateFilter !== 'All') {
-        const cDate = req.collectionDate ? req.collectionDate.substring(0, 10) : null;
+        const cDate = req.collectionDate || req.scheduledDate ? (req.collectionDate || req.scheduledDate).substring(0, 10) : null;
         if (cDate !== dateFilter) return false;
       }
 
@@ -171,15 +233,16 @@ const AdminPickups = () => {
         const matchWard = (req.wardId || '').toLowerCase().includes(q);
         const matchAddress = (citizen.address || req.address || '').toLowerCase().includes(q);
         const matchWorker = (worker.fullName || req.acceptedByWorkerId || '').toLowerCase().includes(q);
+        const matchPeriod = (req.assignedPeriod || '').toLowerCase().includes(q);
 
-        return matchId || matchCitizenName || matchCitizenId || matchHouse || matchWard || matchAddress || matchWorker;
+        return matchId || matchCitizenName || matchCitizenId || matchHouse || matchWard || matchAddress || matchWorker || matchPeriod;
       }
 
       return true;
     });
-  }, [requests, statusFilter, wardFilter, dateFilter, volumeFilter, searchQuery, citizensMap, workersMap]);
+  }, [enrichedRequests, statusFilter, periodFilter, timelineFilter, wardFilter, dateFilter, volumeFilter, searchQuery, citizensMap, workersMap]);
 
-  // Sort requests
+  // Sort requests chronologically or by field
   const sortedRequests = useMemo(() => {
     const list = [...filteredRequests];
     list.sort((a, b) => {
@@ -187,8 +250,11 @@ const AdminPickups = () => {
       let valB = '';
 
       if (sortField === 'date') {
-        valA = new Date(a.collectionDate || a.requestedAt || 0).getTime();
-        valB = new Date(b.collectionDate || b.requestedAt || 0).getTime();
+        valA = new Date(a.collectionDate || a.scheduledDate || a.requestedAt || 0).getTime();
+        valB = new Date(b.collectionDate || b.scheduledDate || b.requestedAt || 0).getTime();
+      } else if (sortField === 'requestedAt') {
+        valA = new Date(a.requestedAt || 0).getTime();
+        valB = new Date(b.requestedAt || 0).getTime();
       } else if (sortField === 'requestId') {
         valA = a.requestId || '';
         valB = b.requestId || '';
@@ -201,8 +267,8 @@ const AdminPickups = () => {
         valA = a.wardId || '';
         valB = b.wardId || '';
       } else if (sortField === 'status') {
-        valA = a.status || '';
-        valB = b.status || '';
+        valA = a.scheduleStatus?.label || a.status || '';
+        valB = b.scheduleStatus?.label || b.status || '';
       } else if (sortField === 'volume') {
         valA = a.estimatedVolume || '';
         valB = b.estimatedVolume || '';
@@ -218,7 +284,7 @@ const AdminPickups = () => {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, wardFilter, dateFilter, volumeFilter, sortField, sortDirection]);
+  }, [searchQuery, statusFilter, periodFilter, timelineFilter, wardFilter, dateFilter, volumeFilter, sortField, sortDirection]);
 
   // Pagination slice
   const totalPages = Math.max(1, Math.ceil(sortedRequests.length / pageSize));
@@ -236,9 +302,25 @@ const AdminPickups = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'completed' || s === 'collected') {
+  const getStatusBadge = (req) => {
+    const st = req.scheduleStatus || getPickupScheduleStatus(req);
+    if (req?.dueStatus === 'Approved for Reschedule' || req?.adminApprovalStatus === 'Approved') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-100 text-teal-900 border border-teal-300 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800">
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-600 dark:bg-teal-400" />
+          Approved for Reschedule
+        </span>
+      );
+    }
+    if (req?.dueStatus === 'Rejected' || req?.adminApprovalStatus === 'Rejected') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400" />
+          Reason Rejected
+        </span>
+      );
+    }
+    if (st.isCompleted) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
@@ -246,7 +328,23 @@ const AdminPickups = () => {
         </span>
       );
     }
-    if (s === 'scheduled' || s === 'accepted') {
+    if (st.isDue) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+          Due / Review Required
+        </span>
+      );
+    }
+    if (st.isToday) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500 text-white border border-amber-600 shadow-2xs animate-pulse">
+          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+          Pickup Today
+        </span>
+      );
+    }
+    if (st.isScheduled) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
@@ -254,31 +352,12 @@ const AdminPickups = () => {
         </span>
       );
     }
-    if (s === 'failed' || s === 'missed') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400" />
-          Missed
-        </span>
-      );
-    }
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
-        Pending
+        Pending Schedule
       </span>
     );
-  };
-
-  const isCollectionWindow = (dateStr) => {
-    if (!dateStr) return false;
-    try {
-      const d = new Date(dateStr);
-      const day = d.getDate();
-      return day >= 15 && day <= 25;
-    } catch {
-      return false;
-    }
   };
 
   return (
@@ -294,10 +373,10 @@ const AdminPickups = () => {
               <span>Haritha Karma Sena Admin Operations</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Pickup Request & House Management
+              Pickup Request & Timeline Management
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 font-medium mt-1 max-w-2xl">
-              Real-time directory of all doorstep plastic waste pickup requests, household locations, scheduled dates (15th–25th window), and assigned field collectors.
+              Real-time oversight of doorstep plastic waste pickup requests, assigned monthly collection periods (20th–25th window), scheduled dates, and missed collection reviews.
             </p>
           </div>
 
@@ -312,13 +391,16 @@ const AdminPickups = () => {
         </div>
       </div>
 
-      {/* Overview KPI Metrics Grid */}
+      {/* Overview KPI Metrics Grid based on Timelines */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Metric 1: Total Requests */}
         <div
-          onClick={() => setStatusFilter('All')}
+          onClick={() => {
+            setStatusFilter('All');
+            setTimelineFilter('All');
+          }}
           className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer space-y-1.5 group ${
-            statusFilter === 'All'
+            statusFilter === 'All' && timelineFilter === 'All'
               ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-600 shadow-md ring-2 ring-emerald-500/30'
               : 'bg-white dark:bg-[#14231b] border-emerald-800/15 dark:border-emerald-700/30 shadow-2xs hover:shadow-md'
           }`}
@@ -331,13 +413,16 @@ const AdminPickups = () => {
           </div>
           <p className="text-2xl font-black text-gray-900 dark:text-white">{totalCount}</p>
           <p className="text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> All Wards
+            <CheckCircle2 className="w-3 h-3" /> All Timeline Records
           </p>
         </div>
 
         {/* Metric 2: Pending Requests */}
         <div 
-          onClick={() => setStatusFilter(statusFilter === 'Pending' ? 'All' : 'Pending')}
+          onClick={() => {
+            setStatusFilter(statusFilter === 'Pending' ? 'All' : 'Pending');
+            setTimelineFilter('All');
+          }}
           className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer space-y-1.5 group ${
             statusFilter === 'Pending' 
               ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-500 shadow-md ring-2 ring-amber-400/30' 
@@ -352,13 +437,16 @@ const AdminPickups = () => {
           </div>
           <p className="text-2xl font-black text-amber-900 dark:text-amber-200">{pendingCount}</p>
           <p className="text-[10.5px] font-semibold text-amber-700 dark:text-amber-400">
-            Awaiting Schedule
+            Awaiting Worker Schedule
           </p>
         </div>
 
-        {/* Metric 3: Scheduled Pickups */}
+        {/* Metric 3: Scheduled Pickups (Upcoming / Today) */}
         <div 
-          onClick={() => setStatusFilter(statusFilter === 'Scheduled' ? 'All' : 'Scheduled')}
+          onClick={() => {
+            setStatusFilter(statusFilter === 'Scheduled' ? 'All' : 'Scheduled');
+            setTimelineFilter('All');
+          }}
           className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer space-y-1.5 group ${
             statusFilter === 'Scheduled' 
               ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-500 shadow-md ring-2 ring-blue-400/30' 
@@ -373,13 +461,16 @@ const AdminPickups = () => {
           </div>
           <p className="text-2xl font-black text-blue-900 dark:text-blue-200">{scheduledCount}</p>
           <p className="text-[10.5px] font-semibold text-blue-700 dark:text-blue-400">
-            15th–25th Window
+            Active / Upcoming (20–25th)
           </p>
         </div>
 
         {/* Metric 4: Completed Collections */}
         <div 
-          onClick={() => setStatusFilter(statusFilter === 'Completed' ? 'All' : 'Completed')}
+          onClick={() => {
+            setStatusFilter(statusFilter === 'Completed' ? 'All' : 'Completed');
+            setTimelineFilter('All');
+          }}
           className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer space-y-1.5 group ${
             statusFilter === 'Completed' 
               ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-[#0a4d2c] shadow-md ring-2 ring-emerald-600/30' 
@@ -394,28 +485,31 @@ const AdminPickups = () => {
           </div>
           <p className="text-2xl font-black text-[#0a4d2c] dark:text-emerald-400">{completedCount}</p>
           <p className="text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-400">
-            Drives Collected
+            Successfully Collected
           </p>
         </div>
 
-        {/* Metric 5: Missed / Failed */}
+        {/* Metric 5: Due / Missed Collections */}
         <div 
-          onClick={() => setStatusFilter(statusFilter === 'Failed' ? 'All' : 'Failed')}
+          onClick={() => {
+            setStatusFilter(statusFilter === 'Due' ? 'All' : 'Due');
+            setTimelineFilter('All');
+          }}
           className={`col-span-2 sm:col-span-1 p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer space-y-1.5 group ${
-            statusFilter === 'Failed' 
+            statusFilter === 'Due' 
               ? 'bg-rose-50/90 dark:bg-rose-950/40 border-rose-500 shadow-md ring-2 ring-rose-400/30' 
               : 'bg-white dark:bg-[#14231b] border-emerald-800/15 dark:border-emerald-700/30 shadow-2xs hover:shadow-md'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10.5px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">Missed</span>
+            <span className="text-[10.5px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">Due / Missed</span>
             <div className="p-2 bg-rose-50 dark:bg-rose-950/60 rounded-xl text-rose-700 dark:text-rose-300">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-rose-900 dark:text-rose-200">{failedCount}</p>
+          <p className="text-2xl font-black text-rose-900 dark:text-rose-200">{dueCount}</p>
           <p className="text-[10.5px] font-semibold text-rose-700 dark:text-rose-400">
-            Action Required
+            Date Passed / Review Due
           </p>
         </div>
       </div>
@@ -427,7 +521,7 @@ const AdminPickups = () => {
         </div>
       )}
 
-      {/* Filter & Search Bar */}
+      {/* Filter & Search Bar with Timeline & Period Selectors */}
       <div className="bg-white dark:bg-[#14231b] p-5 rounded-3xl border-2 border-emerald-800/15 dark:border-emerald-700/30 shadow-2xs space-y-4">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           {/* Search Box */}
@@ -435,7 +529,7 @@ const AdminPickups = () => {
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by Request ID, Citizen Name, House Name, Number, Address, Worker..."
+              placeholder="Search by Request ID, Citizen Name, House Name, Ward, Worker, Period..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#0c1510] border border-gray-200 dark:border-emerald-800 rounded-2xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:border-[#0a4d2c] transition-all"
@@ -453,10 +547,42 @@ const AdminPickups = () => {
                 className="bg-gray-50 dark:bg-[#0c1510] border border-gray-200 dark:border-emerald-800 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 dark:text-white focus:outline-none focus:border-[#0a4d2c] cursor-pointer"
               >
                 <option value="All">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Scheduled">Scheduled</option>
-                <option value="Completed">Completed</option>
-                <option value="Failed">Missed / Failed</option>
+                <option value="Due">Due / Review Required ({dueCount})</option>
+                <option value="Scheduled">Scheduled (Upcoming / Today) ({scheduledCount})</option>
+                <option value="Pending">Pending Schedule ({pendingCount})</option>
+                <option value="Completed">Completed ({completedCount})</option>
+              </select>
+            </div>
+
+            {/* Collection Period Filter */}
+            <div className="flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5 text-gray-400" />
+              <select
+                value={periodFilter}
+                onChange={(e) => setPeriodFilter(e.target.value)}
+                className="bg-gray-50 dark:bg-[#0c1510] border border-gray-200 dark:border-emerald-800 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 dark:text-white focus:outline-none focus:border-[#0a4d2c] cursor-pointer"
+              >
+                <option value="All">All Collection Periods</option>
+                {uniquePeriods.map(p => (
+                  <option key={p} value={p}>{p} (20th–25th)</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Timeline Stage Filter */}
+            <div className="flex items-center gap-1.5">
+              <Timer className="w-3.5 h-3.5 text-gray-400" />
+              <select
+                value={timelineFilter}
+                onChange={(e) => setTimelineFilter(e.target.value)}
+                className="bg-gray-50 dark:bg-[#0c1510] border border-gray-200 dark:border-emerald-800 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 dark:text-white focus:outline-none focus:border-[#0a4d2c] cursor-pointer"
+              >
+                <option value="All">All Timelines</option>
+                <option value="Overdue">Overdue / Passed Date (Due)</option>
+                <option value="Today">Scheduled for Today</option>
+                <option value="Upcoming">Upcoming (20th–25th)</option>
+                <option value="Pending">Pending Scheduling</option>
+                <option value="Completed">Completed Collections</option>
               </select>
             </div>
 
@@ -483,7 +609,7 @@ const AdminPickups = () => {
                 onChange={(e) => setDateFilter(e.target.value)}
                 className="bg-gray-50 dark:bg-[#0c1510] border border-gray-200 dark:border-emerald-800 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 dark:text-white focus:outline-none focus:border-[#0a4d2c] cursor-pointer"
               >
-                <option value="All">All Dates</option>
+                <option value="All">All Scheduled Dates</option>
                 {uniqueDates.map(d => (
                   <option key={d} value={d}>
                     {new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -544,11 +670,13 @@ const AdminPickups = () => {
           <span>
             Showing <strong>{Math.min(sortedRequests.length, (currentPage - 1) * pageSize + 1)}–{Math.min(sortedRequests.length, currentPage * pageSize)}</strong> of <strong>{sortedRequests.length}</strong> matching records (Total {requests.length})
           </span>
-          {(searchQuery || statusFilter !== 'All' || wardFilter !== 'All' || dateFilter !== 'All' || volumeFilter !== 'All') && (
+          {(searchQuery || statusFilter !== 'All' || periodFilter !== 'All' || timelineFilter !== 'All' || wardFilter !== 'All' || dateFilter !== 'All' || volumeFilter !== 'All') && (
             <button
               onClick={() => {
                 setSearchQuery('');
                 setStatusFilter('All');
+                setPeriodFilter('All');
+                setTimelineFilter('All');
                 setWardFilter('All');
                 setDateFilter('All');
                 setVolumeFilter('All');
@@ -565,7 +693,7 @@ const AdminPickups = () => {
       {loading ? (
         <div className="bg-white dark:bg-[#14231b] rounded-3xl p-12 text-center border-2 border-emerald-800/15 dark:border-emerald-700/30 shadow-sm space-y-3">
           <div className="w-8 h-8 border-3 border-[#0a4d2c] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Loading system pickup request records & household locations...</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Loading system pickup request records & timeline data...</p>
         </div>
       ) : sortedRequests.length === 0 ? (
         <div className="bg-white dark:bg-[#14231b] rounded-3xl p-12 text-center border-2 border-emerald-800/15 dark:border-emerald-700/30 shadow-sm space-y-3">
@@ -574,11 +702,11 @@ const AdminPickups = () => {
           </div>
           <h3 className="text-base font-bold text-gray-800 dark:text-white">No Matching Pickup Records</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-            No pickup requests matched your current filters or search criteria.
+            No pickup requests matched your current filters, collection periods, or search criteria.
           </p>
         </div>
       ) : viewMode === 'table' ? (
-        /* TABLE VIEW WITH SORTABLE HEADERS */
+        /* TABLE VIEW WITH TIMELINE COLUMNS */
         <div className="bg-white dark:bg-[#14231b] rounded-3xl border-2 border-emerald-800/15 dark:border-emerald-700/30 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
@@ -586,7 +714,7 @@ const AdminPickups = () => {
                 <tr className="bg-emerald-50/60 dark:bg-emerald-950/50 border-b border-gray-100 dark:border-emerald-900/60 text-gray-600 dark:text-gray-300 uppercase text-[10px] font-black tracking-wider">
                   <th onClick={() => handleSort('requestId')} className="py-3 px-4 cursor-pointer hover:text-[#0a4d2c]">
                     <div className="flex items-center gap-1.5">
-                      <span>Request ID</span>
+                      <span>Request ID & Created</span>
                       {sortField === 'requestId' ? (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3 text-[#0a4d2c]" /> : <ArrowDown className="w-3 h-3 text-[#0a4d2c]" />) : <ArrowUpDown className="w-3 h-3 text-gray-400" />}
                     </div>
                   </th>
@@ -610,14 +738,14 @@ const AdminPickups = () => {
                   </th>
                   <th onClick={() => handleSort('date')} className="py-3 px-3 cursor-pointer hover:text-[#0a4d2c]">
                     <div className="flex items-center gap-1.5">
-                      <span>Schedule Date</span>
+                      <span>Collection Timeline & Date</span>
                       {sortField === 'date' ? (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3 text-[#0a4d2c]" /> : <ArrowDown className="w-3 h-3 text-[#0a4d2c]" />) : <ArrowUpDown className="w-3 h-3 text-gray-400" />}
                     </div>
                   </th>
                   <th className="py-3 px-3">Assigned Worker</th>
                   <th onClick={() => handleSort('status')} className="py-3 px-3 cursor-pointer hover:text-[#0a4d2c]">
                     <div className="flex items-center gap-1.5">
-                      <span>Status</span>
+                      <span>Timeline Status & Reason</span>
                       {sortField === 'status' ? (sortDirection === 'asc' ? <ArrowUp className="w-3 h-3 text-[#0a4d2c]" /> : <ArrowDown className="w-3 h-3 text-[#0a4d2c]" />) : <ArrowUpDown className="w-3 h-3 text-gray-400" />}
                     </div>
                   </th>
@@ -635,12 +763,17 @@ const AdminPickups = () => {
                   const lat = citizen.latitude ?? req.latitude;
                   const lng = citizen.longitude ?? req.longitude;
                   const hasLocation = lat != null && lng != null && lat !== 0 && lng !== 0;
-                  const inWindow = isCollectionWindow(req.collectionDate);
+                  const isCompleted = req.scheduleStatus.isCompleted;
 
                   return (
                     <tr key={req.requestId || req.id} className="hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-[#0a4d2c] dark:text-emerald-400 whitespace-nowrap">
-                        {req.requestId}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="font-mono font-bold text-[#0a4d2c] dark:text-emerald-400 block">
+                          {req.requestId}
+                        </span>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-0.5 font-semibold">
+                          Req: {formatPickupDate(req.requestedAt, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-gray-900 dark:text-white">{citizenName}</div>
@@ -656,18 +789,55 @@ const AdminPickups = () => {
                         <div className="text-[10.5px] text-gray-500 dark:text-gray-400">{req.estimatedVolume || 'Medium'}</div>
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
-                        {req.collectionDate ? (
-                          <div>
-                            <div className="font-bold text-gray-900 dark:text-white">
-                              {new Date(req.collectionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </div>
-                            {inWindow && (
-                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">15th–25th Window</span>
-                            )}
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-emerald-700 dark:text-emerald-400" />
+                            <span>{req.assignedPeriod} (20th–25th)</span>
                           </div>
-                        ) : (
-                          <span className="text-amber-600 dark:text-amber-400 font-semibold text-[11px]">Unscheduled</span>
-                        )}
+
+                          {req.scheduleStatus.isCompleted ? (
+                            <div>
+                              <div className="font-bold text-emerald-800 dark:text-emerald-300 text-xs">
+                                Collected: {formatPickupDate(req.collectedAt || req.collectionDate)}
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-[9.5px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Collection Completed
+                              </span>
+                            </div>
+                          ) : req.scheduleStatus.isDue ? (
+                            <div>
+                              <div className="font-bold text-rose-800 dark:text-rose-300 text-xs">
+                                Scheduled: {formatPickupDate(req.collectionDate || req.scheduledDate)}
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-[9.5px] font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-800">
+                                <AlertTriangle className="w-2.5 h-2.5" /> Date Passed (Due)
+                              </span>
+                            </div>
+                          ) : req.scheduleStatus.isToday ? (
+                            <div>
+                              <div className="font-bold text-amber-900 dark:text-amber-200 text-xs">
+                                Today: {formatPickupDate(req.collectionDate || req.scheduledDate)}
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-[9.5px] font-bold text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700 animate-pulse">
+                                <Clock className="w-2.5 h-2.5" /> Pickup Today
+                              </span>
+                            </div>
+                          ) : req.scheduleStatus.isScheduled ? (
+                            <div>
+                              <div className="font-bold text-blue-900 dark:text-blue-200 text-xs">
+                                {formatPickupDate(req.collectionDate || req.scheduledDate)}
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-[9.5px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                                Upcoming (20th–25th Window)
+                              </span>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-amber-700 dark:text-amber-400 font-bold text-xs block">Unscheduled</span>
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Awaiting Worker Schedule</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         {worker.fullName || req.acceptedByWorkerId ? (
@@ -679,8 +849,55 @@ const AdminPickups = () => {
                           <span className="text-rose-600 dark:text-rose-400 font-semibold text-[11px]">Unassigned</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-3 whitespace-nowrap">
-                        {getStatusBadge(req.status)}
+                      <td className="py-3.5 px-3">
+                        <div className="space-y-1.5">
+                          <div>{getStatusBadge(req)}</div>
+                          {req.dueReason && (
+                            <div className="p-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg border border-amber-200 dark:border-amber-800/60 max-w-[220px]">
+                              <span className="text-[10px] font-extrabold text-amber-800 dark:text-amber-300 uppercase block">
+                                Worker Reason:
+                              </span>
+                              <p className="text-xs font-bold text-gray-900 dark:text-white break-words">
+                                "{req.dueReason}"
+                              </p>
+                              {req.dueReasonSubmittedAt && (
+                                <span className="text-[9.5px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                                  {new Date(req.dueReasonSubmittedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {!isCompleted && Boolean(req.dueReason) && req.adminApprovalStatus !== 'Approved' && req.adminApprovalStatus !== 'Rejected' && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <button
+                                onClick={() => handleAdminApproval(req.requestId, 'Approve')}
+                                disabled={actionLoadingId === req.requestId}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10.5px] font-black flex items-center gap-1 cursor-pointer disabled:opacity-50 shadow-2xs"
+                                title="Approve Missed Pickup (Unlocks Reschedule)"
+                              >
+                                <Check className="w-3 h-3" /> Approve
+                              </button>
+                              <button
+                                onClick={() => handleAdminApproval(req.requestId, 'Reject')}
+                                disabled={actionLoadingId === req.requestId}
+                                className="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[10.5px] font-black flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                title="Reject Missed Pickup (Keeps Locked)"
+                              >
+                                <X className="w-3 h-3" /> Reject
+                              </button>
+                            </div>
+                          )}
+                          {req.adminApprovalStatus === 'Approved' && !isCompleted && (
+                            <span className="text-[10px] font-extrabold text-teal-700 dark:text-teal-400 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-teal-600" /> Reschedule Unlocked
+                            </span>
+                          )}
+                          {req.adminApprovalStatus === 'Rejected' && !isCompleted && (
+                            <span className="text-[10px] font-extrabold text-rose-700 dark:text-rose-400 flex items-center gap-1">
+                              <XCircle className="w-3 h-3 text-rose-600" /> Pickup Locked
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         {hasLocation ? (
@@ -707,8 +924,8 @@ const AdminPickups = () => {
           </div>
         </div>
       ) : (
-        /* CARD VIEW */
-        <div className="space-y-4">
+        /* CARD VIEW WITH FULL TIMELINE STEPPER */
+        <div className="space-y-5">
           {paginatedRequests.map((req) => {
             const citizen = citizensMap[req.citizenId] || {};
             const worker = workersMap[req.acceptedByWorkerId] || {};
@@ -722,41 +939,46 @@ const AdminPickups = () => {
             const lng = citizen.longitude ?? req.longitude;
             const hasLocation = lat != null && lng != null && lat !== 0 && lng !== 0;
             const workerName = worker.fullName || req.acceptedByWorkerId || 'Unassigned';
-            const inWindow = isCollectionWindow(req.collectionDate);
+            const isCompleted = req.scheduleStatus.isCompleted;
 
             return (
               <div
                 key={req.requestId || req.id}
-                className="bg-white dark:bg-[#14231b] rounded-3xl p-6 border-2 border-emerald-800/15 dark:border-emerald-700/30 shadow-2xs hover:shadow-md transition-all space-y-4"
+                className="bg-white dark:bg-[#14231b] rounded-3xl p-6 border-2 border-emerald-800/15 dark:border-emerald-700/30 shadow-2xs hover:shadow-md transition-all space-y-5"
               >
+                {/* Header Card */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-100 dark:border-emerald-900/60 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950 text-[#0a4d2c] dark:text-emerald-300 flex items-center justify-center font-extrabold text-sm shrink-0 border border-emerald-100 dark:border-emerald-800">
                       <Truck className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-base font-extrabold text-[#0a4d2c] dark:text-emerald-400 font-mono">
                           {req.requestId}
                         </span>
-                        {getStatusBadge(req.status)}
-                        {inWindow && (
-                          <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
-                            15th–25th Window
-                          </span>
-                        )}
+                        {getStatusBadge(req)}
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10.5px] font-bold border border-emerald-200 dark:border-emerald-800">
+                          {req.assignedPeriod} (20th–25th)
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium block">
-                        Ward: <strong className="text-gray-800 dark:text-white">{req.wardId}</strong> • Requested {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium block mt-0.5">
+                        Ward: <strong className="text-gray-800 dark:text-white">{req.wardId}</strong> • Created: {formatPickupDate(req.requestedAt, { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2.5 text-xs">
-                    {req.collectionDate ? (
-                      <div className="bg-emerald-50 dark:bg-emerald-950 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 text-[#0a4d2c] dark:text-emerald-300 font-bold flex items-center gap-1.5">
+                    {req.collectionDate || req.scheduledDate ? (
+                      <div className={`px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 ${
+                        req.scheduleStatus.isDue
+                          ? 'bg-rose-50 dark:bg-rose-950 border-rose-200 text-rose-800 dark:text-rose-300'
+                          : req.scheduleStatus.isToday
+                          ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 text-amber-900 dark:text-amber-200'
+                          : 'bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800 text-[#0a4d2c] dark:text-emerald-300'
+                      }`}>
                         <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>Date: {new Date(req.collectionDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span>Date: {formatPickupDate(req.collectionDate || req.scheduledDate)}</span>
                       </div>
                     ) : (
                       <div className="bg-amber-50 dark:bg-amber-950 px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5">
@@ -774,6 +996,122 @@ const AdminPickups = () => {
                   </div>
                 </div>
 
+                {/* Visual Timeline Progress Stepper */}
+                <div className="p-4 rounded-2xl bg-gray-50/70 dark:bg-[#0f1d16] border border-gray-200 dark:border-emerald-900/60">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+                      <Timer className="w-3.5 h-3.5 text-emerald-600" />
+                      Collection Lifecycle Timeline
+                    </span>
+                    <span className="text-[10.5px] font-bold text-emerald-700 dark:text-emerald-400">
+                      Target Window: {req.assignedPeriod} (20th–25th)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+                    {/* Stage 1: Request Created */}
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#14231b] border border-emerald-200 dark:border-emerald-800/60 space-y-1">
+                      <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-extrabold text-[11px]">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>1. Request Submitted</span>
+                      </div>
+                      <p className="text-[10.5px] font-semibold text-gray-800 dark:text-gray-200">
+                        {formatPickupDate(req.requestedAt)}
+                      </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        Assigned to {req.assignedPeriod}
+                      </p>
+                    </div>
+
+                    {/* Stage 2: Worker Scheduling */}
+                    <div className={`p-2.5 rounded-xl border space-y-1 ${
+                      req.collectionDate || req.scheduledDate
+                        ? 'bg-white dark:bg-[#14231b] border-blue-200 dark:border-blue-900/60'
+                        : 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40'
+                    }`}>
+                      <div className={`flex items-center gap-1.5 font-extrabold text-[11px] ${
+                        req.collectionDate || req.scheduledDate ? 'text-blue-700 dark:text-blue-400' : 'text-amber-700 dark:text-amber-400'
+                      }`}>
+                        {req.collectionDate || req.scheduledDate ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                        <span>2. Worker Schedule</span>
+                      </div>
+                      <p className="text-[10.5px] font-semibold text-gray-800 dark:text-gray-200">
+                        {req.collectionDate || req.scheduledDate ? formatPickupDate(req.collectionDate || req.scheduledDate) : 'Pending Schedule'}
+                      </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        {req.acceptedByWorkerId ? `Collector: ${workerName}` : 'Awaiting Collector'}
+                      </p>
+                    </div>
+
+                    {/* Stage 3: Collection Window */}
+                    <div className={`p-2.5 rounded-xl border space-y-1 ${
+                      isCompleted
+                        ? 'bg-white dark:bg-[#14231b] border-emerald-200 dark:border-emerald-800/60'
+                        : req.scheduleStatus.isDue
+                        ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40'
+                        : req.scheduleStatus.isToday
+                        ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
+                        : 'bg-gray-50 dark:bg-[#0c1510] border-gray-200 dark:border-gray-800'
+                    }`}>
+                      <div className={`flex items-center gap-1.5 font-extrabold text-[11px] ${
+                        isCompleted
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : req.scheduleStatus.isDue
+                          ? 'text-rose-700 dark:text-rose-400'
+                          : req.scheduleStatus.isToday
+                          ? 'text-amber-700 dark:text-amber-300'
+                          : 'text-gray-500'
+                      }`}>
+                        {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : req.scheduleStatus.isDue ? <AlertTriangle className="w-3.5 h-3.5" /> : <Calendar className="w-3.5 h-3.5" />}
+                        <span>3. Doorstep Collection</span>
+                      </div>
+                      <p className="text-[10.5px] font-semibold text-gray-800 dark:text-gray-200">
+                        {isCompleted
+                          ? `Collected: ${formatPickupDate(req.collectedAt || req.collectionDate)}`
+                          : req.scheduleStatus.isDue
+                          ? 'Date Passed (Missed)'
+                          : req.scheduleStatus.isToday
+                          ? 'Collection Due Today!'
+                          : 'Window: 20th–25th'}
+                      </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        {isCompleted ? 'Waste received' : req.scheduleStatus.isDue ? 'Action required below' : 'Doorstep handover'}
+                      </p>
+                    </div>
+
+                    {/* Stage 4: Verification / Due Review */}
+                    <div className={`p-2.5 rounded-xl border space-y-1 ${
+                      isCompleted
+                        ? 'bg-white dark:bg-[#14231b] border-emerald-200 dark:border-emerald-800/60'
+                        : req.scheduleStatus.isDue
+                        ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800'
+                        : 'bg-gray-50 dark:bg-[#0c1510] border-gray-200 dark:border-gray-800'
+                    }`}>
+                      <div className={`flex items-center gap-1.5 font-extrabold text-[11px] ${
+                        isCompleted
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : req.scheduleStatus.isDue
+                          ? 'text-amber-700 dark:text-amber-300'
+                          : 'text-gray-500'
+                      }`}>
+                        {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        <span>4. Verification & Review</span>
+                      </div>
+                      <p className="text-[10.5px] font-semibold text-gray-800 dark:text-gray-200">
+                        {isCompleted
+                          ? 'Verified with OTP'
+                          : req.scheduleStatus.isDue
+                          ? (req.adminApprovalStatus === 'Approved' ? 'Reschedule Unlocked' : req.dueReason ? 'Reason Under Review' : 'Reason Awaited')
+                          : `Code: ${req.verificationCode || 'Generated'}`}
+                      </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        {isCompleted ? 'Finalized in records' : req.scheduleStatus.isDue ? 'Admin oversight' : 'Citizen security code'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Details 3-Column Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div className="bg-gray-50/80 dark:bg-[#0c1510] p-4 rounded-2xl border border-gray-200 dark:border-emerald-900/60 space-y-2">
                     <div className="flex items-center justify-between">
@@ -822,13 +1160,20 @@ const AdminPickups = () => {
 
                   <div className="bg-emerald-50/50 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/60 space-y-2.5">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0a4d2c] dark:text-emerald-300 block">
-                      Waste & Volume Details
+                      Waste & Collection Window
                     </span>
 
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Waste Category:</span>
+                        <span className="text-gray-500">Target Window:</span>
                         <span className="font-bold text-[#0a4d2c] dark:text-emerald-400 bg-white dark:bg-[#14231b] px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+                          {req.assignedPeriod} (20th–25th)
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Waste Category:</span>
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">
                           {req.overallCategory || 'Recyclable Plastic'}
                         </span>
                       </div>
@@ -867,15 +1212,15 @@ const AdminPickups = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-500">Requested:</span>
                         <span className="font-medium text-gray-700 dark:text-gray-300">
-                          {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                          {formatPickupDate(req.requestedAt, { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       </div>
 
-                      {req.acceptedAt && (
+                      {(req.collectionDate || req.scheduledDate) && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Scheduled:</span>
+                          <span className="text-gray-500">Scheduled Date:</span>
                           <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {new Date(req.acceptedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {formatPickupDate(req.collectionDate || req.scheduledDate, { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                         </div>
                       )}
@@ -884,7 +1229,7 @@ const AdminPickups = () => {
                         <div className="flex justify-between">
                           <span className="text-gray-500">Collected:</span>
                           <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                            {new Date(req.collectedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {formatPickupDate(req.collectedAt, { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                         </div>
                       )}
@@ -903,6 +1248,95 @@ const AdminPickups = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Missed Collection Review Section */}
+                {(req.dueReason || req.dueStatus === 'Review Required' || req.dueStatus === 'Reason Submitted' || req.dueStatus === 'Approved for Reschedule' || req.dueStatus === 'Rejected' || req.scheduleStatus.isDue) && (
+                  <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        Missed Date Reason & Approvals
+                      </span>
+                      <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-md ${
+                        req.dueStatus === 'Approved for Reschedule' || req.adminApprovalStatus === 'Approved'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                          : req.dueStatus === 'Rejected' || req.adminApprovalStatus === 'Rejected'
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                      }`}>
+                        {req.dueStatus || (req.adminApprovalStatus ? `Admin: ${req.adminApprovalStatus}` : 'Review Required')}
+                      </span>
+                    </div>
+
+                    {req.dueReason && (
+                      <div className="bg-white dark:bg-[#14231b] p-3 rounded-xl border border-amber-100 dark:border-amber-900/60 text-gray-700 dark:text-gray-200">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 block uppercase">Worker Reason:</span>
+                        <p className="font-semibold text-gray-900 dark:text-white text-xs mt-0.5">{req.dueReason}</p>
+                      </div>
+                    )}
+
+                    {/* Admin Review Status */}
+                    <div className="bg-white/90 dark:bg-[#14231b] p-3 rounded-xl border border-gray-200 dark:border-emerald-900/60 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase block">Admin Review Decision:</span>
+                        <span className={`font-black mt-0.5 flex items-center gap-1.5 ${
+                          req.adminApprovalStatus === 'Approved'
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : req.adminApprovalStatus === 'Rejected'
+                            ? 'text-rose-700 dark:text-rose-400'
+                            : 'text-amber-700 dark:text-amber-400'
+                        }`}>
+                          {req.adminApprovalStatus === 'Approved' && <Check className="w-4 h-4 text-emerald-600" />}
+                          {req.adminApprovalStatus === 'Rejected' && <X className="w-4 h-4 text-rose-600" />}
+                          <span>
+                            {req.adminApprovalStatus === 'Approved'
+                              ? 'Approved (Worker Reschedule Unlocked)'
+                              : req.adminApprovalStatus === 'Rejected'
+                              ? 'Rejected (Pickup Remains Locked)'
+                              : 'Pending Admin Review'}
+                          </span>
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-gray-500 font-medium">
+                        {req.adminApprovalStatus ? 'Decision recorded' : 'Action required by Admin'}
+                      </span>
+                    </div>
+
+                    {/* Admin Action Buttons */}
+                    {!isCompleted && (
+                      <div className="pt-2 border-t border-amber-200/60 dark:border-amber-800/60 flex items-center gap-2">
+                        {req.adminApprovalStatus !== 'Approved' && (
+                          <button
+                            onClick={() => handleAdminApproval(req.requestId, 'Approve')}
+                            disabled={actionLoadingId === req.requestId}
+                            className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>{actionLoadingId === req.requestId ? 'Saving...' : 'Approve Missed Pickup (Unlock Reschedule)'}</span>
+                          </button>
+                        )}
+                        {req.adminApprovalStatus !== 'Rejected' && (
+                          <button
+                            onClick={() => handleAdminApproval(req.requestId, 'Reject')}
+                            disabled={actionLoadingId === req.requestId}
+                            className={`py-2 px-3 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-50 cursor-pointer ${
+                              req.adminApprovalStatus === 'Approved' ? 'w-auto' : 'flex-initial'
+                            }`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Reject (Lock Pickup)</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {req.dueStatus === 'Approved for Reschedule' && (
+                      <p className="text-xs text-emerald-800 dark:text-emerald-300 font-semibold text-center bg-emerald-50 dark:bg-emerald-950/50 py-2 px-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                        Approved by both Citizen and Admin. Worker can now reschedule within the 20th–25th collection window.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -978,4 +1412,3 @@ const AdminPickups = () => {
 };
 
 export default AdminPickups;
-

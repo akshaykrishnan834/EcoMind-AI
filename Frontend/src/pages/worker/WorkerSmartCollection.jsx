@@ -471,7 +471,9 @@ const WorkerSmartCollection = ({
 
       if (latestReq) {
         const s = (latestReq.status || '').toLowerCase();
-        if (s === 'completed' || s === 'collected') {
+        if (s.includes('due') || Boolean(latestReq.dueStatus)) {
+          pickupStatus = 'Due';
+        } else if (s === 'completed' || s === 'collected') {
           pickupStatus = 'Completed';
         } else if (s === 'scheduled' || s === 'accepted') {
           pickupStatus = 'Scheduled';

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -28,10 +28,16 @@ import {
   CornerDownLeft,
   Map as MapIcon,
   LogOut,
-  Leaf
+  Leaf,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  XCircle,
+  Check
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import ecomindlogo from '../assets/images/logo-ecomind.png';
+import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../services/notificationService';
 
 // All sidebar menu registry for intelligent search
 const SIDEBAR_REGISTRY = {
@@ -116,6 +122,62 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
     return () => window.removeEventListener('storage', syncUser);
   }, []);
 
+  // Dynamic user notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  const currentUserId = useMemo(() => {
+    return propUser?.citizenId || propUser?.id || propUser?._id || propUser?.email || userObj?.citizenId || userObj?.id || userObj?.email || '';
+  }, [propUser, userObj]);
+
+  const loadNotifs = useCallback(async () => {
+    if (!currentUserId) return;
+    try {
+      setLoadingNotifs(true);
+      const data = await getUserNotifications(currentUserId);
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn("Could not load header notifications:", err);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    loadNotifs();
+    const interval = setInterval(loadNotifs, 20000);
+    const handleRefresh = () => loadNotifs();
+    window.addEventListener('ecomind:refresh-notifications', handleRefresh);
+    window.addEventListener('ecomind:refresh-requests', handleRefresh);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('ecomind:refresh-notifications', handleRefresh);
+      window.removeEventListener('ecomind:refresh-requests', handleRefresh);
+    };
+  }, [loadNotifs]);
+
+  const unreadCount = useMemo(() => {
+    return notifications.filter(n => !n.isRead).length;
+  }, [notifications]);
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead && notif.id) {
+      await markNotificationAsRead(notif.id);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+    }
+    setNotifOpen(false);
+    if (notif.type?.includes('pickup') || notif.type?.includes('admin')) {
+      if (onSelectTab) onSelectTab('Collection Schedule');
+      window.dispatchEvent(new CustomEvent('ecomind:navigate-tab', { detail: 'Collection Schedule' }));
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!currentUserId) return;
+    await markAllNotificationsAsRead(currentUserId);
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
+
   // Determine current role based on prop, pathname, or stored user
   const effectiveRole = useMemo(() => {
     if (propRole) return propRole.toLowerCase();
@@ -172,6 +234,11 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
 
   const handleProfileClick = () => {
     setUserDropdownOpen(false);
+    if (effectiveRole === 'worker') {
+      sessionStorage.setItem('workerActiveTab', 'Profile');
+    } else if (effectiveRole === 'citizen') {
+      sessionStorage.setItem('citizenActiveTab', 'Profile');
+    }
     if (onSelectTab) {
       onSelectTab('Profile');
     }
@@ -438,43 +505,114 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
               aria-label="Notifications"
             >
               <Bell className="w-4 h-4 text-slate-600 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:rotate-12 transition-transform duration-200" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#181b20] animate-pulse" />
+              {unreadCount > 0 ? (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-[#181b20] animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              ) : (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500/50 ring-2 ring-white dark:ring-[#181b20]" />
+              )}
             </button>
 
             {/* Notification Dropdown Panel */}
             {notifOpen && (
-              <div className="absolute right-0 mt-2.5 w-80 sm:w-88 rounded-2xl bg-white dark:bg-[#181b22] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-black/60 p-4 z-50">
+              <div className="absolute right-0 mt-2.5 w-80 sm:w-96 rounded-2xl bg-white dark:bg-[#181b22] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-black/60 p-4 z-50 animate-fadeIn">
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-white/5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-900 dark:text-white">Notifications</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                      3 new
-                    </span>
+                    {unreadCount > 0 ? (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                        {unreadCount} unread
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                        All caught up
+                      </span>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setNotifOpen(false)}
-                    className="text-[11px] font-medium text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllRead}
+                        className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-[11px] font-medium text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#121418] border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">Collection Scheduled</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Dry waste collection in Ward 12 is scheduled for Friday.</div>
-                    <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">10 mins ago</div>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#121418] border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">AI Segregation Tip</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Clean & dry PET bottles before pickup handover.</div>
-                    <div className="text-[9px] text-slate-400 font-medium mt-1">2 hours ago</div>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#121418] border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">Receipt Verified</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Your monthly collection record has been updated.</div>
-                    <div className="text-[9px] text-slate-400 font-medium mt-1">Yesterday</div>
-                  </div>
+
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                  {notifications.length > 0 ? (
+                    notifications.map((notif) => {
+                      const isUnread = !notif.isRead;
+                      const isDue = notif.type === 'pickup_due';
+                      const isApproved = notif.type === 'admin_approved';
+                      const isRejected = notif.type === 'admin_rejected';
+                      const isSched = notif.type === 'pickup_scheduled';
+
+                      const Icon = isDue ? AlertTriangle : isApproved ? CheckCircle2 : isRejected ? XCircle : isSched ? Calendar : Bell;
+                      const iconBg = isDue
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                        : isApproved
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                          : isRejected
+                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                            : 'bg-emerald-50 text-emerald-600 dark:bg-[#121418] dark:text-emerald-400';
+
+                      const borderClass = isUnread
+                        ? isDue
+                          ? 'border-amber-300 bg-amber-50/60 dark:bg-amber-950/20'
+                          : isApproved
+                            ? 'border-emerald-300 bg-emerald-50/60 dark:bg-emerald-950/20'
+                            : 'border-emerald-200 bg-slate-50/90 dark:bg-[#14171d]'
+                        : 'border-slate-100 dark:border-white/5 bg-white dark:bg-[#121418] opacity-80';
+
+                      return (
+                        <div
+                          key={notif.id || notif._id}
+                          onClick={() => handleNotificationClick(notif)}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer hover:shadow-xs flex items-start gap-3 ${borderClass}`}
+                        >
+                          <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${iconBg}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                {notif.title}
+                              </span>
+                              {isUnread && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2 leading-relaxed">
+                              {notif.message}
+                            </p>
+                            <span className="text-[9px] text-slate-400 mt-1 block">
+                              {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-6 text-center text-slate-400 dark:text-slate-500">
+                      <Bell className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2 opacity-60" />
+                      <p className="text-xs font-semibold">No notifications yet</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        You'll receive alerts when collection dates are scheduled, due, or reviewed.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -548,6 +686,20 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
 
                 <div className="h-px bg-slate-100 dark:bg-white/5 my-1" />
 
+                {/* 1. Profile Option */}
+                <button
+                  type="button"
+                  onClick={handleProfileClick}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer group"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <User className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="block leading-tight font-bold">Profile</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">View & manage profile</span>
+                  </div>
+                </button>
 
                 {/* 2. Log Out Option (Under Profile) */}
                 <button

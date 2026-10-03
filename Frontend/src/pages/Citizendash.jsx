@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '../components/Header';
 import CitizenSidebar from '../components/CitizenSidebar';
 import CitizenProfile from '../components/CitizenProfile';
@@ -12,6 +12,7 @@ import AIChatBot from '../components/AIChatBot';
 import AIFloatingChat from '../components/AIFloatingChat';
 import CitizenSettings from '../components/CitizenSettings';
 import CitizenWorkerChat from '../components/CitizenWorkerChat';
+import DueAlertDetailsModal from '../components/DueAlertDetailsModal';
 import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -38,10 +39,15 @@ import {
   Leaf,
   CreditCard,
   KeyRound,
-  Bot
+  Bot,
+  Bell,
+  AlertTriangle,
+  MessageSquare,
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import { getCitizenByEmail } from '../services/citizenService';
-import { getCitizenRequests, getMonthlyStatus } from '../services/pickupRequestService';
+import { getCitizenRequests, getMonthlyStatus, getPickupScheduleStatus, formatPickupDate, getAssignedCollectionPeriod } from '../services/pickupRequestService';
 import { getAllWorkers } from '../services/workerService';
 
 const CitizenDashboard = () => {
@@ -67,6 +73,7 @@ const CitizenDashboard = () => {
   const [monthlyStatusData, setMonthlyStatusData] = useState(null);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [assignedWorker, setAssignedWorker] = useState(null);
+  const [showDueAlertModal, setShowDueAlertModal] = useState(false);
 
   // Time-based greeting helper
   const getGreeting = () => {
@@ -117,32 +124,32 @@ const CitizenDashboard = () => {
   }, [citizenData?.wardId, userObj.wardId]);
 
   // Fetch pickup requests & monthly status for citizen
-  useEffect(() => {
-    const loadRequests = async () => {
-      const citizenId = citizenData?.citizenId || citizenData?.id || citizenData?._id || userObj.citizenId;
-      if (!citizenId) {
-        setLoadingRequests(false);
-        return;
-      }
-      try {
-        setLoadingRequests(true);
-        const [reqs, mStatus] = await Promise.all([
-          getCitizenRequests(citizenId).catch(() => []),
-          getMonthlyStatus(citizenId).catch(() => null)
-        ]);
-        setRealRequests(Array.isArray(reqs) ? reqs : []);
-        setMonthlyStatusData(mStatus || null);
-      } catch (err) {
-        console.warn("Could not fetch pickup requests for dashboard:", err);
-      } finally {
-        setLoadingRequests(false);
-      }
-    };
+  const loadRequests = useCallback(async () => {
+    const citizenId = citizenData?.citizenId || citizenData?.id || citizenData?._id || userObj.citizenId;
+    if (!citizenId) {
+      setLoadingRequests(false);
+      return;
+    }
+    try {
+      setLoadingRequests(true);
+      const [reqs, mStatus] = await Promise.all([
+        getCitizenRequests(citizenId).catch(() => []),
+        getMonthlyStatus(citizenId).catch(() => null)
+      ]);
+      setRealRequests(Array.isArray(reqs) ? reqs : []);
+      setMonthlyStatusData(mStatus || null);
+    } catch (err) {
+      console.warn("Could not fetch pickup requests for dashboard:", err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, [citizenData?.citizenId, citizenData?.id, citizenData?._id, userObj.citizenId]);
 
+  useEffect(() => {
     if (citizenData || citizenEmail) {
       loadRequests();
     }
-  }, [citizenData, citizenEmail]);
+  }, [citizenData, citizenEmail, loadRequests]);
 
   // Listen for navigation requests from Header search
   useEffect(() => {
@@ -213,49 +220,85 @@ const CitizenDashboard = () => {
   const panchayatDistrict = 'Kottayam';
   const panchayatPincode = '686506';
 
-  // Active / Current pickup request derived state
-  const currentMonthRequest = monthlyStatusData?.request || realRequests.find(
-    (r) => (r.status || '').toLowerCase() === 'pending' || (r.status || '').toLowerCase() === 'scheduled' || (r.status || '').toLowerCase() === 'completed' || (r.status || '').toLowerCase() === 'collected'
+  const isUncompleted = (r) => {
+    if (!r) return false;
+    const s = (r.status || '').toLowerCase();
+    return s !== 'completed' && s !== 'collected' && s !== 'cancelled';
+  };
+
+  // Active / Current pickup request derived state, prioritizing active unresolved requests with dueReason
+  const activeOrDueRequest = 
+    (monthlyStatusData?.hasMonthlyRequest && monthlyStatusData?.request && isUncompleted(monthlyStatusData.request) ? monthlyStatusData.request : null) ||
+    realRequests.find(r => isUncompleted(r) && Boolean(r.dueReason && r.dueReason.trim())) ||
+    realRequests.find(r => isUncompleted(r) && ((r.status || '').toLowerCase().includes('due') || (r.dueStatus || '').toLowerCase().includes('due'))) ||
+    realRequests.find(r => isUncompleted(r) && (r.status || '').toLowerCase() === 'scheduled') ||
+    realRequests.find(r => isUncompleted(r) && (r.status || '').toLowerCase() === 'pending') ||
+    (monthlyStatusData?.hasMonthlyRequest ? monthlyStatusData?.request : null) ||
+    realRequests.find(r => Boolean(r.dueReason && r.dueReason.trim())) ||
+    realRequests[0] ||
+    null;
+
+  const matchedReal = realRequests.find(r => 
+    (activeOrDueRequest?.requestId && r.requestId === activeOrDueRequest.requestId) ||
+    (activeOrDueRequest?.id && r.id === activeOrDueRequest.id)
   );
 
-  const isRequestCompleted = Boolean(
-    currentMonthRequest && (
-      (currentMonthRequest.status || '').toLowerCase() === 'completed' ||
-      (currentMonthRequest.status || '').toLowerCase() === 'collected'
-    )
-  );
+  const currentMonthRequest = activeOrDueRequest ? {
+    ...activeOrDueRequest,
+    ...(matchedReal || {}),
+    dueReason: matchedReal?.dueReason || activeOrDueRequest?.dueReason || monthlyStatusData?.request?.dueReason || '',
+    dueReasonSubmittedAt: matchedReal?.dueReasonSubmittedAt || activeOrDueRequest?.dueReasonSubmittedAt || monthlyStatusData?.request?.dueReasonSubmittedAt || null,
+    dueReasonSubmittedBy: matchedReal?.dueReasonSubmittedBy || activeOrDueRequest?.dueReasonSubmittedBy || monthlyStatusData?.request?.dueReasonSubmittedBy || null,
+    citizenApprovalStatus: matchedReal?.citizenApprovalStatus || activeOrDueRequest?.citizenApprovalStatus || monthlyStatusData?.request?.citizenApprovalStatus || 'Pending',
+    adminApprovalStatus: matchedReal?.adminApprovalStatus || activeOrDueRequest?.adminApprovalStatus || monthlyStatusData?.request?.adminApprovalStatus || 'Pending',
+  } : null;
 
-  // Ongoing work mock/real state
+  const activePickupStatus = getPickupScheduleStatus(currentMonthRequest);
+  const isRequestCompleted = activePickupStatus.isCompleted;
+  const assignedPeriod = getAssignedCollectionPeriod();
+
+  // Ongoing work state (strictly null if citizen has not submitted a request)
   const ongoingWork = currentMonthRequest ? {
-    id: currentMonthRequest.requestId || currentMonthRequest.id || 'REQ-8492',
+    id: currentMonthRequest.requestId || currentMonthRequest.id,
     category: currentMonthRequest.overallCategory || 'Non-Biodegradable Plastic & Dry Waste',
     scheduledDate: isRequestCompleted
       ? (currentMonthRequest.collectedAt
-          ? `Collected on ${new Date(currentMonthRequest.collectedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
-          : currentMonthRequest.collectionDate
-            ? `Completed on ${new Date(currentMonthRequest.collectionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+          ? `Collected on ${formatPickupDate(currentMonthRequest.collectedAt)}`
+          : currentMonthRequest.scheduledDate || currentMonthRequest.collectionDate
+            ? `Completed on ${formatPickupDate(currentMonthRequest.scheduledDate || currentMonthRequest.collectionDate)}`
             : 'Completed')
-      : (currentMonthRequest.collectionDate
-          ? new Date(currentMonthRequest.collectionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-          : '15th - 25th Collection Drive Window'),
-    status: currentMonthRequest.status || 'Pending',
-    currentStep: isRequestCompleted ? 4 : (currentMonthRequest.status || '').toLowerCase() === 'scheduled' ? 2 : 1,
+      : (currentMonthRequest.scheduledDate || currentMonthRequest.collectionDate
+          ? formatPickupDate(currentMonthRequest.scheduledDate || currentMonthRequest.collectionDate)
+          : 'Awaiting Worker Schedule (20th–25th)'),
+    status: activePickupStatus.label,
+    rawStatus: currentMonthRequest.status || activePickupStatus.status,
+    badgeClass: activePickupStatus.badgeClass,
+    isDue: activePickupStatus.isDue,
+    isToday: activePickupStatus.isToday,
+    isReasonSubmitted: activePickupStatus.isReasonSubmitted,
+    dueReason: activePickupStatus.dueReason || currentMonthRequest.dueReason || '',
+    dueReasonSubmittedAt: activePickupStatus.dueReasonSubmittedAt || currentMonthRequest.dueReasonSubmittedAt,
+    dueReasonSubmittedBy: activePickupStatus.dueReasonSubmittedBy || currentMonthRequest.dueReasonSubmittedBy,
+    citizenApprovalStatus: activePickupStatus.citizenApprovalStatus || currentMonthRequest.citizenApprovalStatus || 'Pending',
+    adminApprovalStatus: activePickupStatus.adminApprovalStatus || currentMonthRequest.adminApprovalStatus || 'Pending',
+    isApprovedForReschedule: activePickupStatus.isApprovedForReschedule || currentMonthRequest.dueStatus === 'Approved for Reschedule',
+    currentStep: isRequestCompleted ? 4 : activePickupStatus.isToday ? 3 : activePickupStatus.isDue ? 3 : (currentMonthRequest.status || '').toLowerCase() === 'scheduled' ? 2 : 1,
     workerName: currentMonthRequest.acceptedByWorkerId ? `Haritha Karma Sena (${currentMonthRequest.acceptedByWorkerId})` : senaWorkerName,
     workerPhone: senaWorkerPhone,
     verificationCode: currentMonthRequest.verificationCode || '',
     isCompleted: isRequestCompleted,
-    notes: isRequestCompleted ? 'Plastic waste pickup verified and completed.' : 'Please keep dried non-biodegradable plastics ready at the gate.'
-  } : {
-    id: 'REQ-8492',
-    category: 'Non-Biodegradable Plastic & Dry Waste',
-    scheduledDate: '15th - 25th Monthly Drive Window',
-    status: 'Scheduled',
-    currentStep: 2, // 1: Requested, 2: Scheduled, 3: In Transit, 4: Completed
-    workerName: senaWorkerName,
-    workerPhone: senaWorkerPhone,
-    isCompleted: false,
-    notes: 'Please keep dried non-biodegradable plastics ready at the gate.'
-  };
+    notes: isRequestCompleted
+      ? 'Plastic waste pickup verified and completed.'
+      : activePickupStatus.isToday
+        ? 'Your waste pickup is scheduled for today. Please keep your dry plastic waste ready at the gate.'
+        : activePickupStatus.isDue
+          ? (activePickupStatus.dueReason || currentMonthRequest.dueReason
+              ? `Scheduled collection date passed. Worker recorded reason: "${activePickupStatus.dueReason || currentMonthRequest.dueReason}". Under Panchayat Admin review.`
+              : 'Scheduled collection date passed. Waiting for worker to record reason for missed pickup.')
+          : (currentMonthRequest.status || '').toLowerCase() === 'scheduled'
+            ? 'Pickup date confirmed by assigned worker. Please keep dried non-biodegradable plastics ready at the gate.'
+            : 'Pickup request received. Awaiting assigned Haritha Karma Sena worker to schedule collection date (20th–25th window).'
+  } : null;
 
   // Completed work history mock/real state
   const completedWorkHistory = realRequests.filter(
@@ -357,6 +400,7 @@ const CitizenDashboard = () => {
                 realRequests={realRequests}
                 assignedWorker={assignedWorker}
                 setActiveTab={setActiveTab}
+                onRefresh={loadRequests}
               />
             ) : activeTab === 'My Location' ? (
               <CitizenLocation
@@ -458,6 +502,111 @@ const CitizenDashboard = () => {
                   </div>
                 </div>
 
+                {/* TARGET COLLECTION PERIOD DYNAMIC BANNER */}
+                <div className="bg-emerald-50/90 dark:bg-[#122419] border border-emerald-200/90 dark:border-emerald-800/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-emerald-950 dark:text-emerald-100 shadow-2xs">
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-2.5 bg-[#0a4d2c] text-white rounded-xl shrink-0 shadow-xs">
+                      <Calendar className="w-5 h-5 text-emerald-300" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-[#0a4d2c] dark:text-emerald-400">
+                          {assignedPeriod.headline}
+                        </span>
+                        {assignedPeriod.isNextMonth ? (
+                          <span className="text-[10px] px-2 py-0.5 bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 rounded-full font-bold">
+                            Next Month Window
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/80 text-[#0a4d2c] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 rounded-full font-bold">
+                            Current Month Window
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm font-semibold text-emerald-900 dark:text-emerald-200 mt-1">
+                        {assignedPeriod.subtext}
+                      </p>
+                    </div>
+                  </div>
+                  {!ongoingWork && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('Pickup Request')}
+                      className="px-4 py-2.5 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-center"
+                    >
+                      <Truck className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>Submit Request</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* NOTIFICATION: PICKUP TODAY BANNER */}
+                {Boolean(ongoingWork) && activePickupStatus.isToday && (
+                  <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-2 border-amber-300 animate-fadeIn">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white/20 backdrop-blur-xs rounded-2xl text-white shadow-md shrink-0">
+                        <Bell className="w-6 h-6 animate-pulse" />
+                      </div>
+                      <div>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-wider mb-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-amber-200" /> Scheduled For Today
+                        </div>
+                        <h3 className="text-base sm:text-lg font-black tracking-tight">
+                          Your waste pickup is scheduled for today.
+                        </h3>
+                        <p className="text-xs sm:text-sm text-amber-100 font-medium mt-0.5">
+                          Haritha Karma Sena workers are scheduled to arrive at your doorstep today. Please keep dry, segregated non-biodegradable plastic ready at the gate.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2 self-start sm:self-center">
+                      <span className="px-4 py-2 bg-white text-amber-900 font-black text-xs uppercase tracking-wider rounded-xl shadow-md flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-amber-600" />
+                        Pickup Today
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* NOTIFICATION: PICKUP DUE ALERT BANNER (CLICK TO OPEN POP-UP & REVIEW WORKER'S REASON) */}
+                {Boolean(ongoingWork) && (activePickupStatus.isDue || Boolean(ongoingWork?.dueReason)) && (
+                  <div
+                    onClick={() => setShowDueAlertModal(true)}
+                    className="cursor-pointer bg-gradient-to-r from-amber-500 via-rose-500 to-amber-600 hover:from-amber-600 hover:to-rose-600 text-white rounded-2xl p-4 sm:p-5 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="p-2.5 bg-white/20 text-white rounded-xl shrink-0 backdrop-blur-xs">
+                        <AlertTriangle className="w-6 h-6 animate-pulse" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white">
+                            Due Alert
+                          </span>
+                          <span className="text-xs font-bold text-amber-100">
+                            Scheduled Date Passed ({ongoingWork.scheduledDate})
+                          </span>
+                        </div>
+                        <h3 className="text-sm sm:text-base font-extrabold text-white mt-0.5">
+                          {ongoingWork.dueReason
+                            ? `Worker reason recorded: "${ongoingWork.dueReason.length > 55 ? ongoingWork.dueReason.substring(0, 55) + '...' : ongoingWork.dueReason}"`
+                            : 'Pickup was not completed on scheduled date. Waiting for worker reason.'}
+                        </h3>
+                        <p className="text-[11px] text-amber-100 font-medium">
+                          Click to open pop-up and review worker's reason & Panchayat Admin review status. (Citizen View-Only)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="px-4 py-2 bg-white text-rose-700 hover:bg-rose-50 text-xs font-black rounded-xl shadow-xs transition flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Review Worker's Reason</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Profile Completion Warning Banner */}
                 {!isProfileComplete && (
                   <div className="bg-amber-50 dark:bg-[#20180d] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
@@ -492,15 +641,28 @@ const CitizenDashboard = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-base font-black ${currentMonthRequest ? 'text-[#0a4d2c] dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
-                          }`}>
-                          {currentMonthRequest ? (currentMonthRequest.status || 'Submitted') : 'Window Open'}
+                        <span className={`text-base font-black ${
+                          activePickupStatus.isDue
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : activePickupStatus.isToday
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : ongoingWork ? 'text-[#0a4d2c] dark:text-emerald-400' : 'text-emerald-700 dark:text-emerald-300'
+                        }`}>
+                          {ongoingWork ? activePickupStatus.label : 'Open for Requests'}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400">
-                          Aug 2026
-                        </span>
+                        {ongoingWork ? (
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${activePickupStatus.badgeClass}`}>
+                            {activePickupStatus.status}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-400">
+                            Available
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Collection drive: 15th to 25th</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+                        {ongoingWork ? ongoingWork.scheduledDate : `Target: ${assignedPeriod.periodName} (20th–25th)`}
+                      </p>
                     </div>
                   </div>
 
@@ -562,9 +724,10 @@ const CitizenDashboard = () => {
                   </div>
                 </div>
 
-                {/* ACTIVE HOUSEHOLD PICKUP STATUS & LIVE TRACKER / VERIFICATION PENDING */}
+                {/* ACTIVE HOUSEHOLD PICKUP STATUS & LIVE TRACKER / NO REQUEST CONTAINER */}
                 {isVerified ? (
-                  <div className="bg-white dark:bg-[#121e17] rounded-3xl p-6 shadow-xs space-y-6">
+                  ongoingWork ? (
+                    <div className="bg-white dark:bg-[#121e17] rounded-3xl p-6 shadow-xs space-y-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4">
                       <div>
                         <div className="flex items-center gap-2">
@@ -579,8 +742,8 @@ const CitizenDashboard = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-emerald-100 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 text-xs font-black rounded-full">
-                          Status: {ongoingWork.status}
+                        <span className={`px-3 py-1 text-xs font-black rounded-full border ${activePickupStatus.badgeClass}`}>
+                          {activePickupStatus.label}
                         </span>
                         <span className="text-xs font-bold text-gray-400">ID: {ongoingWork.id}</span>
                       </div>
@@ -607,28 +770,47 @@ const CitizenDashboard = () => {
                         {/* Step 2: Scheduled */}
                         <div className="space-y-2">
                           <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 2
-                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 dark:ring-emerald-950/60'
+                              ? activePickupStatus.isDue
+                                ? 'bg-rose-600 text-white ring-4 ring-rose-100 dark:ring-rose-950/60'
+                                : 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 dark:ring-emerald-950/60'
                               : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                             }`}>
                             {ongoingWork.currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
                           </div>
                           <div>
                             <p className="text-xs font-extrabold text-gray-900 dark:text-gray-100">Scheduled</p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">15th - 25th Window</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                              {ongoingWork.scheduledDate}
+                            </p>
                           </div>
                         </div>
 
-                        {/* Step 3: Out for Collection */}
+                        {/* Step 3: Out for Collection / Due / Pickup Today */}
                         <div className="space-y-2">
-                          <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${ongoingWork.currentStep >= 3
-                              ? 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 dark:ring-emerald-950/60 animate-pulse'
+                          <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs shadow-xs transition-all ${
+                            ongoingWork.currentStep >= 3
+                              ? activePickupStatus.isDue
+                                ? 'bg-rose-600 text-white ring-4 ring-rose-200 dark:ring-rose-950/60 animate-bounce-subtle'
+                                : activePickupStatus.isToday
+                                  ? 'bg-amber-500 text-white ring-4 ring-amber-100 dark:ring-amber-950/60 animate-pulse'
+                                  : 'bg-[#0a4d2c] text-white ring-4 ring-emerald-100 dark:ring-emerald-950/60 animate-pulse'
                               : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                             }`}>
-                            {ongoingWork.currentStep > 3 ? <Check className="w-4 h-4" /> : '3'}
+                            {ongoingWork.currentStep > 3 ? (
+                              <Check className="w-4 h-4" />
+                            ) : activePickupStatus.isDue ? (
+                              <AlertCircle className="w-4 h-4" />
+                            ) : (
+                              '3'
+                            )}
                           </div>
                           <div>
-                            <p className="text-xs font-extrabold text-gray-900 dark:text-gray-100">In Transit</p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Haritha Sena Active</p>
+                            <p className="text-xs font-extrabold text-gray-900 dark:text-gray-100">
+                              {activePickupStatus.isDue ? 'Due' : activePickupStatus.isToday ? 'Pickup Today' : 'In Transit'}
+                            </p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                              {activePickupStatus.isDue ? (activePickupStatus.isReasonSubmitted ? 'Reason Given' : 'Date Passed') : activePickupStatus.isToday ? 'Scheduled Today' : 'Haritha Sena Active'}
+                            </p>
                           </div>
                         </div>
 
@@ -651,18 +833,65 @@ const CitizenDashboard = () => {
 
                     {/* Detailed Request Box */}
                     <div className="bg-[#f2faf5] dark:bg-[#16291e] rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <span className="text-[10px] uppercase font-bold text-gray-400">Waste Category</span>
                         <h4 className="text-sm font-extrabold text-[#0a4d2c] dark:text-emerald-400">{ongoingWork.category}</h4>
                         <p className="text-xs text-gray-600 dark:text-gray-300 font-medium flex items-center gap-1.5 pt-1">
                           <Calendar className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
-                          {ongoingWork.isCompleted ? 'Collection Status:' : 'Collection Schedule:'}{' '}
+                          {ongoingWork.isCompleted ? 'Collection Status:' : 'Scheduled Pickup Date:'}{' '}
                           <span className="font-extrabold text-gray-900 dark:text-gray-100">{ongoingWork.scheduledDate}</span>
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                           Assigned Team: <span className="font-extrabold text-gray-800 dark:text-gray-200">{ongoingWork.workerName}</span> ({ongoingWork.workerPhone})
                         </p>
+
+                        {/* DUE STATE REASON DISPLAY & CITIZEN REVIEW */}
+                        {(activePickupStatus.isDue || Boolean(ongoingWork.dueReason)) && ongoingWork.dueReason && (
+                          <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700 rounded-2xl space-y-2.5">
+                            <div className="flex items-center justify-between text-xs font-black text-amber-900 dark:text-amber-200">
+                              <span className="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                                <MessageSquare className="w-3.5 h-3.5 text-amber-600" /> Worker's Missed Pickup Reason:
+                              </span>
+                              {ongoingWork.dueReasonSubmittedAt && (
+                                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold">
+                                  {formatPickupDate(ongoingWork.dueReasonSubmittedAt)}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-amber-950 dark:text-amber-100 font-bold bg-white dark:bg-[#14231b] p-2.5 rounded-xl border border-amber-200 dark:border-amber-800">
+                              "{ongoingWork.dueReason}"
+                            </p>
+                            {ongoingWork.dueReasonSubmittedBy && (
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block">
+                                Submitted by {ongoingWork.dueReasonSubmittedBy}
+                              </span>
+                            )}
+                            <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-amber-200 dark:border-amber-800">
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="font-semibold text-gray-600 dark:text-gray-400">Admin Review:</span>
+                                <span className={`px-2.5 py-0.5 rounded-full font-bold text-xs border ${
+                                  ongoingWork.adminApprovalStatus === 'Approved'
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                                    : ongoingWork.adminApprovalStatus === 'Rejected'
+                                      ? 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300'
+                                      : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-100'
+                                }`}>
+                                  {ongoingWork.adminApprovalStatus === 'Approved'
+                                    ? '✓ Approved (Reschedule Unlocked)'
+                                    : ongoingWork.adminApprovalStatus === 'Rejected'
+                                      ? '✕ Rejected (Pickup Locked)'
+                                      : '⏳ Pending Admin Review'}
+                                </span>
+                              </div>
+                              <span className="px-3 py-1 bg-white/90 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 text-[11px] font-bold rounded-xl shadow-2xs flex items-center gap-1.5">
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Citizen View-Only</span>
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
                         {ongoingWork.verificationCode && (
                           <div className="mt-2 inline-flex items-center gap-2 bg-emerald-100 dark:bg-[#1f3a2b] px-3 py-1.5 rounded-xl">
                             <KeyRound className="w-3.5 h-3.5 text-[#0a4d2c] dark:text-emerald-400" />
@@ -681,7 +910,17 @@ const CitizenDashboard = () => {
                         )}
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-3 shrink-0">
+                      <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                        {activePickupStatus.isDue && (
+                          <button
+                            type="button"
+                            onClick={() => setShowDueAlertModal(true)}
+                            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>Review Worker's Reason</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => setActiveTab('Collection Schedule')}
                           className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-[#1a3325] dark:hover:bg-[#224431] text-[#0a4d2c] dark:text-emerald-300 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
@@ -706,6 +945,42 @@ const CitizenDashboard = () => {
                       </div>
                     </div>
                   </div>
+                ) : (
+                  /* NO PICKUP REQUEST SUBMITTED CONTAINER */
+                  <div className="bg-white dark:bg-[#121e17] rounded-3xl p-8 sm:p-10 shadow-xs border border-emerald-100/80 dark:border-emerald-950/40 text-center space-y-5 animate-fadeIn">
+                    <div className="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-[#193325] text-[#0a4d2c] dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
+                      <Truck className="w-8 h-8" />
+                    </div>
+                    <div className="max-w-md mx-auto space-y-2">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-[#1f3a2b] text-[#0a4d2c] dark:text-emerald-300 text-xs font-bold">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>{assignedPeriod.headline}</span>
+                      </div>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
+                        No Pickup Request Submitted Yet
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                        {assignedPeriod.subtext}
+                      </p>
+                    </div>
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                      <button
+                        onClick={() => setActiveTab('Pickup Request')}
+                        className="px-6 py-3 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Truck className="w-4 h-4 text-emerald-300" />
+                        <span>Submit Monthly Request</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('Collection Schedule')}
+                        className="px-5 py-3 bg-emerald-50 dark:bg-[#1a3325] text-[#0a4d2c] dark:text-emerald-300 font-extrabold text-xs rounded-xl hover:bg-emerald-100 transition cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>View Schedule</span>
+                      </button>
+                    </div>
+                  </div>
+                )
                 ) : (
                   /* VERIFICATION PENDING CONTAINER */
                   <div className="bg-white dark:bg-[#121e17] rounded-3xl p-6 shadow-xs space-y-6">
@@ -784,8 +1059,8 @@ const CitizenDashboard = () => {
                       <div className="flex items-start gap-2.5 p-2.5 bg-emerald-50/60 dark:bg-[#162b1e] rounded-xl">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-extrabold text-[#0a4d2c] dark:text-emerald-400 block">15th - 25th Collection Drive</span>
-                          Haritha Karma Sena visits households every month between 15th and 25th dates.
+                          <span className="font-extrabold text-[#0a4d2c] dark:text-emerald-400 block">20th - 25th Collection Drive</span>
+                          Haritha Karma Sena visits households every month between 20th and 25th dates.
                         </div>
                       </div>
 
@@ -896,6 +1171,14 @@ const CitizenDashboard = () => {
           onExpandFull={() => setActiveTab('AI Assistant')}
         />
       </div>
+
+      {/* Due Alert Details Modal (Citizen View-Only Review) */}
+      <DueAlertDetailsModal
+        isOpen={showDueAlertModal}
+        onClose={() => setShowDueAlertModal(false)}
+        request={currentMonthRequest || ongoingWork}
+        userRole="citizen"
+      />
     </div>
   );
 };

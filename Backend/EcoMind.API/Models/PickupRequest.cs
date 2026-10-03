@@ -46,6 +46,32 @@ namespace EcoMind.API.Models
         [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
         public DateTime? CollectionDate { get; set; }
 
+        // Scheduled Date (synced with CollectionDate)
+        [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
+        public DateTime? ScheduledDate { get; set; }
+
+        // Due tracking: "Due", "Reason Submitted", or null
+        public string? DueStatus { get; set; }
+
+        // Reason provided when pickup was due / not completed
+        public string? DueReason { get; set; }
+
+        [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
+        public DateTime? DueReasonSubmittedAt { get; set; }
+
+        public string? DueReasonSubmittedBy { get; set; }
+
+        // Citizen & Admin approval tracking for missed / passed pickup rescheduling
+        public string? CitizenApprovalStatus { get; set; }
+
+        [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
+        public DateTime? CitizenApprovedAt { get; set; }
+
+        public string? AdminApprovalStatus { get; set; }
+
+        [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
+        public DateTime? AdminApprovedAt { get; set; }
+
         // Request timestamp
         [BsonSerializer(typeof(FlexibleDateTimeSerializer))]
         public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
@@ -53,6 +79,13 @@ namespace EcoMind.API.Models
         // Filled when waste is collected by worker
         [BsonSerializer(typeof(FlexibleNullableDateTimeSerializer))]
         public DateTime? CollectedAt { get; set; }
+
+        // Assigned collection period (on or before 25th = current month; after 25th = next month)
+        public int? CollectionMonth { get; set; }
+
+        public int? CollectionYear { get; set; }
+
+        public string? CollectionPeriodName { get; set; }
 
         // Unique 4-digit verification code shown only to citizen for pickup completion verification
         public string VerificationCode { get; set; } = string.Empty;

@@ -742,7 +742,7 @@ const AdminReports = () => {
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-2xs space-y-2">
-                  <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Scheduled (15th–25th)</span>
+                  <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Scheduled (20th–25th)</span>
                   <p className="text-2xl font-black text-emerald-900">{pickupMetrics.scheduled}</p>
                   <p className="text-xs text-emerald-700">Date assigned by field workers</p>
                 </div>

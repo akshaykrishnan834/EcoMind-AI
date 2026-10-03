@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle2, XCircle, Clock, Truck, ShieldCheck, RefreshCw, FileText, AlertCircle, MapPin, Home, Info, Award, UserCheck, Check, DollarSign, Download, Printer, FileSpreadsheet } from 'lucide-react';
-import { getCitizenRequests } from '../services/pickupRequestService';
+import { Calendar, CheckCircle2, XCircle, Clock, Truck, ShieldCheck, RefreshCw, FileText, AlertCircle, AlertTriangle, MapPin, Home, Info, Award, UserCheck, Check, DollarSign, Download, Printer, FileSpreadsheet, MessageSquare, Bell } from 'lucide-react';
+import { getCitizenRequests, getPickupScheduleStatus, formatPickupDate } from '../services/pickupRequestService';
 import { getCitizenPayments } from '../services/paymentService';
 
 const MONTH_NAMES = [
@@ -126,9 +126,11 @@ const CollectionRecords = ({ citizenData }) => {
         const reqKey = `${year}-${m.monthNum}`;
         const req = requestMap[reqKey];
         const payRecord = paymentMap[reqKey];
+        const sched = req ? getPickupScheduleStatus(req) : null;
 
-        const isCompleted = req && ((req.status || '').toLowerCase() === 'completed' || (req.status || '').toLowerCase() === 'collected');
-        const isScheduled = req && ((req.status || '').toLowerCase() === 'scheduled' || (req.status || '').toLowerCase() === 'accepted');
+        const isCompleted = sched?.isCompleted;
+        const isScheduled = sched?.isScheduled || sched?.isToday;
+        const isDue = sched?.isDue || sched?.isReasonSubmitted;
         const isPaidFee = payRecord && (payRecord.status || '').toLowerCase() === 'paid';
         const isPastMonth = year < currentYearNow || (year === currentYearNow && m.monthNum < currentMonthNow);
         const isCurrentMonth = year === currentYearNow && m.monthNum === currentMonthNow;
@@ -136,8 +138,8 @@ const CollectionRecords = ({ citizenData }) => {
         let dateDisplay = '-';
         if (req?.collectedAt) {
           dateDisplay = new Date(req.collectedAt).toLocaleDateString('en-GB');
-        } else if (req?.collectionDate) {
-          dateDisplay = new Date(req.collectionDate).toLocaleDateString('en-GB');
+        } else if (req?.scheduledDate || req?.collectionDate) {
+          dateDisplay = formatPickupDate(req.scheduledDate || req.collectionDate);
         } else if (req?.requestedAt) {
           dateDisplay = new Date(req.requestedAt).toLocaleDateString('en-GB');
         }
@@ -147,9 +149,36 @@ const CollectionRecords = ({ citizenData }) => {
         const payment = isPaidFee ? 'Paid ₹50' : isPastMonth ? 'Pending Due ₹50' : 'Unpaid ₹50';
         const paymentBg = isPaidFee ? '#d1fae5; color: #065f46;' : isPastMonth ? '#fee2e2; color: #991b1b;' : '#fef3c7; color: #92400e;';
 
-        const verified = isCompleted ? 'Verified by Worker' : isScheduled ? 'Scheduled' : req ? 'Pending' : '-';
-        const result = isCompleted ? 'Success' : isPastMonth ? 'Failed' : isCurrentMonth ? (req ? 'In Progress' : 'Pending') : '-';
-        const resultBg = isCompleted ? '#d1fae5; color: #065f46; font-weight: bold;' : isPastMonth ? '#fee2e2; color: #991b1b; font-weight: bold;' : '';
+        const verified = isCompleted
+          ? 'Verified by Worker'
+          : sched?.isReasonSubmitted
+            ? `Reason: ${req.dueReason || 'Submitted'}`
+            : isDue
+              ? 'Due (Overdue)'
+              : sched?.isToday
+                ? 'Scheduled Today'
+                : isScheduled
+                  ? 'Scheduled'
+                  : req
+                    ? 'Pending'
+                    : '-';
+
+        const result = isCompleted
+          ? 'Success'
+          : isDue
+            ? (sched?.isReasonSubmitted ? 'Due (Reason Submitted)' : 'Due')
+            : isPastMonth
+              ? 'Failed'
+              : isCurrentMonth
+                ? (req ? (sched?.isToday ? 'Pickup Today' : 'In Progress') : 'Pending')
+                : '-';
+        const resultBg = isCompleted
+          ? '#d1fae5; color: #065f46; font-weight: bold;'
+          : isDue
+            ? '#fee2e2; color: #991b1b; font-weight: bold;'
+            : isPastMonth
+              ? '#fee2e2; color: #991b1b; font-weight: bold;'
+              : '';
 
         tableRows += `
           <tr>
@@ -398,18 +427,22 @@ const CollectionRecords = ({ citizenData }) => {
                       {visibleMonths.map((m) => {
                         const reqKey = `${year}-${m.monthNum}`;
                         const req = requestMap[reqKey];
+                        const sched = req ? getPickupScheduleStatus(req) : null;
 
-                        const isCompleted = req && ((req.status || '').toLowerCase() === 'completed' || (req.status || '').toLowerCase() === 'collected');
-                        const isScheduled = req && ((req.status || '').toLowerCase() === 'scheduled' || (req.status || '').toLowerCase() === 'accepted');
-                        const isPending = req && ((req.status || '').toLowerCase() === 'pending');
+                        const isCompleted = sched?.isCompleted;
+                        const isScheduled = sched?.isScheduled;
+                        const isToday = sched?.isToday;
+                        const isDue = sched?.isDue;
+                        const isReasonSubmitted = sched?.isReasonSubmitted;
+                        const isPending = sched?.isPending;
 
                         // Format date string
                         let dateDisplay = '-';
                         if (req) {
                           if (req.collectedAt) {
                             dateDisplay = new Date(req.collectedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
-                          } else if (req.collectionDate) {
-                            dateDisplay = new Date(req.collectionDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                          } else if (req.scheduledDate || req.collectionDate) {
+                            dateDisplay = formatPickupDate(req.scheduledDate || req.collectionDate);
                           } else if (req.requestedAt) {
                             dateDisplay = new Date(req.requestedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
                           }
@@ -428,11 +461,15 @@ const CollectionRecords = ({ citizenData }) => {
                             key={m.short}
                             className={`h-11 transition-colors ${isCompleted
                               ? 'bg-emerald-50/70 font-semibold'
-                              : isScheduled
-                                ? 'bg-blue-50/40'
-                                : req
-                                  ? 'bg-amber-50/30'
-                                  : 'hover:bg-gray-50/50'
+                              : (isDue || isReasonSubmitted)
+                                ? 'bg-rose-50/40'
+                                : isToday
+                                  ? 'bg-amber-50/50'
+                                  : isScheduled
+                                    ? 'bg-blue-50/40'
+                                    : req
+                                      ? 'bg-amber-50/30'
+                                      : 'hover:bg-gray-50/50'
                               }`}
                           >
                             {/* Month Abbreviation */}
@@ -492,6 +529,32 @@ const CollectionRecords = ({ citizenData }) => {
                                   <Check className="w-3 h-3 text-[#0a4d2c] stroke-[3]" />
                                   <span>Verified</span>
                                 </span>
+                              ) : (isReasonSubmitted || Boolean(req?.dueReason)) ? (
+                                <div className="inline-flex flex-col items-center">
+                                  <span
+                                    title={`Due Reason Recorded: "${req?.dueReason || ''}" by ${req?.dueReasonSubmittedBy || 'Worker'}`}
+                                    className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-amber-100 text-amber-900 font-extrabold text-[10px] rounded-md border border-amber-300 max-w-[160px] truncate"
+                                  >
+                                    <MessageSquare className="w-3 h-3 text-amber-700 shrink-0" />
+                                    <span className="truncate">Reason: {req?.dueReason || 'Recorded'}</span>
+                                  </span>
+                                </div>
+                              ) : isDue ? (
+                                <span
+                                  title="Scheduled date has passed without waste collection"
+                                  className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-rose-100 text-rose-900 font-black text-[10px] rounded-md border border-rose-300 whitespace-nowrap animate-pulse"
+                                >
+                                  <AlertTriangle className="w-3 h-3 text-rose-700" />
+                                  <span>Due</span>
+                                </span>
+                              ) : isToday ? (
+                                <span
+                                  title="Waste pickup is scheduled for today!"
+                                  className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-amber-500 text-white font-black text-[10px] rounded-md shadow-xs whitespace-nowrap animate-pulse"
+                                >
+                                  <Bell className="w-3 h-3 text-white" />
+                                  <span>Today</span>
+                                </span>
                               ) : isScheduled ? (
                                 <span
                                   title="Scheduled - Awaiting worker collection & verification"
@@ -522,6 +585,14 @@ const CollectionRecords = ({ citizenData }) => {
                                   <CheckCircle2 className="w-3 h-3 text-[#0a4d2c] stroke-[2.5]" />
                                   <span>Success</span>
                                 </span>
+                              ) : (isDue || isReasonSubmitted) ? (
+                                <span
+                                  title={isReasonSubmitted ? `Due - Reason submitted: "${req?.dueReason || ''}"` : "Scheduled date passed without completion"}
+                                  className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-800 font-black text-[10px] rounded-md border border-rose-300 shadow-2xs whitespace-nowrap"
+                                >
+                                  <AlertTriangle className="w-3 h-3 text-rose-700 stroke-[2.5]" />
+                                  <span>Due</span>
+                                </span>
                               ) : isPastMonth ? (
                                 <span
                                   title="Month passed and scheduled pickup was not completed - Request Failed"
@@ -537,7 +608,7 @@ const CollectionRecords = ({ citizenData }) => {
                                     className="inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-50 text-blue-900 font-bold text-[10px] rounded-md border border-blue-200 whitespace-nowrap"
                                   >
                                     <Clock className="w-3 h-3 text-blue-700" />
-                                    <span>In Progress</span>
+                                    <span>{isToday ? 'Today' : 'In Progress'}</span>
                                   </span>
                                 ) : (
                                   <span
@@ -585,7 +656,7 @@ const CollectionRecords = ({ citizenData }) => {
               • <strong>Payment Status:</strong> Reflects monthly user fee receipts recorded via online portal or direct collection receipt.
             </div>
             <div>
-              • <strong>Pickup Date:</strong> Scheduled or completed doorstep collection cycle (15th–25th window).
+              • <strong>Pickup Date:</strong> Scheduled or completed doorstep collection cycle (20th–25th window).
             </div>
           </div>
         </div>

@@ -234,7 +234,7 @@ const CitizenGuidelines = ({ citizenData, assignedWorker, setActiveTab }) => {
                   Designated Monthly Window
                 </span>
                 <span className="text-base font-extrabold text-[#0a4d2c]">
-                  15th to 25th of Every Month
+                  20th to 25th of Every Month
                 </span>
               </div>
             </div>
@@ -245,7 +245,7 @@ const CitizenGuidelines = ({ citizenData, assignedWorker, setActiveTab }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div className="p-4 border border-gray-200 rounded-2xl space-y-1 bg-gray-50/50">
-              <span className="text-[10px] uppercase font-bold text-gray-500">Phase 1 (1st – 14th)</span>
+              <span className="text-[10px] uppercase font-bold text-gray-500">Phase 1 (1st – 19th)</span>
               <h4 className="font-extrabold text-gray-900">Citizen Request Period</h4>
               <p className="text-gray-600 text-[11px] leading-relaxed">
                 Citizens submit their monthly plastic pickup request via the EcoMind AI portal and clean recyclable plastic.
@@ -253,7 +253,7 @@ const CitizenGuidelines = ({ citizenData, assignedWorker, setActiveTab }) => {
             </div>
 
             <div className="p-4 border border-emerald-300 rounded-2xl space-y-1 bg-emerald-50/60">
-              <span className="text-[10px] uppercase font-bold text-emerald-700">Phase 2 (15th – 25th)</span>
+              <span className="text-[10px] uppercase font-bold text-emerald-700">Phase 2 (20th – 25th)</span>
               <h4 className="font-extrabold text-[#0a4d2c]">Doorstep Collection Drive</h4>
               <p className="text-gray-600 text-[11px] leading-relaxed">
                 Haritha Karma Sena workers conduct door-to-door waste pickups, verify codes, and update collection cards.

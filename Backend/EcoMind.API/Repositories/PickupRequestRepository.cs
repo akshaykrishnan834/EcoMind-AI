@@ -50,26 +50,80 @@ namespace EcoMind.API.Repositories
             return list;
         }
 
+        public async Task<PickupRequest?> GetRequestByCitizenAndPeriodAsync(
+            string citizenId,
+            int year,
+            int month)
+        {
+            if (string.IsNullOrWhiteSpace(citizenId)) return null;
+            var cleanCitizen = citizenId.Trim();
+
+            var list = await _requests
+                .Find(x => (x.CitizenId == cleanCitizen || x.CitizenId == citizenId) &&
+                           x.Status != "Cancelled")
+                .SortByDescending(x => x.RequestedAt)
+                .ToListAsync();
+
+            foreach (var r in list)
+            {
+                if (r.CollectionYear == year && r.CollectionMonth == month)
+                {
+                    return r;
+                }
+
+                // If not explicitly set, calculate from RequestedAt
+                if (!r.CollectionYear.HasValue || !r.CollectionMonth.HasValue)
+                {
+                    var reqDate = r.RequestedAt != default ? r.RequestedAt : DateTime.UtcNow;
+                    var (compYear, compMonth, _) = PickupRequestService.CalculateAssignedCollectionPeriod(reqDate);
+
+                    if (compYear == year && compMonth == month)
+                    {
+                        return r;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         public async Task<PickupRequest?> GetCurrentMonthRequestByCitizenIdAsync(
             string citizenId)
         {
-            var now = DateTime.UtcNow;
-            var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var endOfMonth = startOfMonth.AddMonths(1);
+            if (string.IsNullOrWhiteSpace(citizenId)) return null;
+            var cleanCitizen = citizenId.Trim();
 
-            var req = await _requests
-                .Find(x => x.CitizenId == citizenId &&
-                           x.RequestedAt >= startOfMonth &&
-                           x.RequestedAt < endOfMonth &&
-                           x.Status != "Cancelled")
+            // 1. Prioritize any active, due, or uncompleted pickup request for this citizen
+            var activeReq = await _requests
+                .Find(x => (x.CitizenId == cleanCitizen || x.CitizenId == citizenId) &&
+                           x.Status != "Cancelled" &&
+                           x.Status != "Completed" &&
+                           x.Status != "Collected")
                 .SortByDescending(x => x.RequestedAt)
                 .FirstOrDefaultAsync();
+
+            if (activeReq != null)
+            {
+                if (string.IsNullOrWhiteSpace(activeReq.VerificationCode))
+                {
+                    activeReq.VerificationCode = Random.Shared.Next(1000, 10000).ToString();
+                    await _requests.UpdateOneAsync(
+                        x => x.Id == activeReq.Id || x.RequestId == activeReq.RequestId,
+                        Builders<PickupRequest>.Update.Set(x => x.VerificationCode, activeReq.VerificationCode));
+                }
+                return activeReq;
+            }
+
+            // 2. Determine target collection period for current date (<= 25: current month; > 25: next month)
+            var (targetYear, targetMonth, _) = PickupRequestService.CalculateAssignedCollectionPeriod(DateTime.UtcNow);
+
+            var req = await GetRequestByCitizenAndPeriodAsync(cleanCitizen, targetYear, targetMonth);
 
             if (req != null && string.IsNullOrWhiteSpace(req.VerificationCode))
             {
                 req.VerificationCode = Random.Shared.Next(1000, 10000).ToString();
                 await _requests.UpdateOneAsync(
-                    x => x.RequestId == req.RequestId,
+                    x => x.Id == req.Id || x.RequestId == req.RequestId,
                     Builders<PickupRequest>.Update.Set(x => x.VerificationCode, req.VerificationCode));
             }
 
@@ -255,7 +309,16 @@ namespace EcoMind.API.Repositories
                 .Set(x => x.Status, "Scheduled")
                 .Set(x => x.AcceptedByWorkerId, workerId)
                 .Set(x => x.AcceptedAt, DateTime.UtcNow)
-                .Set(x => x.CollectionDate, collectionDate);
+                .Set(x => x.CollectionDate, collectionDate)
+                .Set(x => x.ScheduledDate, collectionDate)
+                .Set(x => x.DueStatus, null)
+                .Set(x => x.DueReason, null)
+                .Set(x => x.DueReasonSubmittedAt, null)
+                .Set(x => x.DueReasonSubmittedBy, null)
+                .Set(x => x.CitizenApprovalStatus, null)
+                .Set(x => x.CitizenApprovedAt, null)
+                .Set(x => x.AdminApprovalStatus, null)
+                .Set(x => x.AdminApprovedAt, null);
 
             var result = await _requests.UpdateOneAsync(
                 x => x.RequestId == requestId,
@@ -270,6 +333,7 @@ namespace EcoMind.API.Repositories
             var update = Builders<PickupRequest>
                 .Update
                 .Set(x => x.Status, "Completed")
+                .Set(x => x.DueStatus, null)
                 .Set(x => x.CollectedAt, DateTime.UtcNow);
 
             var result = await _requests.UpdateOneAsync(
@@ -277,6 +341,92 @@ namespace EcoMind.API.Repositories
                 update);
 
             return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> SubmitDueReasonAsync(
+            string requestId,
+            string reason,
+            string? submittedBy = null)
+        {
+            var req = await GetByRequestIdAsync(requestId);
+            if (req == null) return false;
+
+            var cleanReason = reason.Trim();
+            var submitter = string.IsNullOrWhiteSpace(submittedBy) ? "Worker" : submittedBy.Trim();
+
+            var update = Builders<PickupRequest>
+                .Update
+                .Set(x => x.DueReason, cleanReason)
+                .Set(x => x.DueReasonSubmittedAt, DateTime.UtcNow)
+                .Set(x => x.DueReasonSubmittedBy, submitter)
+                .Set(x => x.DueStatus, "Review Required")
+                .Set(x => x.AdminApprovalStatus, "Pending")
+                .Set(x => x.AdminApprovedAt, null)
+                .Set(x => x.Status, "Due / Review Required");
+
+            var result = await _requests.UpdateOneAsync(
+                x => x.Id == req.Id || x.RequestId == req.RequestId,
+                update);
+
+            return result.ModifiedCount > 0 || result.MatchedCount > 0;
+        }
+
+        public async Task<bool> ApproveDueReasonAsync(
+            string requestId,
+            string approvedByRole,
+            string action = "Approve")
+        {
+            var req = await GetByRequestIdAsync(requestId);
+            if (req == null) return false;
+
+            var isApproved = action.Equals("Approve", StringComparison.OrdinalIgnoreCase);
+            var normalizedAction = isApproved ? "Approved" : "Rejected";
+            var newDueStatus = isApproved ? "Approved for Reschedule" : "Rejected";
+            var now = DateTime.UtcNow;
+
+            var updateBuilder = Builders<PickupRequest>.Update
+                .Set(x => x.DueStatus, newDueStatus)
+                .Set(x => x.AdminApprovalStatus, normalizedAction)
+                .Set(x => x.AdminApprovedAt, now)
+                .Set(x => x.Status, "Due / Review Required");
+
+            var result = await _requests.UpdateOneAsync(
+                x => x.Id == req.Id || x.RequestId == req.RequestId,
+                updateBuilder);
+
+            return result.ModifiedCount > 0 || result.MatchedCount > 0;
+        }
+
+        public async Task<bool> UpdateDueStatusAsync(
+            string requestId,
+            string dueStatus)
+        {
+            if (string.IsNullOrWhiteSpace(requestId)) return false;
+            var clean = requestId.Trim();
+
+            FilterDefinition<PickupRequest> filter;
+            if (MongoDB.Bson.ObjectId.TryParse(clean, out _))
+            {
+                filter = Builders<PickupRequest>.Filter.Or(
+                    Builders<PickupRequest>.Filter.Regex(x => x.RequestId, new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(clean)}$", "i")),
+                    Builders<PickupRequest>.Filter.Eq(x => x.Id, clean)
+                );
+            }
+            else
+            {
+                filter = Builders<PickupRequest>.Filter.Regex(
+                    x => x.RequestId,
+                    new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(clean)}$", "i"));
+            }
+
+            var update = Builders<PickupRequest>
+                .Update
+                .Set(x => x.DueStatus, dueStatus)
+                .Set(x => x.Status, "Due / Review Required");
+
+            var result = await _requests.UpdateOneAsync(filter, update);
+
+            return result.ModifiedCount > 0 || result.MatchedCount > 0;
         }
 
         public async Task<bool> VerificationCodeExistsAsync(string code)
@@ -299,7 +449,9 @@ namespace EcoMind.API.Repositories
             if (status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
                 status.Equals("Collected", StringComparison.OrdinalIgnoreCase))
             {
-                update = update.Set(x => x.CollectedAt, DateTime.UtcNow);
+                update = update
+                    .Set(x => x.CollectedAt, DateTime.UtcNow)
+                    .Set(x => x.DueStatus, null);
             }
 
             var result = await _requests.UpdateOneAsync(

@@ -33,8 +33,21 @@ namespace EcoMind.API.Interfaces
             string? workerId = null,
             string verificationCode = "");
 
+        Task<bool> SubmitDueReasonAsync(
+            string requestId,
+            string reason,
+            string? submittedBy = null);
+
+        Task<bool> ApproveDueReasonAsync(
+            string requestId,
+            string approvedByRole,
+            string action = "Approve");
+
         Task<bool> UpdateStatusAsync(
             string requestId,
             string status);
+
+        Task CheckCitizenPeriodNotificationsAsync(
+            string citizenId);
     }
 }

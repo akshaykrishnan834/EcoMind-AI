@@ -501,7 +501,7 @@ const Admin = () => {
                                             <div className="flex flex-wrap items-center gap-4 text-xs text-emerald-200 font-medium pt-1">
                                                 <span className="flex items-center gap-1.5">
                                                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                                                    Panchayat Drive Active: 15th–25th Monthly Window
+                                                    Panchayat Drive Active: 20th–25th Monthly Window
                                                 </span>
                                                 <span className="text-emerald-400/50">•</span>
                                                 <span>Current Cycle: {months.find(m => m.value === selectedMonth)?.name} {selectedYear}</span>
@@ -1358,7 +1358,7 @@ const Admin = () => {
                                             </div>
                                             <div>
                                                 <h4 className="text-xs font-bold text-gray-900 dark:text-white">Schedule</h4>
-                                                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">15th–25th Dates</p>
+                                                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">20th–25th Dates</p>
                                             </div>
                                         </div>
 

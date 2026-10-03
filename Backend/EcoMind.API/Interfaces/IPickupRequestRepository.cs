@@ -14,6 +14,11 @@ namespace EcoMind.API.Interfaces
         Task<PickupRequest?> GetCurrentMonthRequestByCitizenIdAsync(
             string citizenId);
 
+        Task<PickupRequest?> GetRequestByCitizenAndPeriodAsync(
+            string citizenId,
+            int year,
+            int month);
+
         Task<List<PickupRequest>> GetWardRequestsAsync(
             string wardId,
             string? workerEmail = null,
@@ -40,6 +45,20 @@ namespace EcoMind.API.Interfaces
 
         Task<bool> VerificationCodeExistsAsync(
             string code);
+
+        Task<bool> SubmitDueReasonAsync(
+            string requestId,
+            string reason,
+            string? submittedBy = null);
+
+        Task<bool> ApproveDueReasonAsync(
+            string requestId,
+            string approvedByRole,
+            string action = "Approve");
+
+        Task<bool> UpdateDueStatusAsync(
+            string requestId,
+            string dueStatus);
 
         Task<bool> UpdateStatusAsync(
             string requestId,

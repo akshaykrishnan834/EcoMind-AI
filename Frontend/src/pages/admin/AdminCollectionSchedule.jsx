@@ -17,9 +17,12 @@ import {
   ChevronRight,
   ShieldCheck,
   PackageCheck,
-  CalendarDays
+  CalendarDays,
+  AlertTriangle,
+  Check,
+  X
 } from 'lucide-react';
-import { getAllPickupRequests } from '../../services/pickupRequestService';
+import { getAllPickupRequests, approveDueReason } from '../../services/pickupRequestService';
 import { getAllCitizens } from '../../services/citizenService';
 import { getAllWorkers } from '../../services/workerService';
 
@@ -29,13 +32,14 @@ const AdminCollectionSchedule = () => {
   const [workersList, setWorkersList] = useState([]);
   const [workersMap, setWorkersMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
 
   // Filters state
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1); // 1-12
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedWard, setSelectedWard] = useState('All');
-  const [selectedDay, setSelectedDay] = useState('All'); // 'All' or number 15-25
+  const [selectedDay, setSelectedDay] = useState('All'); // 'All' or number 20-25
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSubTab, setActiveSubTab] = useState('date-wise'); // 'date-wise' | 'worker-wise'
 
@@ -54,7 +58,19 @@ const AdminCollectionSchedule = () => {
     { value: 12, name: 'December' }
   ];
 
-  const collectionDays = Array.from({ length: 11 }, (_, i) => 15 + i); // [15, 16, ..., 25]
+  const collectionDays = Array.from({ length: 6 }, (_, i) => 20 + i); // [20, 21, ..., 25]
+
+  const handleAdminApproval = async (requestId, action = 'Approve') => {
+    setActionLoadingId(requestId);
+    try {
+      await approveDueReason(requestId, 'Admin', action);
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to submit admin approval:', err);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -107,7 +123,7 @@ const AdminCollectionSchedule = () => {
     );
   });
 
-  // Calculate day-wise distribution in the 15th–25th window
+  // Calculate day-wise distribution in the 20th–25th window
   const dayCounts = {};
   collectionDays.forEach(day => {
     dayCounts[day] = 0;
@@ -116,7 +132,7 @@ const AdminCollectionSchedule = () => {
   monthlyScheduledRequests.forEach(req => {
     const d = new Date(req.collectionDate);
     const day = d.getDate();
-    if (day >= 15 && day <= 25) {
+    if (day >= 20 && day <= 25) {
       dayCounts[day] = (dayCounts[day] || 0) + 1;
     }
   });
@@ -133,14 +149,14 @@ const AdminCollectionSchedule = () => {
       return false;
     }
 
-    // Day filter (15-25 or All)
+    // Day filter (20-25 or All)
     const d = new Date(req.collectionDate);
     const day = d.getDate();
     if (selectedDay !== 'All') {
       if (day !== Number(selectedDay)) return false;
     } else {
-      // If 'All', only show window 15th-25th
-      if (day < 15 || day > 25) return false;
+      // If 'All', only show window 20th-25th
+      if (day < 20 || day > 25) return false;
     }
 
     // Search filter
@@ -170,13 +186,13 @@ const AdminCollectionSchedule = () => {
       // Filter by ward if selected
       if (selectedWard !== 'All' && req.wardId !== selectedWard) return false;
 
-      // Filter by window 15th-25th
+      // Filter by window 20th-25th
       const d = new Date(req.collectionDate);
       const day = d.getDate();
       if (selectedDay !== 'All') {
         return day === Number(selectedDay);
       }
-      return day >= 15 && day <= 25;
+      return day >= 20 && day <= 25;
     });
 
     const completed = workerPickups.filter(p => {
@@ -197,14 +213,14 @@ const AdminCollectionSchedule = () => {
   const totalWindowPickups = monthlyScheduledRequests.filter(r => {
     const d = new Date(r.collectionDate);
     const day = d.getDate();
-    return day >= 15 && day <= 25;
+    return day >= 20 && day <= 25;
   }).length;
 
   const completedInWindow = monthlyScheduledRequests.filter(r => {
     const d = new Date(r.collectionDate);
     const day = d.getDate();
     const s = (r.status || '').toLowerCase();
-    return day >= 15 && day <= 25 && (s === 'completed' || s === 'collected');
+    return day >= 20 && day <= 25 && (s === 'completed' || s === 'collected');
   }).length;
 
   const completionRate = totalWindowPickups > 0 ? Math.round((completedInWindow / totalWindowPickups) * 100) : 0;
@@ -222,7 +238,7 @@ const AdminCollectionSchedule = () => {
               <span>Haritha Karma Sena Collection Calendar</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Monthly Collection Schedule (15th–25th)
+              Monthly Collection Schedule (20th–25th)
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 font-medium mt-1">
               Oversee the scheduled doorstep plastic waste collection window across all wards, track houses scheduled for each date, and audit worker allocations.
@@ -315,11 +331,11 @@ const AdminCollectionSchedule = () => {
           </div>
         </div>
 
-        {/* 15th–25th Interactive Day Selector Strip */}
+        {/* 20th–25th Interactive Day Selector Strip */}
         <div className="pt-3 border-t border-gray-100 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-[#0a4d2c]" /> Official Collection Window (15th–25th)
+              <Calendar className="w-3.5 h-3.5 text-[#0a4d2c]" /> Official Collection Window (20th–25th)
             </span>
             <span className="text-xs text-gray-500">
               Click a date to isolate scheduled households
@@ -380,7 +396,7 @@ const AdminCollectionSchedule = () => {
             </div>
           </div>
           <p className="text-2xl font-black text-gray-900">{totalWindowPickups}</p>
-          <p className="text-xs text-gray-500">Scheduled for 15th–25th {months.find(m => m.value === selectedMonth)?.name}</p>
+          <p className="text-xs text-gray-500">Scheduled for 20th–25th {months.find(m => m.value === selectedMonth)?.name}</p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-2xs space-y-2">
@@ -479,11 +495,23 @@ const AdminCollectionSchedule = () => {
                       </div>
 
                       <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
-                        isCompleted
+                        req.dueStatus === 'Approved for Reschedule'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : req.dueStatus === 'Reason Submitted'
+                          ? 'bg-amber-100 text-amber-800 border-amber-300'
+                          : req.dueStatus === 'Rejected'
+                          ? 'bg-rose-100 text-rose-800 border-rose-300'
+                          : isCompleted
                           ? 'bg-blue-100 text-blue-900 border-blue-300'
                           : 'bg-emerald-100 text-[#0a4d2c] border-emerald-300'
                       }`}>
-                        {isCompleted ? 'Completed' : 'Scheduled'}
+                        {req.dueStatus === 'Approved for Reschedule'
+                          ? 'Approved for Reschedule'
+                          : req.dueStatus === 'Reason Submitted'
+                          ? 'Reason Review'
+                          : req.dueStatus === 'Rejected'
+                          ? 'Reason Rejected'
+                          : isCompleted ? 'Completed' : 'Scheduled'}
                       </span>
                     </div>
 
@@ -545,6 +573,95 @@ const AdminCollectionSchedule = () => {
                         {req.overallCategory || 'Plastic'}
                       </span>
                     </div>
+
+                    {/* Missed Collection Review Section */}
+                    {(req.dueReason || req.dueStatus === 'Review Required' || req.dueStatus === 'Reason Submitted' || req.dueStatus === 'Approved for Reschedule' || req.dueStatus === 'Rejected' || (req.status || '').toLowerCase().includes('due')) && (
+                      <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs space-y-2 mt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-amber-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                            Missed Date Reason & Approvals
+                          </span>
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${
+                            req.dueStatus === 'Approved for Reschedule'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : req.dueStatus === 'Rejected'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                              : 'bg-amber-100 text-amber-800 border border-amber-300'
+                          }`}>
+                            {req.dueStatus || 'Pending'}
+                          </span>
+                        </div>
+
+                        {req.dueReason && (
+                          <div className="bg-white p-2 rounded-xl border border-amber-100 text-gray-700">
+                            <span className="text-[10px] font-bold text-gray-400 block uppercase">Worker Reason:</span>
+                            <p className="font-semibold text-gray-900 text-xs mt-0.5">{req.dueReason}</p>
+                          </div>
+                        )}
+
+                        {/* Approval Status Badges */}
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="bg-white/90 p-2 rounded-xl border border-gray-200 flex flex-col">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase">Citizen Approval</span>
+                            <span className={`font-bold mt-0.5 flex items-center gap-1 ${
+                              req.citizenApprovalStatus === 'Approved'
+                                ? 'text-emerald-700'
+                                : req.citizenApprovalStatus === 'Rejected'
+                                ? 'text-rose-700'
+                                : 'text-amber-700'
+                            }`}>
+                              {req.citizenApprovalStatus === 'Approved' && <Check className="w-3 h-3" />}
+                              {req.citizenApprovalStatus === 'Rejected' && <X className="w-3 h-3" />}
+                              {req.citizenApprovalStatus || 'Pending'}
+                            </span>
+                          </div>
+
+                          <div className="bg-white/90 p-2 rounded-xl border border-gray-200 flex flex-col">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase">Admin Approval</span>
+                            <span className={`font-bold mt-0.5 flex items-center gap-1 ${
+                              req.adminApprovalStatus === 'Approved'
+                                ? 'text-emerald-700'
+                                : req.adminApprovalStatus === 'Rejected'
+                                ? 'text-rose-700'
+                                : 'text-amber-700'
+                            }`}>
+                              {req.adminApprovalStatus === 'Approved' && <Check className="w-3 h-3" />}
+                              {req.adminApprovalStatus === 'Rejected' && <X className="w-3 h-3" />}
+                              {req.adminApprovalStatus || 'Pending'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Admin Action Buttons */}
+                        {!isCompleted && req.adminApprovalStatus !== 'Approved' && (
+                          <div className="pt-2 border-t border-amber-200/60 flex items-center gap-2">
+                            <button
+                              onClick={() => handleAdminApproval(req.requestId, 'Approve')}
+                              disabled={actionLoadingId === req.requestId}
+                              className="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>{actionLoadingId === req.requestId ? 'Saving...' : 'Approve Reason'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleAdminApproval(req.requestId, 'Reject')}
+                              disabled={actionLoadingId === req.requestId}
+                              className="py-1.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Reject</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {req.dueStatus === 'Approved for Reschedule' && (
+                          <p className="text-[11px] text-emerald-800 font-semibold text-center bg-emerald-50 py-1.5 px-2 rounded-xl border border-emerald-200">
+                            Approved by Citizen & Admin. Awaiting Worker Rescheduling (20th–25th).
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}

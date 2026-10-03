@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Home, MapPin, Truck, CheckCircle2, XCircle, AlertCircle, Clock, Calendar, Info, Send, Package, KeyRound, ShieldCheck, Check, Sparkles } from 'lucide-react';
-import { createPickupRequest, getMonthlyStatus } from '../services/pickupRequestService';
+import { Home, MapPin, Truck, CheckCircle2, XCircle, AlertCircle, AlertTriangle, Clock, Calendar, Info, Send, Package, KeyRound, ShieldCheck, Check, Sparkles, Bell, MessageSquare, Loader2 } from 'lucide-react';
+import { createPickupRequest, getMonthlyStatus, getCitizenRequests, getPickupScheduleStatus, formatPickupDate, approveDueReason, getAssignedCollectionPeriod } from '../services/pickupRequestService';
+import DueAlertDetailsModal from './DueAlertDetailsModal';
 
 const PickupRequest = ({ citizenData }) => {
+  const assignedPeriod = getAssignedCollectionPeriod();
+
   // Steps: 'summary' | 'success'
   const [step, setStep] = useState('summary');
 
@@ -14,6 +17,9 @@ const PickupRequest = ({ citizenData }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [error, setError] = useState('');
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [approvalMsg, setApprovalMsg] = useState('');
+  const [showDueAlertModal, setShowDueAlertModal] = useState(false);
 
   // Extract Citizen details
   const userObj = JSON.parse(localStorage.getItem('user') || '{}');
@@ -30,16 +36,67 @@ const PickupRequest = ({ citizenData }) => {
     userObj?.status === 'Verified'
   );
 
-  // Check if citizen has already submitted a request for current calendar month
+  // Check if citizen has already submitted a request for current target collection period
   const checkMonthlyLimit = async () => {
     setCheckingMonthlyStatus(true);
     try {
-      const statusRes = await getMonthlyStatus(citizenId);
-      if (statusRes?.hasMonthlyRequest && statusRes?.request) {
-        setExistingMonthlyRequest(statusRes.request);
-      } else {
-        setExistingMonthlyRequest(null);
-      }
+      const [statusRes, citizenReqs] = await Promise.all([
+        getMonthlyStatus(citizenId).catch(() => null),
+        getCitizenRequests(citizenId).catch(() => [])
+      ]);
+
+      const reqList = Array.isArray(citizenReqs) ? citizenReqs : [];
+
+      const isUncompleted = (r) => {
+        if (!r) return false;
+        const s = (r.status || '').toLowerCase();
+        return s !== 'completed' && s !== 'collected' && s !== 'cancelled';
+      };
+
+      // Check for any active unresolved request (due, scheduled, pending)
+      const unresolvedReq = 
+        (statusRes?.hasMonthlyRequest && statusRes?.request && isUncompleted(statusRes.request) ? statusRes.request : null) ||
+        reqList.find(r => isUncompleted(r) && Boolean(r.dueReason && r.dueReason.trim())) ||
+        reqList.find(r => isUncompleted(r) && ((r.status || '').toLowerCase().includes('due') || (r.dueStatus || '').toLowerCase().includes('due'))) ||
+        reqList.find(r => isUncompleted(r) && (r.status || '').toLowerCase() === 'scheduled') ||
+        reqList.find(r => isUncompleted(r) && (r.status || '').toLowerCase() === 'pending');
+
+      // Check if citizen already submitted a request specifically for the current target collection period
+      const targetPeriodReq = reqList.find(r => {
+        if ((r.status || '').toLowerCase() === 'cancelled') return false;
+        if (r.collectionYear && r.collectionMonth) {
+          return Number(r.collectionYear) === assignedPeriod.targetYear && Number(r.collectionMonth) === assignedPeriod.targetMonth;
+        }
+        if (r.requestedAt) {
+          const p = getAssignedCollectionPeriod(r.requestedAt);
+          return p.targetYear === assignedPeriod.targetYear && p.targetMonth === assignedPeriod.targetMonth;
+        }
+        return false;
+      });
+
+      const chosenReq = unresolvedReq ||
+        (statusRes?.hasMonthlyRequest && statusRes?.request ? statusRes.request : null) ||
+        targetPeriodReq ||
+        null;
+
+      const matchedDetail = chosenReq && reqList.find(r => 
+        (chosenReq.requestId && r.requestId === chosenReq.requestId) ||
+        (chosenReq.id && r.id === chosenReq.id)
+      );
+
+      const chosen = chosenReq
+        ? {
+            ...chosenReq,
+            ...(matchedDetail || {}),
+            dueReason: matchedDetail?.dueReason || chosenReq?.dueReason || '',
+            dueReasonSubmittedAt: matchedDetail?.dueReasonSubmittedAt || chosenReq?.dueReasonSubmittedAt || null,
+            dueReasonSubmittedBy: matchedDetail?.dueReasonSubmittedBy || chosenReq?.dueReasonSubmittedBy || null,
+            citizenApprovalStatus: matchedDetail?.citizenApprovalStatus || chosenReq?.citizenApprovalStatus || 'Pending',
+            adminApprovalStatus: matchedDetail?.adminApprovalStatus || chosenReq?.adminApprovalStatus || 'Pending',
+          }
+        : null;
+
+      setExistingMonthlyRequest(chosen);
     } catch (err) {
       console.warn("Could not verify monthly pickup limit:", err);
     } finally {
@@ -84,39 +141,10 @@ const PickupRequest = ({ citizenData }) => {
     }
   };
 
-  const getStatusBadgeClass = (status, isFailed) => {
-    if (isFailed) {
-      return 'bg-rose-100 text-rose-800 border-rose-300';
-    }
-    switch ((status || '').toLowerCase()) {
-      case 'scheduled':
-      case 'accepted':
-        return 'bg-[#0a4d2c] text-white border-emerald-800';
-      case 'completed':
-      case 'collected':
-        return 'bg-emerald-100 text-[#0a4d2c] border-emerald-300';
-      default:
-        return 'bg-amber-100 text-amber-900 border-amber-300';
-    }
-  };
-
-  const isCompleted = Boolean(
-    existingMonthlyRequest && (
-      (existingMonthlyRequest.status || '').toLowerCase() === 'completed' ||
-      (existingMonthlyRequest.status || '').toLowerCase() === 'collected'
-    )
-  );
-
-  const reqDate = new Date(existingMonthlyRequest?.collectionDate || existingMonthlyRequest?.requestedAt);
-  const now = new Date();
-  const isPastMonth = Boolean(
-    existingMonthlyRequest && !isNaN(reqDate.getTime()) && (
-      reqDate.getFullYear() < now.getFullYear() ||
-      (reqDate.getFullYear() === now.getFullYear() && reqDate.getMonth() < now.getMonth())
-    )
-  );
-
-  const isFailedToComplete = !isCompleted && isPastMonth;
+  const schedStatus = getPickupScheduleStatus(existingMonthlyRequest);
+  const isCompleted = schedStatus.isCompleted;
+  const isDue = schedStatus.isDue;
+  const isToday = schedStatus.isToday;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn pb-12">
@@ -168,24 +196,31 @@ const PickupRequest = ({ citizenData }) => {
         </div>
       </div>
 
-      {/* Scheduled Collection Window Notice Banner (15th - 25th) */}
+      {/* Scheduled Collection Window Notice Banner (20th - 25th) */}
       <div className="bg-emerald-50/90 border border-emerald-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-950 shadow-2xs">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[#0a4d2c] text-white rounded-xl shrink-0 shadow-xs">
             <Calendar className="w-5 h-5 text-emerald-300" />
           </div>
           <div>
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0a4d2c] block">
-              Scheduled Monthly Collection Window
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0a4d2c] block">
+                {assignedPeriod.headline}
+              </span>
+              {assignedPeriod.isNextMonth && (
+                <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full font-bold">
+                  Next Month Collection
+                </span>
+              )}
+            </div>
             <p className="text-xs font-semibold text-emerald-900 mt-0.5">
-              Haritha Karma Sena workers collect requested waste between <span className="font-extrabold text-[#0a4d2c] underline">15th to 25th of every month</span>.
+              {assignedPeriod.subtext}
             </p>
           </div>
         </div>
 
         <span className="px-3 py-1.5 bg-[#0a4d2c] text-white text-xs font-extrabold rounded-xl shrink-0 self-start sm:self-center shadow-xs">
-          Collection: 15th – 25th
+          {assignedPeriod.periodName} • 20th–25th
         </span>
       </div>
 
@@ -231,6 +266,46 @@ const PickupRequest = ({ citizenData }) => {
                 </p>
               </div>
             </div>
+          ) : isDue ? (
+            <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-rose-950 shadow-xs">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-rose-600 text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
+                  <AlertTriangle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-rose-950">
+                    Pickup Due (Scheduled Date Has Passed)
+                  </h3>
+                  <p className="text-xs text-rose-800 font-medium mt-0.5">
+                    {existingMonthlyRequest?.dueReason
+                      ? `Worker recorded reason: "${existingMonthlyRequest.dueReason}". Under Panchayat Admin review.`
+                      : "The scheduled pickup date has passed without collection. Awaiting worker to record reason."}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDueAlertModal(true)}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-xs transition flex items-center gap-1.5 self-start sm:self-center shrink-0 cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Review Reason & Updates</span>
+              </button>
+            </div>
+          ) : isToday ? (
+            <div className="p-4 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white border-2 border-amber-300 rounded-2xl flex items-start gap-3 shadow-md">
+              <div className="p-2 bg-white/20 backdrop-blur-xs text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
+                <Bell className="w-5 h-5 animate-pulse text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-black">
+                  Your waste pickup is scheduled for today.
+                </h3>
+                <p className="text-xs text-amber-100 font-medium mt-1">
+                  Haritha Karma Sena workers are arriving today for doorstep waste collection. Please keep dried non-biodegradable plastics ready at the gate.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-900">
               <Info className="w-5 h-5 text-[#0a4d2c] shrink-0 mt-0.5" />
@@ -259,20 +334,17 @@ const PickupRequest = ({ citizenData }) => {
 
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-gray-500">Status:</span>
-                <span className={`px-3 py-1 text-xs font-extrabold rounded-full border flex items-center gap-1.5 ${getStatusBadgeClass(existingMonthlyRequest.status, isFailedToComplete)}`}>
-                  {isFailedToComplete ? (
-                    <>
-                      <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Failed to Complete</span>
-                    </>
+                <span className={`px-3 py-1 text-xs font-extrabold rounded-full border flex items-center gap-1.5 ${schedStatus.badgeClass}`}>
+                  {isDue ? (
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                  ) : isToday ? (
+                    <Bell className="w-3.5 h-3.5" />
                   ) : isCompleted ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#0a4d2c]" />
-                      <span>Completed</span>
-                    </>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
                   ) : (
-                    existingMonthlyRequest.status
+                    <Calendar className="w-3.5 h-3.5" />
                   )}
+                  <span>{schedStatus.label}</span>
                 </span>
               </div>
             </div>
@@ -289,7 +361,7 @@ const PickupRequest = ({ citizenData }) => {
                       Collection Completed On
                     </span>
                     <span className="text-base font-extrabold text-[#0a4d2c]">
-                      {new Date(existingMonthlyRequest.collectedAt || existingMonthlyRequest.collectionDate || existingMonthlyRequest.requestedAt).toLocaleDateString('en-US', {
+                      {formatPickupDate(existingMonthlyRequest.collectedAt || existingMonthlyRequest.collectionDate || existingMonthlyRequest.requestedAt, {
                         weekday: 'long',
                         month: 'short',
                         day: 'numeric',
@@ -303,29 +375,104 @@ const PickupRequest = ({ citizenData }) => {
                   Pickup Completed
                 </span>
               </div>
-            ) : isFailedToComplete ? (
-              <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-rose-600 text-white rounded-xl shrink-0 shadow-xs">
-                    <XCircle className="w-5 h-5 text-white" />
+            ) : (isDue || Boolean(existingMonthlyRequest.dueReason)) ? (
+              <>
+                <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-rose-600 text-white rounded-xl shrink-0 shadow-xs">
+                      <AlertTriangle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-800 block">
+                        Pickup Status: Due / Review Required
+                      </span>
+                      <span className="text-base font-black text-rose-950">
+                        Scheduled Date was {formatPickupDate(existingMonthlyRequest.scheduledDate || existingMonthlyRequest.collectionDate)}
+                      </span>
+                      <p className="text-xs text-rose-700 font-medium mt-0.5">
+                        Scheduled collection date passed without completion. Worker must submit reason for Admin review.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-800 block">
-                      Pickup Cycle Expired
+                  <span className="px-3 py-1.5 bg-rose-100 text-rose-800 border border-rose-300 font-extrabold text-xs rounded-xl self-start sm:self-center">
+                    Due / Review Required
+                  </span>
+                </div>
+
+                {/* Worker Missed Pickup Reason & Admin Review Details (Citizen View Only) */}
+                <div className="p-4 bg-white border-2 border-amber-300 rounded-2xl shadow-xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4 text-amber-600" />
+                      Missed Pickup Reason Submitted by Worker ({existingMonthlyRequest.dueReasonSubmittedBy || 'Haritha Karma Sena'}):
                     </span>
-                    <span className="text-base font-extrabold text-rose-950">
-                      Failed to Complete (Month Passed)
+                    {existingMonthlyRequest.dueReasonSubmittedAt && (
+                      <span className="text-[11px] text-gray-500 font-semibold">
+                        Recorded on {formatPickupDate(existingMonthlyRequest.dueReasonSubmittedAt)}
+                      </span>
+                    )}
+                  </div>
+
+                  {existingMonthlyRequest.dueReason ? (
+                    <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 text-gray-900 font-bold text-sm">
+                      "{existingMonthlyRequest.dueReason}"
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-600 text-xs italic">
+                      Awaiting assigned worker to enter reason for the missed collection.
+                    </div>
+                  )}
+
+                  {/* Admin Review Status Banner */}
+                  <div className="p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-50 border-gray-200">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-500 block">Admin Review Status</span>
+                      <span className="font-extrabold text-gray-900 flex items-center gap-1.5 mt-0.5">
+                        {existingMonthlyRequest.adminApprovalStatus === 'Approved' ? (
+                          <span className="text-emerald-700 flex items-center gap-1">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            Approved by Admin • Worker authorized to schedule new collection date (20th–25th)
+                          </span>
+                        ) : existingMonthlyRequest.adminApprovalStatus === 'Rejected' ? (
+                          <span className="text-rose-700 flex items-center gap-1">
+                            <XCircle className="w-4 h-4 text-rose-600" />
+                            Rejected by Admin • Pickup remains locked
+                          </span>
+                        ) : (
+                          <span className="text-amber-800 flex items-center gap-1">
+                            <Clock className="w-4 h-4 text-amber-600" />
+                            Pending Admin Review • Admin must approve before worker can reschedule
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    <span className="text-[10px] text-gray-400 font-medium italic shrink-0">
+                      * Citizen View Only (No action required from citizen)
                     </span>
-                    <p className="text-xs text-rose-700 font-medium mt-0.5">
-                      The scheduled collection cycle for this month has passed without waste handover.
-                    </p>
                   </div>
                 </div>
-                <span className="px-3.5 py-1.5 bg-rose-600 text-white font-extrabold text-xs rounded-xl shrink-0 self-start sm:self-center shadow-xs">
-                  Failed
+              </>
+            ) : isToday ? (
+              <div className="p-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-white/20 text-white rounded-xl shrink-0 shadow-xs">
+                    <Bell className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-100 block">
+                      Scheduled For Today
+                    </span>
+                    <span className="text-base font-black">
+                      Your waste pickup is scheduled for today.
+                    </span>
+                  </div>
+                </div>
+                <span className="px-3.5 py-1.5 bg-white text-amber-900 font-black text-xs rounded-xl shrink-0 self-start sm:self-center shadow-xs">
+                  Pickup Today
                 </span>
               </div>
-            ) : existingMonthlyRequest.collectionDate ? (
+            ) : (existingMonthlyRequest.scheduledDate || existingMonthlyRequest.collectionDate) ? (
               <div className="p-4 bg-emerald-100/90 border border-emerald-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#0a4d2c] text-white rounded-xl shrink-0">
@@ -336,7 +483,7 @@ const PickupRequest = ({ citizenData }) => {
                       Scheduled Collection Date
                     </span>
                     <span className="text-base font-extrabold text-[#0a4d2c]">
-                      {new Date(existingMonthlyRequest.collectionDate).toLocaleDateString('en-US', {
+                      {formatPickupDate(existingMonthlyRequest.scheduledDate || existingMonthlyRequest.collectionDate, {
                         weekday: 'long',
                         month: 'short',
                         day: 'numeric',
@@ -356,7 +503,7 @@ const PickupRequest = ({ citizenData }) => {
                   Scheduled Collection Date:
                 </span>
                 <span className="font-extrabold text-amber-900">
-                  Awaiting worker schedule (15th–25th Window)
+                  Awaiting worker schedule (20th–25th Window)
                 </span>
               </div>
             )}
@@ -438,7 +585,7 @@ const PickupRequest = ({ citizenData }) => {
                   {isCompleted ? 'Collection Status:' : 'Collection Window:'}
                 </span>
                 <span className="font-extrabold text-[#0a4d2c]">
-                  {isCompleted ? 'Collected & Verified' : '15th – 25th of Month'}
+                  {isCompleted ? 'Collected & Verified' : '20th – 25th of Month'}
                 </span>
               </div>
 
@@ -548,9 +695,9 @@ const PickupRequest = ({ citizenData }) => {
 
                 <div className="space-y-3 pt-1">
                   <div className="flex justify-between text-xs py-1 border-b border-emerald-100">
-                    <span className="text-gray-500 font-medium">Collection Window:</span>
+                    <span className="text-gray-500 font-medium">Assigned Collection:</span>
                     <span className="font-extrabold text-[#0a4d2c]">
-                      15th – 25th of Month
+                      {assignedPeriod.periodName} (20th–25th)
                     </span>
                   </div>
 
@@ -562,9 +709,14 @@ const PickupRequest = ({ citizenData }) => {
                   </div>
 
                   <div className="p-3.5 bg-white border border-emerald-200 rounded-xl text-xs text-emerald-900 mt-2 space-y-1">
-                    <span className="font-extrabold block text-[#0a4d2c]">Monthly Collection Notice:</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold block text-[#0a4d2c]">Collection Assignment:</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#0a4d2c]">
+                        {assignedPeriod.isNextMonth ? 'Next Month' : 'Current Month'}
+                      </span>
+                    </div>
                     <p className="text-gray-600 leading-relaxed text-[11px]">
-                      Haritha Karma Sena workers will collect your recyclable plastic waste during the 15th–25th monthly collection window. Please keep plastic items clean, dry, and bundled.
+                      {assignedPeriod.subtext}
                     </p>
                   </div>
                 </div>
@@ -656,6 +808,14 @@ const PickupRequest = ({ citizenData }) => {
           </div>
         </div>
       )}
+
+      {/* Due Alert Details Modal (Citizen View-Only) */}
+      <DueAlertDetailsModal
+        isOpen={showDueAlertModal}
+        onClose={() => setShowDueAlertModal(false)}
+        request={existingMonthlyRequest}
+        userRole="citizen"
+      />
     </div>
   );
 };

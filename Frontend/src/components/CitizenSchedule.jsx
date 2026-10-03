@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Calendar,
   Clock,
   CheckCircle2,
   XCircle,
   AlertCircle,
+  AlertTriangle,
   Truck,
   Package,
   KeyRound,
@@ -15,74 +16,90 @@ import {
   Sparkles,
   Check,
   CalendarCheck,
-  Info
+  Info,
+  Bell,
+  MessageSquare,
+  Loader2,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
+import { getPickupScheduleStatus, formatPickupDate, getAssignedCollectionPeriod } from '../services/pickupRequestService';
 
 const CitizenSchedule = ({
   citizenData,
   monthlyStatusData,
   realRequests = [],
   assignedWorker,
-  setActiveTab
+  setActiveTab,
+  onRefresh
 }) => {
   const userObj = JSON.parse(localStorage.getItem('user') || '{}');
   const citizenName = citizenData?.fullName || userObj.fullName || 'Citizen';
   const wardId = citizenData?.wardId || userObj.wardId || 'Ward 1';
   const panchayatName = citizenData?.panchayatName || userObj.panchayatName || 'Chirakkadavu';
 
-  // Extract active / current monthly request
-  const currentRequest = monthlyStatusData?.request || realRequests.find(
-    (r) =>
-      (r.status || '').toLowerCase() === 'pending' ||
-      (r.status || '').toLowerCase() === 'scheduled' ||
-      (r.status || '').toLowerCase() === 'completed' ||
-      (r.status || '').toLowerCase() === 'collected'
+  const isUncompleted = (r) => {
+    if (!r) return false;
+    const s = (r.status || '').toLowerCase();
+    return s !== 'completed' && s !== 'collected' && s !== 'cancelled';
+  };
+
+  // Extract active / current monthly request, prioritizing active unresolved requests with dueReason
+  const activeOrDueRequest = 
+    (monthlyStatusData?.hasMonthlyRequest && monthlyStatusData?.request && isUncompleted(monthlyStatusData.request) ? monthlyStatusData.request : null) ||
+    realRequests.find(r => isUncompleted(r) && Boolean(r.dueReason && r.dueReason.trim())) ||
+    realRequests.find(r => isUncompleted(r) && ((r.status || '').toLowerCase().includes('due') || (r.dueStatus || '').toLowerCase().includes('due'))) ||
+    realRequests.find(r => isUncompleted(r) && (r.status || '').toLowerCase() === 'scheduled') ||
+    realRequests.find(r => isUncompleted(r) && (r.status || '').toLowerCase() === 'pending') ||
+    (monthlyStatusData?.hasMonthlyRequest ? monthlyStatusData?.request : null) ||
+    realRequests.find(r => Boolean(r.dueReason && r.dueReason.trim())) ||
+    realRequests[0] ||
+    null;
+
+  const matchedReal = realRequests.find(r => 
+    (activeOrDueRequest?.requestId && r.requestId === activeOrDueRequest.requestId) ||
+    (activeOrDueRequest?.id && r.id === activeOrDueRequest.id)
   );
 
-  const status = (currentRequest?.status || '').toLowerCase();
-  const isCompleted = status === 'completed' || status === 'collected';
-  const isScheduled = status === 'scheduled' || status === 'accepted';
-  const isPending = status === 'pending';
+  const currentRequest = activeOrDueRequest ? {
+    ...activeOrDueRequest,
+    ...(matchedReal || {}),
+    dueReason: matchedReal?.dueReason || activeOrDueRequest?.dueReason || monthlyStatusData?.request?.dueReason || '',
+    dueReasonSubmittedAt: matchedReal?.dueReasonSubmittedAt || activeOrDueRequest?.dueReasonSubmittedAt || monthlyStatusData?.request?.dueReasonSubmittedAt || null,
+    dueReasonSubmittedBy: matchedReal?.dueReasonSubmittedBy || activeOrDueRequest?.dueReasonSubmittedBy || monthlyStatusData?.request?.dueReasonSubmittedBy || null,
+    citizenApprovalStatus: matchedReal?.citizenApprovalStatus || activeOrDueRequest?.citizenApprovalStatus || monthlyStatusData?.request?.citizenApprovalStatus || 'Pending',
+    adminApprovalStatus: matchedReal?.adminApprovalStatus || activeOrDueRequest?.adminApprovalStatus || monthlyStatusData?.request?.adminApprovalStatus || 'Pending',
+  } : null;
+
   const hasRequest = Boolean(currentRequest);
-
-  const now = new Date();
-  const reqDate = new Date(currentRequest?.collectionDate || currentRequest?.requestedAt);
-  const isPastMonth = Boolean(
-    currentRequest && !isNaN(reqDate.getTime()) && (
-      reqDate.getFullYear() < now.getFullYear() ||
-      (reqDate.getFullYear() === now.getFullYear() && reqDate.getMonth() < now.getMonth())
-    )
-  );
-  const isFailed = hasRequest && !isCompleted && isPastMonth;
+  const schedStatus = getPickupScheduleStatus(currentRequest);
+  const isCompleted = schedStatus.isCompleted;
+  const isScheduled = schedStatus.isScheduled;
+  const isPending = schedStatus.isPending;
+  const isDue = schedStatus.isDue;
+  const isToday = schedStatus.isToday;
 
   // Worker contact
   const senaWorkerName = assignedWorker?.fullName || 'Haritha Karma Sena Unit';
   const senaWorkerPhone = assignedWorker?.phoneNumber || '+91 98470 12345';
 
-  // Format date helper
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    try {
-      return new Date(dateStr).toLocaleDateString('en-US', {
+  const scheduledDateFormatted = currentRequest?.scheduledDate || currentRequest?.collectionDate
+    ? formatPickupDate(currentRequest.scheduledDate || currentRequest.collectionDate, {
         weekday: 'long',
         month: 'short',
         day: 'numeric',
         year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const scheduledDateFormatted = currentRequest?.collectionDate
-    ? formatDate(currentRequest.collectionDate)
-    : '15th – 25th Collection Window';
+      })
+    : '20th – 25th Collection Window';
 
   const collectedDateFormatted = currentRequest?.collectedAt
-    ? formatDate(currentRequest.collectedAt)
-    : currentRequest?.collectionDate
-      ? formatDate(currentRequest.collectionDate)
-      : 'This Month';
+    ? formatPickupDate(currentRequest.collectedAt, {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+    : scheduledDateFormatted;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn pb-12">
@@ -126,58 +143,209 @@ const CitizenSchedule = ({
             </span>
             <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2 mt-0.5">
               <span>Monthly Doorstep Plastic Pickup</span>
-              {isFailed ? (
-                <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded-full flex items-center gap-1">
-                  <XCircle className="w-3.5 h-3.5 text-rose-600" /> Failed to Complete
+              {hasRequest ? (
+                <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border flex items-center gap-1 ${schedStatus.badgeClass}`}>
+                  {isDue ? (
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                  ) : isToday ? (
+                    <Bell className="w-3.5 h-3.5" />
+                  ) : isCompleted ? (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  ) : isScheduled ? (
+                    <Calendar className="w-3.5 h-3.5" />
+                  ) : (
+                    <Clock className="w-3.5 h-3.5" />
+                  )}
+                  {schedStatus.label}
                 </span>
-              ) : isCompleted ? (
-                <span className="px-2.5 py-0.5 bg-emerald-100 text-[#0a4d2c] text-xs font-bold rounded-full flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Completed
-                </span>
-              ) : isScheduled ? (
-                <span className="px-2.5 py-0.5 bg-emerald-700 text-white text-xs font-bold rounded-full flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" /> Scheduled
-                </span>
-              ) : isPending ? (
-                <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-full flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" /> Pending Schedule
-                </span>
-              ) : !hasRequest ? (
+              ) : (
                 <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-bold rounded-full">
                   No Active Request
                 </span>
-              ) : null}
+              )}
             </h2>
           </div>
 
           <div className="flex items-center gap-2 bg-emerald-50/80 border border-emerald-200 px-3.5 py-2 rounded-2xl text-xs">
             <Clock className="w-4 h-4 text-[#0a4d2c]" />
-            <span className="text-gray-600 font-medium">Standard Window:</span>
-            <span className="font-extrabold text-[#0a4d2c]">15th – 25th of Month</span>
+            <span className="text-gray-600 font-medium">Collection Window:</span>
+            <span className="font-extrabold text-[#0a4d2c]">
+              20th – 25th of {currentRequest?.collectionPeriodName || getAssignedCollectionPeriod().periodName}
+            </span>
           </div>
         </div>
 
         {/* Big Date Display Banner */}
-        {isFailed ? (
-          <div className="p-5 bg-rose-50 border-2 border-rose-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+        {(isDue || Boolean(currentRequest?.dueReason) || schedStatus.isReasonSubmitted) ? (
+          <div className="space-y-4">
+            <div className={`p-5 rounded-2xl border-2 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+              schedStatus.isApprovedForReschedule
+                ? 'bg-teal-50 border-teal-300'
+                : schedStatus.isReasonSubmitted
+                  ? 'bg-amber-50 border-amber-300'
+                  : 'bg-rose-50 border-rose-300'
+            }`}>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 text-white rounded-2xl shadow-md shrink-0 ${
+                  schedStatus.isApprovedForReschedule
+                    ? 'bg-teal-600'
+                    : schedStatus.isReasonSubmitted
+                      ? 'bg-amber-600'
+                      : 'bg-rose-600'
+                }`}>
+                  {schedStatus.isApprovedForReschedule ? (
+                    <CheckCircle2 className="w-7 h-7 text-white" />
+                  ) : (
+                    <AlertTriangle className="w-7 h-7 text-white" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <span className={`text-[11px] font-black uppercase tracking-wider block ${
+                    schedStatus.isApprovedForReschedule
+                      ? 'text-teal-900'
+                      : schedStatus.isReasonSubmitted
+                        ? 'text-amber-900'
+                        : 'text-rose-800'
+                  }`}>
+                    {schedStatus.isApprovedForReschedule
+                      ? 'Approved for Reschedule ✓'
+                      : schedStatus.isReasonSubmitted
+                        ? 'Due / Review Required'
+                        : 'Pickup Status: Due'}
+                  </span>
+                  <span className="text-lg sm:text-xl font-black text-gray-950">
+                    Scheduled Collection Date Passed ({scheduledDateFormatted})
+                  </span>
+                  <p className="text-xs text-gray-700 font-medium">
+                    {schedStatus.isApprovedForReschedule
+                      ? 'Panchayat Admin has approved the missed pickup. Your assigned worker is authorized to reschedule the collection date (20th–25th).'
+                      : schedStatus.isReasonSubmitted
+                        ? `Reason from ${schedStatus.dueReasonSubmittedBy || 'Worker'}: "${schedStatus.dueReason}"`
+                        : "The scheduled pickup date has passed and waste was not collected. Waiting for your assigned worker to record the missed pickup reason."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start md:self-center shrink-0">
+                <span className="px-3.5 py-1.5 bg-white text-gray-700 border border-gray-300 text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Citizen View-Only</span>
+                </span>
+              </div>
+            </div>
+
+            {/* View-Only Worker Reason & Admin Status Card */}
+            {(schedStatus.isReasonSubmitted || Boolean(currentRequest?.dueReason) || Boolean(schedStatus.dueReason)) && (
+              <div className="bg-white p-5 rounded-3xl border-2 border-amber-300 shadow-md space-y-4 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-amber-600" />
+                      <span>Missed Pickup Review & Reschedule Status</span>
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Citizens have view-only access. Pickup rescheduling requires Panchayat Admin review and is scheduled by the worker.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs shrink-0">
+                    <span className="font-semibold text-gray-500">Admin Review:</span>
+                    <span className={`px-2.5 py-0.5 rounded-full font-bold text-xs border ${
+                      schedStatus.adminApprovalStatus === 'Approved'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                        : schedStatus.adminApprovalStatus === 'Rejected'
+                          ? 'bg-red-50 text-red-800 border-red-300'
+                          : 'bg-amber-50 text-amber-800 border-amber-300'
+                    }`}>
+                      {schedStatus.adminApprovalStatus === 'Approved'
+                        ? '✓ Approved'
+                        : schedStatus.adminApprovalStatus === 'Rejected'
+                          ? '✕ Rejected'
+                          : '⏳ Pending Review'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Prominent Worker Reason Callout */}
+                <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-200 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-extrabold text-amber-900">
+                    <span className="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                      <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
+                      Reason Recorded by Worker ({schedStatus.dueReasonSubmittedBy || currentRequest?.dueReasonSubmittedBy || 'Haritha Karma Sena'}):
+                    </span>
+                    {(schedStatus.dueReasonSubmittedAt || currentRequest?.dueReasonSubmittedAt) && (
+                      <span className="text-[11px] text-amber-700 font-semibold">
+                        {formatPickupDate(schedStatus.dueReasonSubmittedAt || currentRequest?.dueReasonSubmittedAt)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="bg-white p-3.5 rounded-xl border border-amber-100 text-gray-900 font-bold text-sm shadow-2xs">
+                    "{schedStatus.dueReason || currentRequest?.dueReason}"
+                  </div>
+                </div>
+
+                {/* Status Guidance */}
+                <div className="pt-1">
+                  {schedStatus.adminApprovalStatus === 'Approved' ? (
+                    <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-start gap-2.5">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="text-xs">
+                        <span className="font-extrabold text-emerald-900 block">
+                          Admin Approved • Reschedule Unlocked for Worker
+                        </span>
+                        <p className="text-emerald-800 mt-0.5">
+                          Panchayat Admin has approved the missed pickup. Your assigned worker is authorized to select a new collection date within the 20th–25th window. You will be notified when the new date is confirmed.
+                        </p>
+                      </div>
+                    </div>
+                  ) : schedStatus.adminApprovalStatus === 'Rejected' ? (
+                    <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-xl flex items-start gap-2.5">
+                      <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                      <div className="text-xs">
+                        <span className="font-extrabold text-rose-900 block">
+                          Admin Rejected • Pickup Locked
+                        </span>
+                        <p className="text-rose-800 mt-0.5">
+                          Panchayat Admin reviewed and rejected the reason. This pickup remains locked. Contact Panchayat helpline for inquiries.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5">
+                      <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="text-xs">
+                        <span className="font-extrabold text-amber-900 block">
+                          Awaiting Admin Review • Rescheduling Locked
+                        </span>
+                        <p className="text-amber-800 mt-0.5">
+                          The worker's reason is awaiting review and approval by Panchayat Admin. The worker is not allowed to reschedule before Admin approval.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : isToday ? (
+          <div className="p-5 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-rose-600 text-white rounded-2xl shadow-md shrink-0">
-                <XCircle className="w-7 h-7 text-white" />
+              <div className="p-3 bg-white/20 backdrop-blur-xs rounded-2xl shadow-md shrink-0">
+                <Bell className="w-7 h-7 text-white animate-pulse" />
               </div>
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-rose-800 block">
-                  Collection Cycle Expired
+                <span className="text-[11px] font-black uppercase tracking-wider text-amber-200 block">
+                  Scheduled For Today
                 </span>
-                <span className="text-lg sm:text-xl font-black text-rose-950">
-                  Failed to Complete (Month Passed)
+                <span className="text-xl sm:text-2xl font-black">
+                  Your waste pickup is scheduled for today.
                 </span>
-                <p className="text-xs text-rose-700 font-medium mt-0.5">
-                  The collection cycle for this month has passed without waste handover. A new pickup request can be submitted.
+                <p className="text-xs text-amber-100 font-medium mt-0.5">
+                  Haritha Karma Sena workers will arrive for doorstep waste collection today.
                 </p>
               </div>
             </div>
-            <span className="px-4 py-2 bg-rose-200 text-rose-900 text-xs font-extrabold rounded-xl shadow-xs self-start sm:self-center">
-              Failed
+            <span className="px-4 py-2 bg-white text-amber-900 text-xs font-extrabold rounded-xl shadow-xs self-start sm:self-center flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-amber-600" /> Today
             </span>
           </div>
         ) : isCompleted ? (
@@ -232,7 +400,7 @@ const CitizenSchedule = ({
               </div>
               <div>
                 <span className="text-[11px] font-black uppercase tracking-wider text-amber-800 block">
-                  Collection Window (15th – 25th)
+                  Collection Window (20th – 25th)
                 </span>
                 <span className="text-lg sm:text-xl font-black text-amber-950">
                   Awaiting Haritha Karma Sena Worker Schedule
@@ -255,7 +423,7 @@ const CitizenSchedule = ({
               <div>
                 <h4 className="text-base font-bold text-gray-900">No Pickup Request Submitted This Month</h4>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Submit your monthly request before the 15th to schedule dry plastic collection for your household.
+                  Submit your monthly request before the 20th to schedule dry plastic collection for your household.
                 </p>
               </div>
             </div>
@@ -297,7 +465,7 @@ const CitizenSchedule = ({
               </div>
               <div>
                 <p className="text-xs font-bold text-gray-900">2. Date Scheduled</p>
-                <p className="text-[10px] text-gray-500 font-medium">15th–25th window set</p>
+                <p className="text-[10px] text-gray-500 font-medium">20th–25th window set</p>
               </div>
             </div>
 
@@ -358,7 +526,7 @@ const CitizenSchedule = ({
               <div>
                 <span className="text-gray-500 font-medium block">Requested Date:</span>
                 <span className="font-bold text-gray-900">
-                  {currentRequest.requestedAt ? formatDate(currentRequest.requestedAt) : 'This Month'}
+                  {currentRequest.requestedAt ? formatPickupDate(currentRequest.requestedAt) : 'This Month'}
                 </span>
               </div>
 

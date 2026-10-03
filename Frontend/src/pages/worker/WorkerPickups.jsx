@@ -5,6 +5,7 @@ import {
   XCircle,
   Clock,
   AlertCircle,
+  AlertTriangle,
   RefreshCw,
   MapPin,
   User,
@@ -15,24 +16,34 @@ import {
   Search,
   ArrowUpDown,
   LayoutGrid,
-  List,
   Phone,
   Home,
   Copy,
-  ExternalLink,
   X,
-  SlidersHorizontal,
-  FileCheck2
+  Bell,
+  MessageSquare,
+  Lock
 } from 'lucide-react';
-import { getWardPickupRequests, schedulePickupRequest } from '../../services/pickupRequestService';
+import {
+  getWardPickupRequests,
+  schedulePickupRequest,
+  getPickupScheduleStatus,
+  formatPickupDate,
+  getValidCollectionDateRange,
+  validateScheduledDate,
+  getAssignedCollectionPeriod,
+  getLocalTodayMidnight
+} from '../../services/pickupRequestService';
 import OTPVerificationModal from '../../components/OTPVerificationModal';
+import DueReasonModal from '../../components/DueReasonModal';
+import DueAlertDetailsModal from '../../components/DueAlertDetailsModal';
 
 const WorkerPickups = ({ wardId, workerId }) => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Pending' | 'Scheduled' | 'Completed' | 'Failed'
+  const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Pending' | 'Scheduled' | 'Today' | 'Due' | 'Completed'
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('priority'); // 'priority' | 'scheduled' | 'date_desc' | 'house_asc' | 'citizen_name'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
@@ -42,6 +53,19 @@ const WorkerPickups = ({ wardId, workerId }) => {
   // Verification Modal States
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [selectedOtpRequestId, setSelectedOtpRequestId] = useState(null);
+
+  // Due Reason Modal States
+  const [showDueModal, setShowDueModal] = useState(false);
+  const [selectedDueRequest, setSelectedDueRequest] = useState(null);
+
+  // Due Alert Details Modal States (Pop-up window for Due updates)
+  const [showDueAlertModal, setShowDueAlertModal] = useState(false);
+  const [selectedDueAlertRequest, setSelectedDueAlertRequest] = useState(null);
+
+  const handleOpenDueAlert = (req) => {
+    setSelectedDueAlertRequest(req);
+    setShowDueAlertModal(true);
+  };
 
   // Location Tracking States
   const [currentWardId, setCurrentWardId] = useState(null);
@@ -60,9 +84,15 @@ const WorkerPickups = ({ wardId, workerId }) => {
             const response = await fetch(`http://localhost:5214/api/Ward/identify?lat=${lat}&lng=${lng}`);
             if (response.ok) {
               const data = await response.json();
-              setCurrentWardId(data.wardId);
-              if (wardId && data.wardId !== wardId) {
-                setLocationWarning(`Worker is currently outside the assigned ward. Current: ${data.wardId}, Assigned: ${wardId}`);
+              if (data.wardId) {
+                setCurrentWardId(data.wardId);
+                if (wardId && data.wardId !== wardId) {
+                  setLocationWarning(`Worker is currently outside the assigned ward. Current: ${data.wardId}, Assigned: ${wardId}`);
+                } else {
+                  setLocationWarning(null);
+                }
+              } else {
+                setLocationWarning(`Worker is currently outside the assigned ward.`);
               }
             } else {
               setLocationWarning(`Worker is currently outside the assigned ward.`);
@@ -96,16 +126,12 @@ const WorkerPickups = ({ wardId, workerId }) => {
             : [];
       setRequests(items);
 
-      // Pre-fill default collection date (18th of current month) for pending requests
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const defaultDate = `${year}-${month}-18`;
-
+      // Pre-fill default collection date from valid future range for pending requests
       const initialDates = {};
       items.forEach(req => {
-        if ((req.status || '').toLowerCase() === 'pending') {
-          initialDates[req.requestId] = defaultDate;
+        if ((req.status || '').toLowerCase() === 'pending' || req.dueStatus === 'Approved for Reschedule') {
+          const reqRange = getValidCollectionDateRange(req);
+          initialDates[req.requestId] = reqRange.defaultDate;
         }
       });
       setSelectedDates(prev => ({ ...initialDates, ...prev }));
@@ -137,14 +163,10 @@ const WorkerPickups = ({ wardId, workerId }) => {
   // Worker Schedules & Accepts Request
   const handleSchedule = async (requestId) => {
     const chosenDateStr = selectedDates[requestId];
-    if (!chosenDateStr) {
-      setError('Please select a collection date between 15th and 25th of the month.');
-      return;
-    }
-
-    const dayNum = parseInt(chosenDateStr.split('-')[2], 10);
-    if (isNaN(dayNum) || dayNum < 15 || dayNum > 25) {
-      setError('Collection date must be strictly between the 15th and 25th of the month.');
+    const targetReq = requests.find(r => r.requestId === requestId);
+    const validation = validateScheduledDate(chosenDateStr, targetReq);
+    if (!validation.valid) {
+      setError(validation.error);
       return;
     }
 
@@ -167,6 +189,14 @@ const WorkerPickups = ({ wardId, workerId }) => {
 
   // Worker Marks Request as Collected / Completed
   const handleCompleteClick = (requestId) => {
+    const targetReq = pickups.find(r => r.requestId === requestId || r.id === requestId);
+    if (targetReq) {
+      const sched = getPickupScheduleStatus(targetReq);
+      if (sched.isDue || sched.isReasonSubmitted || sched.isApprovedForReschedule || sched.isRejected) {
+        setError('Cannot complete a Due pickup. Once Admin approves and a new collection date is scheduled, OTP completion will become available.');
+        return;
+      }
+    }
     setError('');
     setSuccessMsg('');
     setSelectedOtpRequestId(requestId);
@@ -179,35 +209,21 @@ const WorkerPickups = ({ wardId, workerId }) => {
     await fetchPickups();
   };
 
-  const isRequestFailed = (req) => {
-    const s = (req.status || '').toLowerCase();
-    const isCompleted = s === 'completed' || s === 'collected';
-    if (isCompleted) return false;
-    const dateStr = req.collectionDate || req.requestedAt;
-    if (!dateStr) return false;
-    const reqDate = new Date(dateStr);
-    if (isNaN(reqDate.getTime())) return false;
-    const now = new Date();
-    return (
-      reqDate.getFullYear() < now.getFullYear() ||
-      (reqDate.getFullYear() === now.getFullYear() && reqDate.getMonth() < now.getMonth())
-    );
+  const handleOpenDueModal = (req) => {
+    setSelectedDueRequest(req);
+    setShowDueModal(true);
   };
 
   // Processed requests: filtered and sorted in neat priority order
   const processedRequests = useMemo(() => {
     // 1. Status Filter
     const filtered = requests.filter(req => {
-      const isFailed = isRequestFailed(req);
-      const s = (req.status || '').toLowerCase();
-      const isCompleted = s === 'completed' || s === 'collected';
-      const isScheduled = (s === 'scheduled' || s === 'accepted') && !isFailed;
-      const isPending = s === 'pending' && !isFailed;
-
-      if (statusFilter === 'Failed') return isFailed;
-      if (statusFilter === 'Scheduled') return isScheduled;
-      if (statusFilter === 'Pending') return isPending;
-      if (statusFilter === 'Completed') return isCompleted;
+      const sched = getPickupScheduleStatus(req);
+      if (statusFilter === 'Pending') return sched.isPending;
+      if (statusFilter === 'Scheduled') return sched.isScheduled && !sched.isToday;
+      if (statusFilter === 'Today') return sched.isToday;
+      if (statusFilter === 'Due') return sched.isDue || sched.isReasonSubmitted;
+      if (statusFilter === 'Completed') return sched.isCompleted;
       return true;
     });
 
@@ -226,35 +242,39 @@ const WorkerPickups = ({ wardId, workerId }) => {
     // 3. Sort in a well and neat order
     const sorted = [...searched];
     sorted.sort((a, b) => {
+      const schedA = getPickupScheduleStatus(a);
+      const schedB = getPickupScheduleStatus(b);
+
       if (sortBy === 'priority') {
-        // Priority order: Pending (1) -> Scheduled (2) -> Completed (3) -> Failed (4)
-        const getPriority = (item) => {
-          const isFailed = isRequestFailed(item);
-          if (isFailed) return 4;
-          const s = (item.status || '').toLowerCase();
-          if (s === 'pending') return 1;
-          if (s === 'scheduled' || s === 'accepted') return 2;
-          if (s === 'completed' || s === 'collected') return 3;
-          return 5;
+        // Priority order: Pickup Today (1) -> Due / Reason (2) -> Scheduled (3) -> Pending (4) -> Completed (5)
+        const getPriority = (sched) => {
+          if (sched.isToday) return 1;
+          if (sched.isDue || sched.isReasonSubmitted) return 2;
+          if (sched.isScheduled) return 3;
+          if (sched.isPending) return 4;
+          if (sched.isCompleted) return 5;
+          return 6;
         };
-        const pA = getPriority(a);
-        const pB = getPriority(b);
+        const pA = getPriority(schedA);
+        const pB = getPriority(schedB);
         if (pA !== pB) return pA - pB;
 
-        // If both are Scheduled, order by scheduled collection date ascending (soonest first)
-        if (pA === 2 && a.collectionDate && b.collectionDate) {
-          return new Date(a.collectionDate) - new Date(b.collectionDate);
+        // If both are Scheduled or Today, order by scheduled date ascending
+        const dateA = a.scheduledDate || a.collectionDate;
+        const dateB = b.scheduledDate || b.collectionDate;
+        if (dateA && dateB) {
+          return new Date(dateA) - new Date(dateB);
         }
 
-        // If both are Pending or Completed, order by date descending (newest first)
-        const dateA = new Date(a.collectedAt || a.collectionDate || a.requestedAt || 0);
-        const dateB = new Date(b.collectedAt || b.collectionDate || b.requestedAt || 0);
-        return dateB - dateA;
+        // Otherwise order by requested date descending
+        const reqDateA = new Date(a.requestedAt || 0);
+        const reqDateB = new Date(b.requestedAt || 0);
+        return reqDateB - reqDateA;
       }
 
       if (sortBy === 'scheduled') {
-        const dateA = a.collectionDate ? new Date(a.collectionDate).getTime() : 9999999999999;
-        const dateB = b.collectionDate ? new Date(b.collectionDate).getTime() : 9999999999999;
+        const dateA = (a.scheduledDate || a.collectionDate) ? new Date(a.scheduledDate || a.collectionDate).getTime() : 9999999999999;
+        const dateB = (b.scheduledDate || b.collectionDate) ? new Date(b.scheduledDate || b.collectionDate).getTime() : 9999999999999;
         return dateA - dateB;
       }
 
@@ -281,55 +301,100 @@ const WorkerPickups = ({ wardId, workerId }) => {
   }, [requests, statusFilter, searchQuery, sortBy]);
 
   // Status badge helper
-  const renderStatusBadge = (req, isFailed) => {
-    if (isFailed) {
+  const renderStatusBadge = (req) => {
+    const sched = getPickupScheduleStatus(req);
+
+    if (sched.isCompleted) {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold bg-rose-50 text-rose-800 border border-rose-200">
-          <XCircle className="w-3.5 h-3.5 text-rose-600" />
-          <span>Failed / Missed</span>
-        </span>
-      );
-    }
-    const s = (req.status || '').toLowerCase();
-    if (s === 'completed' || s === 'collected') {
-      return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-300">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
           <span>Completed ✓</span>
         </span>
       );
     }
-    if (s === 'scheduled' || s === 'accepted') {
+
+    if (sched.isApprovedForReschedule) {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold bg-sky-50 text-sky-800 border border-sky-200">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-teal-50 text-teal-800 border border-teal-300">
+          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
+          <span>Approved for Reschedule</span>
+        </span>
+      );
+    }
+
+    if (sched.isRejected) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-red-50 text-red-800 border border-red-300">
+          <XCircle className="w-3.5 h-3.5 text-red-600" />
+          <span>Reason Rejected</span>
+        </span>
+      );
+    }
+
+    if (sched.isReasonSubmitted) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-purple-50 text-purple-900 border border-purple-300">
+          <MessageSquare className="w-3.5 h-3.5 text-purple-700" />
+          <span>Reason Submitted</span>
+        </span>
+      );
+    }
+
+    if (sched.isDue) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-rose-50 text-rose-900 border border-rose-300">
+          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+          <span>Due</span>
+        </span>
+      );
+    }
+
+    if (sched.isToday) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white border border-amber-400 shadow-xs animate-pulse">
+          <Bell className="w-3.5 h-3.5 text-white" />
+          <span>Pickup Today</span>
+        </span>
+      );
+    }
+
+    if (sched.isScheduled) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-sky-50 text-sky-800 border border-sky-300">
           <Calendar className="w-3.5 h-3.5 text-sky-600" />
           <span>Scheduled</span>
         </span>
       );
     }
+
     return (
-      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
         <Clock className="w-3.5 h-3.5 text-amber-600" />
-        <span>Pending Action</span>
+        <span>Pending</span>
       </span>
     );
   };
 
-  // Helper date limits for date picker (15th to 25th of current month)
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const minCollectionDate = `${year}-${month}-15`;
-  const maxCollectionDate = `${year}-${month}-25`;
+  // Helper date limits for date picker (20th to 25th collection window, past dates barred)
+  const validRange = getValidCollectionDateRange();
+  const minCollectionDate = validRange.minDate;
+  const maxCollectionDate = validRange.maxDate;
 
   // Counts for tabs
   const counts = useMemo(() => {
     return {
       all: requests.length,
-      pending: requests.filter(r => (r.status || '').toLowerCase() === 'pending' && !isRequestFailed(r)).length,
-      scheduled: requests.filter(r => ((r.status || '').toLowerCase() === 'scheduled' || (r.status || '').toLowerCase() === 'accepted') && !isRequestFailed(r)).length,
-      completed: requests.filter(r => (r.status || '').toLowerCase() === 'completed' || (r.status || '').toLowerCase() === 'collected').length,
-      failed: requests.filter(isRequestFailed).length,
+      pending: requests.filter(r => getPickupScheduleStatus(r).isPending).length,
+      scheduled: requests.filter(r => {
+        const s = getPickupScheduleStatus(r);
+        return s.isScheduled && !s.isToday;
+      }).length,
+      today: requests.filter(r => getPickupScheduleStatus(r).isToday).length,
+      due: requests.filter(r => {
+        const s = getPickupScheduleStatus(r);
+        return s.isDue || s.isReasonSubmitted;
+      }).length,
+      completed: requests.filter(r => getPickupScheduleStatus(r).isCompleted).length,
     };
   }, [requests]);
 
@@ -349,7 +414,7 @@ const WorkerPickups = ({ wardId, workerId }) => {
               Plastic Waste Pickup Requests
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 font-medium mt-1">
-              Organized duty queue for <span className="font-extrabold text-white underline">{wardId || 'Ward 1'}</span>. Collection window runs strictly 15th–25th.
+              Organized duty queue for <span className="font-extrabold text-white underline">{wardId || 'Ward 1'}</span>. Collection window runs strictly 20th–25th.
             </p>
           </div>
 
@@ -428,6 +493,28 @@ const WorkerPickups = ({ wardId, workerId }) => {
             </button>
             <button
               type="button"
+              onClick={() => setStatusFilter('Today')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                statusFilter === 'Today'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'text-gray-700 hover:text-gray-900'
+              }`}
+            >
+              Pickup Today ({counts.today})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('Due')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                statusFilter === 'Due'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-gray-700 hover:text-gray-900'
+              }`}
+            >
+              Due ({counts.due})
+            </button>
+            <button
+              type="button"
               onClick={() => setStatusFilter('Completed')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                 statusFilter === 'Completed'
@@ -436,17 +523,6 @@ const WorkerPickups = ({ wardId, workerId }) => {
               }`}
             >
               Completed ({counts.completed})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('Failed')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                statusFilter === 'Failed'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'text-gray-700 hover:text-gray-900'
-              }`}
-            >
-              Failed ({counts.failed})
             </button>
           </div>
 
@@ -469,34 +545,31 @@ const WorkerPickups = ({ wardId, workerId }) => {
                 className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                   viewMode === 'table' ? 'bg-white text-[#0a4d2c] shadow-2xs' : 'text-gray-500 hover:text-gray-900'
                 }`}
-                title="Compact Table View"
+                title="Table List View"
               >
-                <List className="w-4 h-4" />
+                <Clock className="w-4 h-4" />
               </button>
             </div>
-
-            <span className="text-xs font-semibold text-gray-500 hidden sm:inline">
-              Showing {processedRequests.length} of {requests.length} requests
-            </span>
           </div>
         </div>
 
-        {/* Row 2: Search Input & Sort Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Row 2: Search + Sorting */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search house number (e.g. 629), citizen name, request ID..."
-              className="w-full pl-10 pr-9 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0a4d2c] focus:bg-white transition"
+              placeholder="Search by house #, citizen name, phone, or request ID..."
+              className="w-full pl-10 pr-9 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0a4d2c] focus:bg-white transition"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -514,7 +587,7 @@ const WorkerPickups = ({ wardId, workerId }) => {
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0a4d2c] cursor-pointer"
             >
-              <option value="priority">Priority (Pending & Scheduled First)</option>
+              <option value="priority">Priority (Today, Due & Scheduled First)</option>
               <option value="scheduled">Scheduled Date (Soonest First)</option>
               <option value="date_desc">Newest Request Date</option>
               <option value="house_asc">House Number (Ascending)</option>
@@ -543,26 +616,28 @@ const WorkerPickups = ({ wardId, workerId }) => {
           </p>
         </div>
       ) : viewMode === 'grid' ? (
-        /* GRID CARDS VIEW - CLEAN, BALANCED, AND WELL-ORDERED */
+        /* GRID CARDS VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {processedRequests.map((req) => {
-            const statusLower = (req.status || '').toLowerCase();
-            const isCompleted = statusLower === 'completed' || statusLower === 'collected';
-            const isScheduled = statusLower === 'scheduled' || statusLower === 'accepted';
-            const isPending = statusLower === 'pending';
-            const isFailed = isRequestFailed(req);
+            const sched = getPickupScheduleStatus(req);
             const isActionLoading = actionLoadingId === req.requestId;
-            const currentDateVal = selectedDates[req.requestId] || minCollectionDate;
+            const validRange = getValidCollectionDateRange(req);
+            const currentDateVal = selectedDates[req.requestId] || validRange.defaultDate;
+            const formattedSchedDate = formatPickupDate(req.scheduledDate || req.collectionDate);
 
             return (
               <div
                 key={req.requestId || req.id}
                 className={`bg-white rounded-3xl p-5 sm:p-6 border transition-all duration-200 shadow-xs hover:shadow-md flex flex-col justify-between space-y-4 ${
-                  isFailed
-                    ? 'border-rose-200 hover:border-rose-300'
-                    : isPending
+                  sched.isDue
+                    ? 'border-rose-300 ring-1 ring-rose-200/60'
+                    : sched.isReasonSubmitted
+                    ? 'border-amber-300 ring-1 ring-amber-200/60'
+                    : sched.isToday
+                    ? 'border-amber-400 ring-2 ring-amber-300'
+                    : sched.isPending
                     ? 'border-amber-200/80 hover:border-amber-400'
-                    : isScheduled
+                    : sched.isScheduled
                     ? 'border-sky-200/80 hover:border-sky-400'
                     : 'border-emerald-100 hover:border-emerald-300'
                 }`}
@@ -597,7 +672,7 @@ const WorkerPickups = ({ wardId, workerId }) => {
                       </div>
                     </div>
 
-                    {renderStatusBadge(req, isFailed)}
+                    {renderStatusBadge(req)}
                   </div>
 
                   {/* Citizen Residence Details Box */}
@@ -660,49 +735,178 @@ const WorkerPickups = ({ wardId, workerId }) => {
                     </span>
                   </div>
 
-                  {/* Scheduled Date Banner (if scheduled) */}
-                  {req.collectionDate && (
-                    <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
-                      isFailed ? 'bg-rose-50 border-rose-200' : 'bg-sky-50 border-sky-200'
-                    }`}>
-                      <span className={`font-bold flex items-center gap-1.5 ${
-                        isFailed ? 'text-rose-800' : 'text-sky-800'
-                      }`}>
+                  {/* Top Status Notification Banner */}
+                  {sched.isToday ? (
+                    <div className="p-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl flex items-center gap-2.5 shadow-xs animate-pulse">
+                      <Bell className="w-4 h-4 text-white shrink-0" />
+                      <div className="text-xs">
+                        <strong className="block font-black">Pickup Scheduled for Today!</strong>
+                        <span className="text-[11px] text-amber-100 font-medium">Collect waste and verify citizen 4-digit code.</span>
+                      </div>
+                    </div>
+                  ) : (sched.isDue || sched.isReasonSubmitted) ? (
+                    <div
+                      onClick={() => handleOpenDueAlert(req)}
+                      className="p-3 bg-gradient-to-r from-rose-50 via-amber-50/50 to-rose-50 hover:from-rose-100 hover:to-amber-100 border border-rose-300 rounded-xl flex items-center justify-between gap-3 text-xs transition-all shadow-xs cursor-pointer group"
+                      role="button"
+                      tabIndex={0}
+                      title="Click to view full Due alert & updates in pop-up window"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-1.5 bg-rose-600 text-white rounded-lg shadow-2xs group-hover:scale-105 transition-transform shrink-0">
+                          <AlertTriangle className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="truncate">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-rose-950">Pickup Due Alert</span>
+                            <span className="text-[10px] px-1.5 py-0.2 bg-rose-200 text-rose-900 rounded font-extrabold uppercase">
+                              Passed
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-rose-800 font-semibold block truncate">
+                            Scheduled: {formattedSchedDate}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] font-extrabold text-rose-800 bg-white/90 group-hover:bg-white px-2.5 py-1.5 rounded-lg border border-rose-200 shrink-0 shadow-2xs">
+                        <Bell className="w-3 h-3 text-rose-600" />
+                        <span>View Updates</span>
+                      </div>
+                    </div>
+                  ) : (req.scheduledDate || req.collectionDate) ? (
+                    <div className="p-2.5 rounded-xl border border-sky-200 bg-sky-50 flex items-center justify-between text-xs">
+                      <span className="font-bold flex items-center gap-1.5 text-sky-800">
                         <Calendar className="w-3.5 h-3.5" />
                         <span>Scheduled Collection Date:</span>
                       </span>
-                      <span className={`font-extrabold ${isFailed ? 'text-rose-950' : 'text-sky-950'}`}>
-                        {new Date(req.collectionDate).toLocaleDateString('en-GB', {
-                          weekday: 'short',
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
+                      <span className="font-extrabold text-sky-950">
+                        {formattedSchedDate}
                       </span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Card Action Footer */}
                 <div className="pt-3 border-t border-gray-100">
-                  {isFailed ? (
-                    <div className="p-2.5 text-center text-xs font-bold text-rose-800 bg-rose-50 rounded-xl border border-rose-200 flex items-center justify-center gap-1.5">
-                      <XCircle className="w-4 h-4 text-rose-600" />
-                      <span>Collection cycle expired as month has passed</span>
+                  {sched.isCompleted ? (
+                    <div className="w-full py-2.5 text-center text-xs font-extrabold text-emerald-800 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5 shadow-2xs">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Collected & Verified with Citizen Code</span>
                     </div>
-                  ) : isPending ? (
+                  ) : sched.isApprovedForReschedule ? (
+                    <div className="space-y-2 bg-teal-50/70 p-3.5 rounded-2xl border border-teal-200 animate-fadeIn">
+                      <div className="flex items-center justify-between text-[11px] font-extrabold text-teal-900">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+                          <span>Approved by Admin • "Schedule New Date" Unlocked!</span>
+                        </span>
+                        <span className="text-[10px] bg-teal-200/60 px-2 py-0.5 rounded-full font-bold text-teal-800">Unlocked</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] font-bold text-teal-800">
+                        <span>Select New Collection Date (20th–25th of {validRange.periodName}):</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          min={validRange.minDate}
+                          max={validRange.maxDate}
+                          value={currentDateVal}
+                          onChange={(e) => handleDateChange(req.requestId, e.target.value)}
+                          className="flex-1 bg-white border border-teal-300 rounded-xl p-2 text-xs font-extrabold text-[#0a4d2c] focus:outline-none focus:ring-2 focus:ring-teal-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSchedule(req.requestId)}
+                          disabled={isActionLoading}
+                          className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                        >
+                          {isActionLoading ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <Calendar className="w-3.5 h-3.5 text-white" />
+                              <span>Schedule New Date</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : sched.isRejected ? (
+                    <div className="p-3 bg-red-50 rounded-2xl border border-red-300 text-xs space-y-1">
+                      <div className="flex items-center gap-1.5 text-red-900 font-extrabold">
+                        <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+                        <span>Admin Rejected • Pickup Locked</span>
+                      </div>
+                      <p className="text-[11px] text-red-700 font-medium">
+                        Admin has reviewed and rejected the reason for this missed pickup. The pickup remains locked and cannot be rescheduled.
+                      </p>
+                    </div>
+                  ) : (sched.isDue || sched.isReasonSubmitted) ? (
+                    <div className="space-y-2.5">
+                      {req.dueReason && (
+                        <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-xl space-y-1">
+                          <div className="flex items-center justify-between text-[11px] font-extrabold text-amber-900">
+                            <span className="flex items-center gap-1.5">
+                              <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Worker Missed Reason:</span>
+                            </span>
+                            {req.dueReasonSubmittedAt && (
+                              <span className="text-[10px] text-amber-700 font-semibold">{formatPickupDate(req.dueReasonSubmittedAt)}</span>
+                            )}
+                          </div>
+                          <p className="text-xs font-black text-amber-950 italic">
+                            "{req.dueReason}"
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDueModal(req)}
+                          className="flex-1 py-2.5 px-3 bg-white hover:bg-amber-50 border border-amber-300 text-amber-900 font-extrabold text-xs rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
+                          <span>{req.dueReason ? 'Update Missed Reason' : 'Enter Missed Reason'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDueAlert(req)}
+                          className="px-3 py-2.5 bg-amber-50/70 hover:bg-amber-100 border border-amber-300 text-amber-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs transition"
+                          title="Click to view alert details and Admin approval status in pop-up window"
+                        >
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Waiting for Admin Approval</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (sched.isToday || sched.isScheduled) ? (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCompleteClick(req.requestId)}
+                        className={`w-full py-2.5 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                          sched.isToday
+                            ? 'bg-amber-600 hover:bg-amber-700 animate-pulse'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                      >
+                        <ShieldCheck className="w-4 h-4 text-white" />
+                        <span>Complete Pickup (Enter 4-Digit Code)</span>
+                      </button>
+                    </div>
+                  ) : sched.isPending ? (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[11px] font-bold text-gray-700">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5 text-[#0a4d2c]" />
-                          Schedule Collection (15th–25th):
+                          Schedule Collection (20th–25th of {validRange.periodName}):
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <input
                           type="date"
-                          min={minCollectionDate}
-                          max={maxCollectionDate}
+                          min={validRange.minDate}
+                          max={validRange.maxDate}
                           value={currentDateVal}
                           onChange={(e) => handleDateChange(req.requestId, e.target.value)}
                           className="flex-1 bg-white border border-gray-300 rounded-xl p-2 text-xs font-extrabold text-[#0a4d2c] focus:outline-none focus:ring-2 focus:ring-[#0a4d2c]"
@@ -724,22 +928,6 @@ const WorkerPickups = ({ wardId, workerId }) => {
                         </button>
                       </div>
                     </div>
-                  ) : isScheduled ? (
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => handleCompleteClick(req.requestId)}
-                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <ShieldCheck className="w-4 h-4 text-blue-200" />
-                        <span>Complete Pickup (Enter 4-Digit Code)</span>
-                      </button>
-                    </div>
-                  ) : isCompleted ? (
-                    <div className="w-full py-2 text-center text-xs font-extrabold text-emerald-800 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>Collected & Verified with Citizen Code</span>
-                    </div>
                   ) : null}
                 </div>
               </div>
@@ -747,7 +935,7 @@ const WorkerPickups = ({ wardId, workerId }) => {
           })}
         </div>
       ) : (
-        /* COMPACT TABLE VIEW - FOR HIGH-DENSITY SCANNING */
+        /* COMPACT TABLE VIEW */
         <div className="bg-white rounded-3xl border border-emerald-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-xs">
@@ -764,13 +952,11 @@ const WorkerPickups = ({ wardId, workerId }) => {
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
                 {processedRequests.map((req) => {
-                  const statusLower = (req.status || '').toLowerCase();
-                  const isCompleted = statusLower === 'completed' || statusLower === 'collected';
-                  const isScheduled = statusLower === 'scheduled' || statusLower === 'accepted';
-                  const isPending = statusLower === 'pending';
-                  const isFailed = isRequestFailed(req);
-                  const currentDateVal = selectedDates[req.requestId] || minCollectionDate;
+                  const sched = getPickupScheduleStatus(req);
+                  const validRange = getValidCollectionDateRange(req);
+                  const currentDateVal = selectedDates[req.requestId] || validRange.defaultDate;
                   const isActionLoading = actionLoadingId === req.requestId;
+                  const formattedSchedDate = formatPickupDate(req.scheduledDate || req.collectionDate);
 
                   return (
                     <tr key={req.requestId || req.id} className="hover:bg-emerald-50/30 transition-colors">
@@ -800,24 +986,87 @@ const WorkerPickups = ({ wardId, workerId }) => {
 
                       {/* Scheduled Date */}
                       <td className="py-3 px-4 font-mono text-[11px]">
-                        {req.collectionDate
-                          ? new Date(req.collectionDate).toLocaleDateString('en-GB')
-                          : '-'}
+                        {formattedSchedDate !== '-' ? formattedSchedDate : '-'}
                       </td>
 
                       {/* Status Badge */}
                       <td className="py-3 px-4">
-                        {renderStatusBadge(req, isFailed)}
+                        {renderStatusBadge(req)}
                       </td>
 
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
-                        {isPending ? (
+                        {sched.isCompleted ? (
+                          <span className="text-[11px] font-bold text-emerald-700">✓ Done</span>
+                        ) : sched.isApprovedForReschedule ? (
                           <div className="inline-flex items-center gap-1.5">
                             <input
                               type="date"
-                              min={minCollectionDate}
-                              max={maxCollectionDate}
+                              min={validRange.minDate}
+                              max={validRange.maxDate}
+                              value={currentDateVal}
+                              onChange={(e) => handleDateChange(req.requestId, e.target.value)}
+                              className="bg-white border border-teal-400 rounded-lg p-1 text-[11px] font-bold text-teal-900 w-32 focus:ring-1 focus:ring-teal-500"
+                            />
+                            <button
+                              onClick={() => handleSchedule(req.requestId)}
+                              disabled={isActionLoading}
+                              className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold text-[11px] shadow-2xs cursor-pointer flex items-center gap-1"
+                            >
+                              <Calendar className="w-3 h-3 text-white" />
+                              <span>Schedule New Date</span>
+                            </button>
+                          </div>
+                        ) : sched.isRejected ? (
+                          <span className="px-2 py-1 bg-rose-50 text-rose-800 border border-rose-200 rounded-lg font-bold text-[10px]">
+                            Locked (Admin Rejected)
+                          </span>
+                        ) : (sched.isDue || sched.isReasonSubmitted) ? (
+                          <div className="flex flex-col gap-1.5 items-start">
+                            {req.dueReason && (
+                              <div className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 max-w-[220px] truncate" title={req.dueReason}>
+                                Reason: "{req.dueReason}"
+                              </div>
+                            )}
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenDueAlert(req)}
+                                className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 rounded-lg font-bold text-[11px] cursor-pointer flex items-center gap-1"
+                                title="Click to view Due alert & updates in pop-up window"
+                              >
+                                <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                <span>View Due Alert</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenDueModal(req)}
+                                className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg font-bold text-[11px] cursor-pointer flex items-center gap-1"
+                              >
+                                <MessageSquare className="w-3 h-3 text-amber-600" />
+                                <span>{req.dueReason ? 'Update Reason' : 'Enter Reason'}</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenDueAlert(req)}
+                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 rounded-lg font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                                title="Click to view alert details in pop-up window"
+                              >
+                                <Clock className="w-3 h-3 text-amber-600" /> Waiting for Admin Approval
+                              </button>
+                            </div>
+                          </div>
+                        ) : (sched.isToday || sched.isScheduled) ? (
+                          <button
+                            onClick={() => handleCompleteClick(req.requestId)}
+                            className="px-3 py-1.5 bg-[#0a4d2c] hover:bg-emerald-800 text-white rounded-lg font-bold text-[11px] shadow-2xs cursor-pointer flex items-center gap-1"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                            <span>Complete (OTP)</span>
+                          </button>
+                        ) : sched.isPending ? (
+                          <div className="inline-flex items-center gap-1.5">
+                            <input
+                              type="date"
+                              min={validRange.minDate}
+                              max={validRange.maxDate}
                               value={currentDateVal}
                               onChange={(e) => handleDateChange(req.requestId, e.target.value)}
                               className="bg-white border border-gray-300 rounded-lg p-1 text-[11px] font-bold text-[#0a4d2c] w-32"
@@ -830,15 +1079,6 @@ const WorkerPickups = ({ wardId, workerId }) => {
                               Schedule
                             </button>
                           </div>
-                        ) : isScheduled ? (
-                          <button
-                            onClick={() => handleCompleteClick(req.requestId)}
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] shadow-2xs cursor-pointer"
-                          >
-                            Complete Pickup
-                          </button>
-                        ) : isCompleted ? (
-                          <span className="text-[11px] font-bold text-emerald-700">✓ Done</span>
                         ) : (
                           <span className="text-[11px] text-gray-400">-</span>
                         )}
@@ -862,6 +1102,44 @@ const WorkerPickups = ({ wardId, workerId }) => {
         requestId={selectedOtpRequestId}
         workerId={workerId || 'WORKER001'}
         onSuccess={handleOtpSuccess}
+      />
+
+      {/* Due Reason Modal */}
+      <DueReasonModal
+        isOpen={showDueModal}
+        onClose={() => {
+          setShowDueModal(false);
+          setSelectedDueRequest(null);
+        }}
+        request={selectedDueRequest}
+        userRole="worker"
+        userName={(() => {
+          try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            return u.fullName || u.name || localStorage.getItem('userName') || workerId || 'Haritha Karma Sena Worker';
+          } catch {
+            return workerId || 'Haritha Karma Sena Worker';
+          }
+        })()}
+        onSuccess={() => {
+          fetchPickups();
+        }}
+      />
+
+      {/* Due Alert Details Modal (Pop-up window showing Due alert updates) */}
+      <DueAlertDetailsModal
+        isOpen={showDueAlertModal}
+        onClose={() => {
+          setShowDueAlertModal(false);
+          setSelectedDueAlertRequest(null);
+        }}
+        request={selectedDueAlertRequest}
+        userRole="worker"
+        onOpenUpdateReason={() => {
+          const req = selectedDueAlertRequest;
+          setShowDueAlertModal(false);
+          handleOpenDueModal(req);
+        }}
       />
     </div>
   );

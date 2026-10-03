@@ -89,7 +89,7 @@ const AIChatBot = ({
         day: 'numeric',
         year: 'numeric'
       })
-    : '15th – 25th window (awaiting schedule)';
+    : '20th – 25th window (awaiting schedule)';
 
   const collectedDateFormatted = currentRequest?.collectedAt
     ? new Date(currentRequest.collectedAt).toLocaleDateString('en-US', {
@@ -426,7 +426,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
             <span>
               Schedule:{' '}
               <strong className="font-extrabold text-[#0a4d2c]">
-                {isCompleted ? 'Completed' : isScheduled ? 'Scheduled' : '15th–25th'}
+                {isCompleted ? 'Completed' : isScheduled ? 'Scheduled' : '20th–25th'}
               </strong>
             </span>
           </button>

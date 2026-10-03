@@ -249,7 +249,7 @@ const WorkerPerformance = ({ wardId = 'Ward 1', workerId = '', profile = {} }) =
           </div>
           <p className="text-3xl font-extrabold text-amber-600">{monthPending}</p>
           <p className="text-[11px] text-gray-500 font-medium">
-            Active in collection cycle (15th - 25th)
+            Active in collection cycle (20th - 25th)
           </p>
         </div>
 

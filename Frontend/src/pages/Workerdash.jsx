@@ -940,7 +940,7 @@ const WorkerDashboard = () => {
                     <ul className="space-y-2 text-xs text-gray-600 font-medium">
                       <li className="flex items-center gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>Doorstep dry plastic collection from 15th to 25th.</span>
+                        <span>Doorstep dry plastic collection from 20th to 25th.</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
