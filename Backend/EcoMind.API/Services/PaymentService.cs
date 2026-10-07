@@ -72,6 +72,9 @@ namespace EcoMind.API.Services
                             CitizenId = citizenId,
                             Year = y,
                             Month = m,
+                            BaseAmount = 50.0,
+                            DiscountAmount = 0.0,
+                            PointsRedeemed = 0,
                             Amount = 50.0,
                             Status = "Unpaid",
                             CreatedAt = DateTime.UtcNow
@@ -146,6 +149,9 @@ namespace EcoMind.API.Services
                     CitizenId = dto.CitizenId,
                     Year = dto.Year,
                     Month = dto.Month,
+                    BaseAmount = 50.0,
+                    DiscountAmount = 0.0,
+                    PointsRedeemed = 0,
                     Amount = 50.0,
                     Status = "Unpaid",
                     CreatedAt = DateTime.UtcNow
@@ -158,7 +164,18 @@ namespace EcoMind.API.Services
                 throw new InvalidOperationException($"Fee for {dto.Month}/{dto.Year} is already paid.");
             }
 
-            int amountInPaise = (int)(payment.Amount * 100);
+            // Points only become a discount if explicitly redeemed by citizen beforehand
+            double baseAmount = payment.BaseAmount > 0 ? payment.BaseAmount : 50.0;
+            double discountAmount = payment.DiscountAmount;
+            int pointsRedeemed = payment.PointsRedeemed;
+            double finalAmount = payment.Amount > 0 ? payment.Amount : (baseAmount - discountAmount);
+
+            payment.BaseAmount = baseAmount;
+            payment.DiscountAmount = discountAmount;
+            payment.PointsRedeemed = pointsRedeemed;
+            payment.Amount = finalAmount;
+
+            int amountInPaise = (int)(finalAmount * 100);
 
             var orderRequest = new
             {
@@ -169,7 +186,9 @@ namespace EcoMind.API.Services
                 {
                     citizenId = dto.CitizenId,
                     month = dto.Month.ToString(),
-                    year = dto.Year.ToString()
+                    year = dto.Year.ToString(),
+                    discount = discountAmount.ToString("F2"),
+                    pointsRedeemed = pointsRedeemed.ToString()
                 }
             };
 
@@ -199,7 +218,11 @@ namespace EcoMind.API.Services
                 Amount = amountInPaise,
                 Currency = "INR",
                 Month = dto.Month,
-                Year = dto.Year
+                Year = dto.Year,
+                BaseAmount = baseAmount,
+                DiscountAmount = discountAmount,
+                PointsRedeemed = pointsRedeemed,
+                NetAmount = finalAmount
             };
         }
 
@@ -233,6 +256,9 @@ namespace EcoMind.API.Services
                     CitizenId = dto.CitizenId,
                     Year = dto.Year,
                     Month = dto.Month,
+                    BaseAmount = 50.0,
+                    DiscountAmount = 0.0,
+                    PointsRedeemed = 0,
                     Amount = 50.0,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -267,6 +293,9 @@ namespace EcoMind.API.Services
                     CitizenId = dto.CitizenId,
                     Year = dto.Year,
                     Month = dto.Month,
+                    BaseAmount = 50.0,
+                    DiscountAmount = 0.0,
+                    PointsRedeemed = 0,
                     Amount = 50.0,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -280,6 +309,130 @@ namespace EcoMind.API.Services
 
             await _paymentRepository.UpdateAsync(payment);
             return payment;
+        }
+
+        public async Task<RedeemPointsResponseDto> RedeemPointsAsync(RedeemPointsDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.CitizenId))
+            {
+                return new RedeemPointsResponseDto
+                {
+                    Success = false,
+                    Message = "Citizen ID is required."
+                };
+            }
+
+            var citizen = await _citizenRepository.GetCitizenByCitizenIdAsync(dto.CitizenId);
+            if (citizen == null)
+            {
+                return new RedeemPointsResponseDto
+                {
+                    Success = false,
+                    Message = "Citizen profile not found."
+                };
+            }
+
+            var payment = await _paymentRepository.GetByCitizenAndPeriodAsync(dto.CitizenId, dto.Year, dto.Month);
+            if (payment == null)
+            {
+                payment = new Payment
+                {
+                    PaymentId = $"PAY-{dto.Year}{dto.Month:D2}-{dto.CitizenId}",
+                    CitizenId = dto.CitizenId,
+                    Year = dto.Year,
+                    Month = dto.Month,
+                    BaseAmount = 50.0,
+                    DiscountAmount = 0.0,
+                    PointsRedeemed = 0,
+                    Amount = 50.0,
+                    Status = "Unpaid",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _paymentRepository.CreateAsync(payment);
+            }
+
+            if (payment.Status == "Paid")
+            {
+                return new RedeemPointsResponseDto
+                {
+                    Success = false,
+                    Message = $"Monthly fee for {dto.Month}/{dto.Year} is already paid.",
+                    RemainingPoints = citizen.EcoPoints
+                };
+            }
+
+            // Ensure the same points are not redeemed twice for this month
+            if (payment.PointsRedeemed > 0 || payment.DiscountAmount > 0)
+            {
+                return new RedeemPointsResponseDto
+                {
+                    Success = false,
+                    Message = "Points have already been redeemed for this month. The same points cannot be redeemed twice.",
+                    PointsRedeemed = payment.PointsRedeemed,
+                    RemainingPoints = citizen.EcoPoints,
+                    BaseAmount = payment.BaseAmount,
+                    DiscountAmount = payment.DiscountAmount,
+                    NetAmount = payment.Amount,
+                    Payment = payment
+                };
+            }
+
+            int pointsToRedeem = 10;
+            if (citizen.EcoPoints < pointsToRedeem)
+            {
+                return new RedeemPointsResponseDto
+                {
+                    Success = false,
+                    Message = $"Insufficient points. You need at least {pointsToRedeem} points to redeem 20% discount (Available: {citizen.EcoPoints}).",
+                    RemainingPoints = citizen.EcoPoints
+                };
+            }
+
+            // Deduct the redeemed points from the user's balance and save in database
+            citizen.EcoPoints -= pointsToRedeem;
+            await _citizenRepository.UpdateCitizenAsync(citizen);
+
+            // Apply existing 20% discount rule (₹10 off ₹50 base fee) and save in database
+            payment.BaseAmount = 50.0;
+            payment.DiscountAmount = 10.0;
+            payment.PointsRedeemed = pointsToRedeem;
+            payment.Amount = 40.0;
+            await _paymentRepository.UpdateAsync(payment);
+
+            return new RedeemPointsResponseDto
+            {
+                Success = true,
+                Message = $"{pointsToRedeem} Points Redeemed. 20% Discount Applied.",
+                PointsRedeemed = pointsToRedeem,
+                RemainingPoints = citizen.EcoPoints,
+                BaseAmount = 50.0,
+                DiscountAmount = 10.0,
+                NetAmount = 40.0,
+                Payment = payment
+            };
+        }
+
+        public async Task<bool> ResetDemoPointsAsync(string citizenId)
+        {
+            var citizen = await _citizenRepository.GetCitizenByCitizenIdAsync(citizenId);
+            if (citizen != null)
+            {
+                citizen.EcoPoints = 17;
+                await _citizenRepository.UpdateCitizenAsync(citizen);
+            }
+
+            var now = DateTime.UtcNow;
+            var payment = await _paymentRepository.GetByCitizenAndPeriodAsync(citizenId, now.Year, now.Month);
+            if (payment != null && payment.Status != "Paid")
+            {
+                payment.BaseAmount = 50.0;
+                payment.DiscountAmount = 0.0;
+                payment.PointsRedeemed = 0;
+                payment.Amount = 50.0;
+                await _paymentRepository.UpdateAsync(payment);
+            }
+
+            return true;
         }
     }
 }

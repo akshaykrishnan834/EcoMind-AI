@@ -12,6 +12,7 @@ import AIChatBot from '../components/AIChatBot';
 import AIFloatingChat from '../components/AIFloatingChat';
 import CitizenSettings from '../components/CitizenSettings';
 import CitizenWorkerChat from '../components/CitizenWorkerChat';
+import CitizenLiveWorkerTracker from '../components/CitizenLiveWorkerTracker';
 import DueAlertDetailsModal from '../components/DueAlertDetailsModal';
 import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
@@ -44,11 +45,13 @@ import {
   AlertTriangle,
   MessageSquare,
   XCircle,
-  Loader2
+  Navigation,
+  Gift,
+  Coins
 } from 'lucide-react';
 import { getCitizenByEmail } from '../services/citizenService';
 import { getCitizenRequests, getMonthlyStatus, getPickupScheduleStatus, formatPickupDate, getAssignedCollectionPeriod } from '../services/pickupRequestService';
-import { getAllWorkers } from '../services/workerService';
+import { getAllWorkers, getLiveWorkerByWard } from '../services/workerService';
 
 const CitizenDashboard = () => {
   const [activeTab, setActiveTabState] = useState(() => {
@@ -123,6 +126,41 @@ const CitizenDashboard = () => {
     fetchWorker();
   }, [citizenData?.wardId, userObj.wardId]);
 
+  const [liveWorker, setLiveWorker] = useState(null);
+
+  // Poll and listen for live Haritha Karma Sena worker duty broadcast in citizen's ward
+  useEffect(() => {
+    const citizenWard = citizenData?.wardId || userObj.wardId || 'Ward 1';
+    let isMounted = true;
+
+    const fetchLiveWorkerStatus = async () => {
+      try {
+        const live = await getLiveWorkerByWard(citizenWard);
+        if (isMounted) {
+          setLiveWorker(live);
+        }
+      } catch (e) {
+        console.warn("Could not check live worker status:", e);
+      }
+    };
+
+    fetchLiveWorkerStatus();
+    const interval = setInterval(fetchLiveWorkerStatus, 10000);
+
+    const handleBroadcast = (e) => {
+      if (e.detail) {
+        setLiveWorker(e.detail);
+      }
+    };
+    window.addEventListener('ecomind_worker_location_update', handleBroadcast);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('ecomind_worker_location_update', handleBroadcast);
+    };
+  }, [citizenData?.wardId, userObj.wardId]);
+
   // Fetch pickup requests & monthly status for citizen
   const loadRequests = useCallback(async () => {
     const citizenId = citizenData?.citizenId || citizenData?.id || citizenData?._id || userObj.citizenId;
@@ -192,6 +230,7 @@ const CitizenDashboard = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
     sessionStorage.clear();
     navigate('/', { replace: true });
   };
@@ -343,6 +382,16 @@ const CitizenDashboard = () => {
     }
   ];
 
+  // On-Demand Gating: Active pickup required for live tracking (Option 2)
+  const hasActivePickup = Boolean(
+    (ongoingWork && !isRequestCompleted && (ongoingWork.rawStatus || '').toLowerCase() !== 'cancelled') ||
+    realRequests.some(r => isUncompleted(r))
+  );
+
+  const activeRequestForTracking = hasActivePickup
+    ? (ongoingWork || realRequests.find(r => isUncompleted(r)))
+    : null;
+
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f6faf7] dark:bg-[#09110d] font-sans print:h-auto print:w-auto print:overflow-visible print:bg-white">
       {/* Top Header (Fixed at top) */}
@@ -367,6 +416,7 @@ const CitizenDashboard = () => {
             onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             isOpen={isMobileSidebarOpen}
             onClose={() => setIsMobileSidebarOpen(false)}
+            hasActivePickup={hasActivePickup}
           />
         </div>
 
@@ -401,6 +451,13 @@ const CitizenDashboard = () => {
                 assignedWorker={assignedWorker}
                 setActiveTab={setActiveTab}
                 onRefresh={loadRequests}
+              />
+            ) : activeTab === 'Live Worker Tracker' || activeTab === 'Live Tracker' || activeTab === 'Track Worker' ? (
+              <CitizenLiveWorkerTracker
+                citizenData={citizenData}
+                assignedWorker={assignedWorker}
+                activePickupRequest={activeRequestForTracking}
+                setActiveTab={setActiveTab}
               />
             ) : activeTab === 'My Location' ? (
               <CitizenLocation
@@ -457,6 +514,16 @@ const CitizenDashboard = () => {
                           {wardId} • {panchayat}
                         </span>
 
+                        {/* Total Available Eco-Points Indicator */}
+                        <span
+                          onClick={() => setActiveTab('Monthly Payments')}
+                          className="px-3 py-1 bg-amber-400/20 border border-amber-400/50 text-amber-200 font-extrabold rounded-xl flex items-center gap-1.5 cursor-pointer hover:bg-amber-400/30 transition shadow-xs"
+                          title="Click to view Eco-Points & redeem monthly discount"
+                        >
+                          <Gift className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Available Points: <strong className="text-white text-sm font-black">{citizenData?.ecoPoints ?? 17}</strong></span>
+                        </span>
+
                         <span className={`px-3 py-1 font-extrabold rounded-xl flex items-center gap-1.5 ${isVerified
                             ? 'bg-emerald-500/30 text-emerald-100'
                             : isProfileComplete
@@ -474,6 +541,23 @@ const CitizenDashboard = () => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                      {hasActivePickup && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('Live Worker Tracker')}
+                          className={`px-4 py-3 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer relative ${
+                            liveWorker?.isOnDuty
+                              ? 'bg-emerald-400 hover:bg-emerald-300 text-emerald-950 font-black'
+                              : 'bg-emerald-950/60 hover:bg-emerald-950/80 text-emerald-200'
+                          }`}
+                        >
+                          <Navigation className="w-4 h-4" />
+                          <span>Live Worker</span>
+                          {liveWorker?.isOnDuty && (
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-950 animate-ping absolute -top-1 -right-1" />
+                          )}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setActiveTab('AI Assistant')}
@@ -501,6 +585,104 @@ const CitizenDashboard = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* TOTAL AVAILABLE ECO-POINTS PROMINENT SUMMARY CARD */}
+                <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 dark:bg-[#122419] border-2 border-emerald-300/80 dark:border-emerald-700/80 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 shadow-sm animate-fadeIn">
+                  <div className="flex items-center gap-4">
+                    <div className="w-13 h-13 rounded-2xl bg-[#0a4d2c] text-white flex items-center justify-center font-black shadow-md shrink-0">
+                      <Gift className="w-7 h-7 text-emerald-300" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-[#0a4d2c] dark:text-emerald-300">
+                          Green Citizen Loyalty Points
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 rounded-full font-extrabold">
+                          Redeemable
+                        </span>
+                      </div>
+                      <p className="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-100">
+                        Total Available Points: <span className="text-[#0a4d2c] dark:text-emerald-400 font-black">{citizenData?.ecoPoints ?? 17} Points</span>
+                      </p>
+                      <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+                        Earn points on completed pickups. Redeem 10 points to unlock a 20% discount on your monthly fee.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('Monthly Payments')}
+                    className="px-5 py-3 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center justify-center gap-2 shrink-0 cursor-pointer self-start sm:self-center"
+                  >
+                    <CreditCard className="w-4 h-4 text-emerald-300" />
+                    <span>Redeem in Monthly Payments</span>
+                  </button>
+                </div>
+
+                {/* HARITHA KARMA SENA WORKER LIVE ON-DUTY ALERT BANNER */}
+                {liveWorker?.isOnDuty && (
+                  hasActivePickup ? (
+                    <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-2 border-emerald-300 animate-fadeIn">
+                      <div className="flex items-center gap-4">
+                        <div className="relative p-3 bg-white/20 backdrop-blur-xs rounded-2xl text-white shadow-md shrink-0">
+                          <Truck className="w-6 h-6 animate-bounce" />
+                          <span className="w-3 h-3 rounded-full bg-emerald-300 border-2 border-white absolute -top-1 -right-1 animate-ping" />
+                        </div>
+                        <div>
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-wider mb-1.5">
+                            <Navigation className="w-3.5 h-3.5 text-emerald-200" /> Haritha Karma Sena On Duty
+                          </div>
+                          <h3 className="text-base sm:text-lg font-black tracking-tight">
+                            {liveWorker.workerName || 'Worker'} is actively collecting in {wardId || 'your ward'}!
+                          </h3>
+                          <p className="text-xs sm:text-sm text-emerald-100 font-medium mt-0.5">
+                            Your pickup request is active. Track live vehicle approach and arrival in real-time.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 flex items-center gap-2 self-start sm:self-center">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('Live Worker Tracker')}
+                          className="px-5 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer"
+                        >
+                          <Navigation className="w-4 h-4 text-[#0a4d2c]" />
+                          <span>Track Live on Map</span>
+                          <ArrowRight className="w-4 h-4 text-[#0a4d2c]" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-emerald-50 dark:bg-[#122419] border border-emerald-200/90 dark:border-emerald-800/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-emerald-950 dark:text-emerald-100 shadow-2xs animate-fadeIn">
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 bg-[#0a4d2c] text-white rounded-xl shrink-0 shadow-xs">
+                          <Truck className="w-5 h-5 text-emerald-300" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-200/60 dark:bg-emerald-800/60 text-[#0a4d2c] dark:text-emerald-200">
+                              Ward Collection Active
+                            </span>
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                              Haritha Karma Sena On Duty in {wardId}
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-sm font-semibold text-emerald-900 dark:text-emerald-200 mt-1">
+                            Collection vehicle is visiting houses in {wardId}. Submit your pickup request to be added to today's collection!
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('Pickup Request')}
+                        className="px-4 py-2.5 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-center"
+                      >
+                        <Truck className="w-3.5 h-3.5 text-emerald-300" />
+                        <span>Request Pickup Now</span>
+                      </button>
+                    </div>
+                  )
+                )}
 
                 {/* TARGET COLLECTION PERIOD DYNAMIC BANNER */}
                 <div className="bg-emerald-50/90 dark:bg-[#122419] border border-emerald-200/90 dark:border-emerald-800/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-emerald-950 dark:text-emerald-100 shadow-2xs">
@@ -911,6 +1093,16 @@ const CitizenDashboard = () => {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                        {hasActivePickup && liveWorker?.isOnDuty && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('Live Worker Tracker')}
+                            className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Navigation className="w-3.5 h-3.5 text-emerald-100" />
+                            <span>Track Live</span>
+                          </button>
+                        )}
                         {activePickupStatus.isDue && (
                           <button
                             type="button"

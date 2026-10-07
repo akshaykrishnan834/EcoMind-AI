@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace EcoMind.API.Models
 {
+    [BsonIgnoreExtraElements]
     public class Citizen
     {
         [BsonId]
@@ -42,6 +43,9 @@ namespace EcoMind.API.Models
         public DateTime? VerifiedAt { get; set; }
 
         public string VerifiedBy { get; set; } = string.Empty;
+
+        [BsonDefaultValue(17)]
+        public int EcoPoints { get; set; } = 17;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

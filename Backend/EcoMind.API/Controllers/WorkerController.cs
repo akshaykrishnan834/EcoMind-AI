@@ -48,5 +48,24 @@ namespace EcoMind.API.Controllers
 
             return Ok(new { message = result });
         }
+
+        [HttpPut("duty-status")]
+        public async Task<IActionResult> UpdateDutyStatus([FromBody] UpdateWorkerDutyDto dto)
+        {
+            var result = await _workerService.UpdateDutyStatusAsync(dto);
+            if (result != "Duty status updated successfully.")
+            {
+                return BadRequest(new { message = result });
+            }
+
+            return Ok(new { message = result });
+        }
+
+        [HttpGet("ward/{wardId}/live")]
+        public async Task<IActionResult> GetLiveWorkerByWard(string wardId)
+        {
+            var worker = await _workerService.GetLiveWorkerByWardAsync(wardId);
+            return Ok(worker);
+        }
     }
 }

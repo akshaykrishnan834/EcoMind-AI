@@ -132,5 +132,46 @@ namespace EcoMind.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Explicitly redeem eco-points (e.g. 10 points) for 20% discount on monthly fee
+        /// </summary>
+        [HttpPost("redeem-points")]
+        public async Task<IActionResult> RedeemPoints([FromBody] RedeemPointsDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.CitizenId))
+            {
+                return BadRequest(new { message = "Citizen ID is required." });
+            }
+
+            try
+            {
+                var result = await _paymentService.RedeemPointsAsync(dto);
+                if (!result.Success)
+                {
+                    return BadRequest(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Reset test citizen points to 17 and clear current month fee discount for demo testing
+        /// </summary>
+        [HttpPost("reset-demo-points/{citizenId}")]
+        public async Task<IActionResult> ResetDemoPoints(string citizenId)
+        {
+            if (string.IsNullOrWhiteSpace(citizenId))
+            {
+                return BadRequest(new { message = "Citizen ID is required." });
+            }
+
+            await _paymentService.ResetDemoPointsAsync(citizenId);
+            return Ok(new { success = true, citizenId, ecoPoints = 17, message = "Demo points reset to 17." });
+        }
     }
 }

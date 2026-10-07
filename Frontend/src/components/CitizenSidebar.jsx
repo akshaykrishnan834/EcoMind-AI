@@ -15,7 +15,8 @@ import {
   X,
   User,
   Leaf,
-  MessageSquare
+  MessageSquare,
+  Navigation
 } from 'lucide-react';
 
 const CitizenSidebar = ({
@@ -25,7 +26,8 @@ const CitizenSidebar = ({
   isOpen = false,
   onClose,
   isCollapsed: controlledIsCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  hasActivePickup = false
 }) => {
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
   const isCollapsed = controlledIsCollapsed !== undefined ? controlledIsCollapsed : internalIsCollapsed;
@@ -34,10 +36,13 @@ const CitizenSidebar = ({
   const userObj = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = userObj.fullName || localStorage.getItem('userName') || 'Akshay Krishnan';
 
-  // Navigation Items
+  // Navigation Items (Live Worker Tracker only appears when citizen has an active pickup)
   const mainMenuItems = [
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutGrid },
     { id: 'Pickup Request', label: 'Pickup Request', icon: Truck },
+    ...(hasActivePickup
+      ? [{ id: 'Live Worker Tracker', label: 'Live Worker Tracker', icon: Navigation, badge: 'Live' }]
+      : []),
     { id: 'Messages', label: 'Worker Chat', icon: MessageSquare },
     { id: 'Collection Schedule', label: 'My Collection Schedule', icon: Calendar },
     { id: 'My Location', label: 'My Location', icon: MapPin },
@@ -53,6 +58,7 @@ const CitizenSidebar = ({
 
   const isItemActive = (item) => {
     if (activeItem === item.id || activeItem === item.label) return true;
+    if (item.id === 'Live Worker Tracker' && (activeItem === 'Live Worker Tracker' || activeItem === 'Live Tracker' || activeItem === 'Track Worker')) return true;
     if (item.id === 'Messages' && (activeItem === 'Worker Chat' || activeItem === 'Messages' || activeItem === 'Chat')) return true;
     if (item.id === 'Collection Schedule' && (activeItem === 'My Collection Schedule' || activeItem === 'Collection Schedule')) return true;
     if (item.id === 'AI Assistant' && (activeItem === 'Mittu AI Chat' || activeItem === 'EcoMind AI Chat' || activeItem === 'AI Assistant' || activeItem === 'Mittu AI' || activeItem === 'Mittu')) return true;
@@ -67,6 +73,25 @@ const CitizenSidebar = ({
     }
     if (onClose && window.innerWidth < 1024) {
       onClose();
+    }
+  };
+
+  const handleLogoutClick = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (onClose && window.innerWidth < 1024) {
+      onClose();
+    }
+    if (typeof onLogout === 'function') {
+      onLogout();
+    } else {
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
+      sessionStorage.clear();
+      window.location.href = '/';
     }
   };
 
@@ -378,14 +403,16 @@ const CitizenSidebar = ({
 
           {/* Log Out Button */}
           <button
-            onClick={onLogout}
-            className={`w-full rounded-xl bg-gray-50 hover:bg-red-50 dark:bg-[#20252b] dark:hover:bg-red-950/30 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 border border-gray-200/70 dark:border-white/5 font-bold text-xs ${
+            type="button"
+            onClick={handleLogoutClick}
+            style={{ cursor: 'pointer' }}
+            className={`w-full rounded-xl bg-gray-50 hover:bg-rose-50 active:bg-rose-100 dark:bg-[#20252b] dark:hover:bg-rose-950/40 text-gray-700 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 border border-gray-200/70 dark:border-white/5 font-bold text-xs ${
               isCollapsed ? 'py-2.5 px-2 justify-center' : 'py-2.5 px-3 justify-center gap-2'
-            } flex items-center transition-all cursor-pointer group`}
+            } flex items-center transition-all cursor-pointer select-none group`}
             title="Log Out"
           >
-            <LogOut className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
-            {!isCollapsed && <span>Log Out</span>}
+            <LogOut className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 group-hover:text-rose-600 dark:group-hover:text-rose-400 group-hover:-translate-x-0.5 transition-transform shrink-0 pointer-events-none" />
+            {!isCollapsed && <span className="pointer-events-none">Log Out</span>}
           </button>
 
           {/* Collapsed Mode Floating Tooltip */}

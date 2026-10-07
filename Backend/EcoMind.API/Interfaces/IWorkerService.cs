@@ -10,5 +10,9 @@ namespace EcoMind.API.Interfaces
         Task<List<Worker>> GetAllWorkersAsync();
 
         Task<string> UpdateWorkerAsync(UpdateWorkerDto dto);
+        
+        Task<string> UpdateDutyStatusAsync(UpdateWorkerDutyDto dto);
+
+        Task<Worker?> GetLiveWorkerByWardAsync(string wardId);
     }
 }

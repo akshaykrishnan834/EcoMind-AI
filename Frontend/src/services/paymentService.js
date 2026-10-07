@@ -36,8 +36,8 @@ export const getCurrentMonthPayment = async (citizenId) => {
 
 /**
  * Create a Razorpay Order from backend
- * @param {Object} payload - { citizenId, month, year }
- * @returns {Promise<Object>} Order details: { razorpayOrderId, keyId, amount, currency, month, year }
+ * @param {Object} payload - { citizenId, month, year, applyEcoDiscount }
+ * @returns {Promise<Object>} Order details: { razorpayOrderId, keyId, amount, currency, month, year, baseAmount, discountAmount, pointsRedeemed, netAmount }
  */
 export const createRazorpayOrder = async (payload) => {
   const response = await axios.post(`${API_URL}/create-order`, payload);
@@ -56,7 +56,7 @@ export const verifyRazorpayPayment = async (payload) => {
 
 /**
  * Process cash payment through Haritha Karma Sena field worker
- * @param {Object} payload - { citizenId, month, year }
+ * @param {Object} payload - { citizenId, month, year, applyEcoDiscount }
  * @returns {Promise<Object>} Updated payment object
  */
 export const processWorkerPayment = async (payload) => {
@@ -71,5 +71,15 @@ export const processWorkerPayment = async (payload) => {
  */
 export const processPayment = async (payload) => {
   const response = await axios.post(`${API_URL}/pay`, payload);
+  return response.data;
+};
+
+/**
+ * Explicitly redeem points (10 points for 20% discount on ₹50 fee)
+ * @param {Object} payload - { citizenId, month, year, pointsToRedeem }
+ * @returns {Promise<Object>} { success, message, pointsRedeemed, remainingPoints, baseAmount, discountAmount, netAmount, payment }
+ */
+export const redeemPoints = async (payload) => {
+  const response = await axios.post(`${API_URL}/redeem-points`, payload);
   return response.data;
 };

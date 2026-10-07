@@ -23,6 +23,14 @@ namespace EcoMind.API.Models
 
         public string CurrentWardId { get; set; } = string.Empty;
 
+        public bool IsOnDuty { get; set; } = false;
+
+        public double? CurrentLatitude { get; set; }
+
+        public double? CurrentLongitude { get; set; }
+
+        public DateTime? LastLocationUpdatedAt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

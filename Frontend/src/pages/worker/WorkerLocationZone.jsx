@@ -18,6 +18,7 @@ import {
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import WorkerDutyToggle from '../../components/WorkerDutyToggle';
 
 // Fix Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -234,6 +235,9 @@ const WorkerLocationZone = ({ wardDetails, wardCitizens = [], profile = {} }) =>
           </div>
         </div>
       </div>
+
+      {/* On-Duty Live Broadcast & Geofence Control */}
+      <WorkerDutyToggle profile={profile} wardDetails={wardDetails} />
 
       {/* Boundary Status Banner */}
       <div className={`p-4 sm:p-5 rounded-2xl border shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${

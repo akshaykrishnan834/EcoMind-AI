@@ -11,6 +11,7 @@ import WorkerPaymentCollection from './worker/WorkerPaymentCollection';
 import WorkerPerformance from './worker/WorkerPerformance';
 import WorkerProfile from './worker/WorkerProfile';
 import WorkerSmartCollection from './worker/WorkerSmartCollection';
+import WorkerDutyToggle from '../components/WorkerDutyToggle';
 import CitizenWorkerChat from '../components/CitizenWorkerChat';
 import Footer from '../components/Footer';
 import { getWardPickupRequests } from '../services/pickupRequestService';
@@ -303,6 +304,7 @@ const WorkerDashboard = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
     sessionStorage.clear();
     navigate('/', { replace: true });
   };
@@ -554,6 +556,9 @@ const WorkerDashboard = () => {
                   </div>
                 </div>
               </div>
+
+              {/* On-Duty Live Broadcast & Ward Geofencing Status */}
+              <WorkerDutyToggle profile={profile} wardDetails={wardDetails} />
 
               {/* Interactive KPI Stats Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -30,7 +30,8 @@ import {
   X,
   XCircle,
   CalendarDays,
-  Timer
+  Timer,
+  ShieldCheck
 } from 'lucide-react';
 import {
   getAllPickupRequests,

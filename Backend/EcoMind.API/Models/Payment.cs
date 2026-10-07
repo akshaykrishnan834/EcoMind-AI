@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace EcoMind.API.Models
 {
+    [BsonIgnoreExtraElements]
     public class Payment
     {
         [BsonId]
@@ -16,6 +17,12 @@ namespace EcoMind.API.Models
         public int Month { get; set; }
 
         public int Year { get; set; }
+
+        public double BaseAmount { get; set; } = 50.0;
+
+        public double DiscountAmount { get; set; } = 0.0;
+
+        public int PointsRedeemed { get; set; } = 0;
 
         public double Amount { get; set; } = 50.0;
 

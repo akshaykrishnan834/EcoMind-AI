@@ -58,6 +58,25 @@ const WorkerSidebar = ({
     }
   };
 
+  const handleLogoutClick = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (onClose && window.innerWidth < 1024) {
+      onClose();
+    }
+    if (typeof onLogout === 'function') {
+      onLogout();
+    } else {
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
+      sessionStorage.clear();
+      window.location.href = '/';
+    }
+  };
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -291,13 +310,16 @@ const WorkerSidebar = ({
 
           {/* Log Out Button */}
           <button
-            onClick={onLogout}
-            className={`w-full rounded-xl bg-gray-50 hover:bg-red-50 dark:bg-[#20252b] dark:hover:bg-red-950/30 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 border border-gray-200/70 dark:border-white/5 font-bold text-xs ${isCollapsed ? 'py-2.5 px-2 justify-center' : 'py-2.5 px-3 justify-center gap-2'
-              } flex items-center transition-all cursor-pointer group`}
+            type="button"
+            onClick={handleLogoutClick}
+            style={{ cursor: 'pointer' }}
+            className={`w-full rounded-xl bg-gray-50 hover:bg-rose-50 active:bg-rose-100 dark:bg-[#20252b] dark:hover:bg-rose-950/40 text-gray-700 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 border border-gray-200/70 dark:border-white/5 font-bold text-xs ${
+              isCollapsed ? 'py-2.5 px-2 justify-center' : 'py-2.5 px-3 justify-center gap-2'
+            } flex items-center transition-all cursor-pointer select-none group`}
             title="Log Out"
           >
-            <LogOut className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
-            {!isCollapsed && <span>Log Out</span>}
+            <LogOut className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 group-hover:text-rose-600 dark:group-hover:text-rose-400 group-hover:-translate-x-0.5 transition-transform shrink-0 pointer-events-none" />
+            {!isCollapsed && <span className="pointer-events-none">Log Out</span>}
           </button>
 
           {/* Collapsed Mode Floating Tooltip */}

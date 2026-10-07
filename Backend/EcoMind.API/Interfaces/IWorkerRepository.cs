@@ -10,6 +10,8 @@ namespace EcoMind.API.Interfaces
 
         Task<Worker?> GetWorkerByEmailAsync(string email);
 
+        Task<List<Worker>> GetWorkersByWardIdAsync(string wardId);
+
         Task UpdateWorkerAsync(Worker worker);
     }
 }

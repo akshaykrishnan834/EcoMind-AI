@@ -446,6 +446,8 @@ const Admin = () => {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userEmail');
         sessionStorage.clear();
         navigate('/', { replace: true });
     };

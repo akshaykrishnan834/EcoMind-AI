@@ -551,11 +551,20 @@ namespace EcoMind.API.Services
             var updated = await _pickupRepository.CompleteRequestAsync(requestId);
             if (updated)
             {
+                // Award points (e.g. 5 points per verified pickup)
+                int pointsEarned = 5;
+                var citizen = await _citizenRepository.GetCitizenByCitizenIdAsync(request.CitizenId);
+                if (citizen != null)
+                {
+                    citizen.EcoPoints += pointsEarned;
+                    await _citizenRepository.UpdateCitizenAsync(citizen);
+                }
+
                 await _notificationService.NotifyUserAsync(
                     request.CitizenId,
                     "Citizen",
-                    "Pickup Completed Successfully",
-                    $"Doorstep plastic collection for request {request.RequestId} has been verified and completed successfully by Haritha Karma Sena.",
+                    $"Pickup Completed & +{pointsEarned} Eco-Points Earned!",
+                    $"Doorstep plastic collection for request {request.RequestId} has been verified and completed successfully by Haritha Karma Sena. You earned {pointsEarned} redeemable Eco-Points!",
                     "pickup_completed",
                     request.RequestId);
             }

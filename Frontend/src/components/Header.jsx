@@ -228,6 +228,7 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
     sessionStorage.clear();
     navigate('/', { replace: true });
   };

@@ -29,6 +29,11 @@ namespace EcoMind.API.Repositories
             return await _workers.Find(x => x.Email == email).FirstOrDefaultAsync();
         }
 
+        public async Task<List<Worker>> GetWorkersByWardIdAsync(string wardId)
+        {
+            return await _workers.Find(x => x.WardId == wardId || x.CurrentWardId == wardId).ToListAsync();
+        }
+
         public async Task UpdateWorkerAsync(Worker worker)
         {
             await _workers.ReplaceOneAsync(x => x.Id == worker.Id, worker);

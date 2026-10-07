@@ -121,5 +121,59 @@ namespace EcoMind.API.Services
 
             return "Worker Updated Successfully";
         }
+
+        public async Task<string> UpdateDutyStatusAsync(UpdateWorkerDutyDto dto)
+        {
+            if (dto == null)
+            {
+                return "Invalid duty update payload.";
+            }
+
+            Worker? worker = null;
+
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+            {
+                worker = await _workerRepository.GetWorkerByEmailAsync(dto.Email.Trim());
+            }
+
+            if (worker == null && !string.IsNullOrWhiteSpace(dto.WorkerId))
+            {
+                var allWorkers = await _workerRepository.GetAllWorkersAsync();
+                worker = allWorkers.FirstOrDefault(w => 
+                    string.Equals(w.WorkerId, dto.WorkerId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(w.Id, dto.WorkerId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (worker == null)
+            {
+                return "Worker not found.";
+            }
+
+            worker.IsOnDuty = dto.IsOnDuty;
+            if (dto.Latitude.HasValue && dto.Longitude.HasValue)
+            {
+                worker.CurrentLatitude = dto.Latitude.Value;
+                worker.CurrentLongitude = dto.Longitude.Value;
+            }
+            worker.LastLocationUpdatedAt = DateTime.UtcNow;
+
+            await _workerRepository.UpdateWorkerAsync(worker);
+            return "Duty status updated successfully.";
+        }
+
+        public async Task<Worker?> GetLiveWorkerByWardAsync(string wardId)
+        {
+            if (string.IsNullOrWhiteSpace(wardId))
+            {
+                return null;
+            }
+
+            var cleanWard = wardId.Trim();
+            var workers = await _workerRepository.GetWorkersByWardIdAsync(cleanWard);
+
+            // Prioritize on-duty worker in this ward
+            var activeWorker = workers.FirstOrDefault(w => w.IsOnDuty) ?? workers.FirstOrDefault();
+            return activeWorker;
+        }
     }
 }

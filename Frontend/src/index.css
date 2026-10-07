@@ -90,6 +90,19 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Ensure all buttons, role="button", and interactive elements always show click hand pointer */
+  button,
+  [role="button"],
+  .cursor-pointer {
+    cursor: pointer !important;
+  }
+
+  button:disabled,
+  [role="button"]:disabled,
+  .cursor-not-allowed {
+    cursor: not-allowed !important;
+  }
 }
 
 /* ========================================================
