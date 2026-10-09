@@ -171,9 +171,33 @@ namespace EcoMind.API.Services
             var cleanWard = wardId.Trim();
             var workers = await _workerRepository.GetWorkersByWardIdAsync(cleanWard);
 
-            // Prioritize on-duty worker in this ward
-            var activeWorker = workers.FirstOrDefault(w => w.IsOnDuty) ?? workers.FirstOrDefault();
-            return activeWorker;
+            // Only return active on-duty worker with live GPS; if worker is not active, suppress location
+            var activeWorker = workers.FirstOrDefault(w => w.IsOnDuty);
+            if (activeWorker != null)
+            {
+                return activeWorker;
+            }
+
+            var defaultWorker = workers.FirstOrDefault();
+            if (defaultWorker != null)
+            {
+                return new Worker
+                {
+                    Id = defaultWorker.Id,
+                    WorkerId = defaultWorker.WorkerId,
+                    FullName = defaultWorker.FullName,
+                    Email = defaultWorker.Email,
+                    PhoneNumber = defaultWorker.PhoneNumber,
+                    WardId = defaultWorker.WardId,
+                    CurrentWardId = defaultWorker.CurrentWardId,
+                    IsOnDuty = false,
+                    CurrentLatitude = null,
+                    CurrentLongitude = null,
+                    Status = defaultWorker.Status
+                };
+            }
+
+            return null;
         }
     }
 }

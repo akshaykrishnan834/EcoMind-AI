@@ -393,7 +393,7 @@ const CitizenDashboard = () => {
     : null;
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f6faf7] dark:bg-[#09110d] font-sans print:h-auto print:w-auto print:overflow-visible print:bg-white">
+    <div className="h-screen w-full max-w-full flex flex-col overflow-hidden bg-[#f6faf7] dark:bg-[#09110d] font-sans print:h-auto print:w-auto print:overflow-visible print:bg-white">
       {/* Top Header (Fixed at top) */}
       <div className="shrink-0 z-40 print:hidden">
         <Header
@@ -402,6 +402,7 @@ const CitizenDashboard = () => {
           role="citizen"
           onLogout={handleLogout}
           user={citizenData || userObj}
+          onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         />
       </div>
 
@@ -598,14 +599,14 @@ const CitizenDashboard = () => {
                           Green Citizen Loyalty Points
                         </span>
                         <span className="text-[10px] px-2 py-0.5 bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 rounded-full font-extrabold">
-                          Redeemable
+                          +2 Pts / Delivery • 4-Month Validity
                         </span>
                       </div>
                       <p className="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-100">
                         Total Available Points: <span className="text-[#0a4d2c] dark:text-emerald-400 font-black">{citizenData?.ecoPoints ?? 17} Points</span>
                       </p>
                       <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">
-                        Earn points on completed pickups. Redeem 10 points to unlock a 20% discount on your monthly fee.
+                        Earn <strong>2 redeem points</strong> on each completed plastic delivery (must claim within <strong>4 months</strong> validity). Redeem 10 points to unlock a 20% discount on your monthly fee.
                       </p>
                     </div>
                   </div>

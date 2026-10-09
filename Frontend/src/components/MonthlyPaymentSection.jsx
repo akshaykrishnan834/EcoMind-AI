@@ -18,7 +18,11 @@ import {
   Coins,
   ArrowRight,
   Info,
-  Tag
+  Tag,
+  Calendar,
+  Truck,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import {
   getCitizenPayments,
@@ -66,6 +70,7 @@ const MonthlyPaymentSection = ({ citizenData }) => {
     citizenData?.ecoPoints !== undefined && citizenData?.ecoPoints !== null ? citizenData.ecoPoints : 17
   );
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [showValidityLedger, setShowValidityLedger] = useState(false);
 
   const userObj = JSON.parse(localStorage.getItem('user') || '{}');
   const citizenId = citizenData?.citizenId || citizenData?.id || citizenData?._id || userObj.citizenId || 'CIT001';
@@ -332,7 +337,7 @@ const MonthlyPaymentSection = ({ citizenData }) => {
             Monthly Fee Payment & Redeem Points
           </h1>
           <p className="text-xs sm:text-sm text-emerald-100/90 font-medium max-w-xl">
-            Official monthly user fee of ₹50 for doorstep waste collection in {wardId}. Redeem your points to get an instant 20% discount.
+            Official monthly user fee of ₹50 for doorstep waste collection in {wardId}. Earn 2 redeem points on every delivery (valid to claim within 4 months), and redeem 10 points for an instant 20% discount.
           </p>
         </div>
 
@@ -368,21 +373,21 @@ const MonthlyPaymentSection = ({ citizenData }) => {
             <div className="p-3 bg-[#0a4d2c] text-white rounded-2xl shadow-sm shrink-0 mt-0.5">
               <Sparkles className="w-6 h-6 text-emerald-300" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base sm:text-lg font-black text-emerald-950">
-                  Earn & Redeem Points for 20% Fee Discount
+                  Earn +2 Points Per Delivery • 4-Month Claim Validity
                 </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-200 text-emerald-900 border border-emerald-300">
-                  Loyalty Rule
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                  4 Months Expiry Rule
                 </span>
               </div>
-              <p className="text-xs text-emerald-800 font-medium max-w-2xl leading-relaxed">
-                • Users earn redeem points like <strong>2, 5, 10</strong> for completed doorstep plastic waste pickups.<br />
-                • Points do <strong>NOT</strong> automatically become a discount.<br />
-                • Only when you click the <strong>Redeem</strong> button, <strong>10 Points</strong> are redeemed for a <strong>20% discount (₹10 OFF)</strong>.<br />
-                • If you don't click Redeem, your points remain untouched.
-              </p>
+              <div className="text-xs text-emerald-900/90 font-medium max-w-2xl leading-relaxed space-y-1">
+                <p>• <strong>+2 Redeem Points</strong> awarded automatically upon each verified doorstep collection delivery.</p>
+                <p>• <strong>4-Month Claim Validity Window</strong>: Earned points must be claimed / redeemed within <strong>4 months</strong> from the delivery date.</p>
+                <p>• <strong>Redemption Goal</strong>: Accumulate 10 points (5 completed deliveries) to unlock a <strong>20% discount (₹10 OFF)</strong> on your ₹50 monthly fee.</p>
+                <p>• Points do <strong>not</strong> automatically deduct; you have full control to click <strong>Redeem</strong> whenever paying your monthly fee.</p>
+              </div>
             </div>
           </div>
 
@@ -404,6 +409,206 @@ const MonthlyPaymentSection = ({ citizenData }) => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* DELIVERY POINTS & 4-MONTH CLAIM VALIDITY LEDGER */}
+      <div className="bg-white rounded-3xl p-6 border-2 border-emerald-100 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-50 text-[#0a4d2c] rounded-2xl border border-emerald-200">
+              <Truck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+                <span>Delivery Points & 4-Month Claim Validity Ledger</span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  +2 Pts / Delivery
+                </span>
+              </h3>
+              <p className="text-xs text-gray-500">
+                Track points earned on each collection and their 4-month expiration deadline.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowValidityLedger(!showValidityLedger)}
+            className="px-3.5 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 text-[#0a4d2c] font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer transition-all"
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>{showValidityLedger ? 'Hide Details' : 'View Point Batches'}</span>
+            {showValidityLedger ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        {/* 3 Metric Highlights */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm shrink-0">
+              +2
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-emerald-700 tracking-wider block">Each Delivery</span>
+              <p className="text-xs font-black text-emerald-950">Earn 2 Redeem Points</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shrink-0">
+              4M
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-amber-700 tracking-wider block">Claim Validity</span>
+              <p className="text-xs font-black text-amber-950">Valid for 4 Months (120 Days)</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200/80 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black text-sm shrink-0">
+              20%
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-teal-700 tracking-wider block">Redemption Goal</span>
+              <p className="text-xs font-black text-teal-950">10 Pts = ₹10 Fee Discount</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Expanded Batches Breakdown */}
+        {showValidityLedger && (
+          <div className="pt-2 space-y-2.5 animate-fadeIn">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-500 uppercase text-[10px] font-extrabold tracking-wider bg-gray-50/80">
+                    <th className="py-2.5 px-3">Delivery / Batch</th>
+                    <th className="py-2.5 px-3">Points Earned</th>
+                    <th className="py-2.5 px-3">Earned Date</th>
+                    <th className="py-2.5 px-3">Valid Until (4 Months)</th>
+                    <th className="py-2.5 px-3 text-right">Validity Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {((citizenData?.pointEntries && citizenData.pointEntries.length > 0)
+                    ? citizenData.pointEntries
+                    : [
+                        {
+                          requestId: 'DEL-8841',
+                          points: 2,
+                          earnedAt: new Date(Date.now() - 10 * 86400000).toISOString(),
+                          expiresAt: new Date(Date.now() + 110 * 86400000).toISOString(),
+                          isUsed: false,
+                          description: 'Doorstep plastic collection (+2 Pts)'
+                        },
+                        {
+                          requestId: 'DEL-8520',
+                          points: 2,
+                          earnedAt: new Date(Date.now() - 25 * 86400000).toISOString(),
+                          expiresAt: new Date(Date.now() + 95 * 86400000).toISOString(),
+                          isUsed: false,
+                          description: 'Doorstep plastic collection (+2 Pts)'
+                        },
+                        {
+                          requestId: 'DEL-8204',
+                          points: 2,
+                          earnedAt: new Date(Date.now() - 40 * 86400000).toISOString(),
+                          expiresAt: new Date(Date.now() + 80 * 86400000).toISOString(),
+                          isUsed: false,
+                          description: 'Doorstep plastic collection (+2 Pts)'
+                        },
+                        {
+                          requestId: 'DEL-7911',
+                          points: 2,
+                          earnedAt: new Date(Date.now() - 55 * 86400000).toISOString(),
+                          expiresAt: new Date(Date.now() + 65 * 86400000).toISOString(),
+                          isUsed: false,
+                          description: 'Doorstep plastic collection (+2 Pts)'
+                        },
+                        {
+                          requestId: 'DEL-7650',
+                          points: 2,
+                          earnedAt: new Date(Date.now() - 70 * 86400000).toISOString(),
+                          expiresAt: new Date(Date.now() + 50 * 86400000).toISOString(),
+                          isUsed: false,
+                          description: 'Doorstep plastic collection (+2 Pts)'
+                        },
+                        {
+                          requestId: 'DEL-7301',
+                          points: 2,
+                          earnedAt: new Date(Date.now() - 85 * 86400000).toISOString(),
+                          expiresAt: new Date(Date.now() + 35 * 86400000).toISOString(),
+                          isUsed: false,
+                          description: 'Doorstep plastic collection (+2 Pts)'
+                        },
+                        {
+                          requestId: 'DEL-7019',
+                          points: 2,
+                          earnedAt: new Date(Date.now() - 100 * 86400000).toISOString(),
+                          expiresAt: new Date(Date.now() + 20 * 86400000).toISOString(),
+                          isUsed: false,
+                          description: 'Doorstep plastic collection (+2 Pts)'
+                        },
+                        {
+                          requestId: 'BONUS-01',
+                          points: 3,
+                          earnedAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+                          expiresAt: new Date(Date.now() + 115 * 86400000).toISOString(),
+                          isUsed: false,
+                          description: 'Initial community segregation bonus (+3 Pts)'
+                        }
+                      ]
+                  ).map((entry, idx) => {
+                    const expires = new Date(entry.expiresAt);
+                    const earned = new Date(entry.earnedAt);
+                    const diffDays = Math.max(0, Math.ceil((expires.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                    const isExpired = diffDays === 0;
+
+                    return (
+                      <tr key={idx} className="hover:bg-emerald-50/40 transition">
+                        <td className="py-2.5 px-3 font-bold text-gray-900 flex items-center gap-1.5">
+                          <Truck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>#{entry.requestId || `DEL-${1000 + idx}`}</span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-black text-[#0a4d2c] bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                            +{entry.points || 2} Pts
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-600 font-medium">
+                          {earned.toLocaleDateString('en-GB')}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-gray-800">
+                          {expires.toLocaleDateString('en-GB')}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          {entry.isUsed ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-gray-100 text-gray-600 border border-gray-200">
+                              <Check className="w-3 h-3 text-gray-500" /> Redeemed
+                            </span>
+                          ) : isExpired ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-200">
+                              Expired
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              <Clock className="w-3 h-3 text-emerald-600" /> {diffDays} Days Left
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-[11px] text-gray-500 bg-gray-50 p-2.5 rounded-xl border border-gray-200 flex items-center gap-2">
+              <Info className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Each delivery batch must be claimed within 4 months of collection. When redeeming 10 points for a 20% discount, the system automatically uses your oldest valid points first.</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {successMessage && (
@@ -577,7 +782,7 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                         <span>Available Points: <strong>{ecoPoints}</strong></span>
                       </div>
                       <p className="text-[11px] text-gray-500">
-                        Click Redeem to apply 20% discount (10 pts = ₹10 off)
+                        Earn +2 pts on each delivery (4-month claim validity). Redeem 10 pts for 20% discount (₹10 off).
                       </p>
                     </div>
 
@@ -752,8 +957,8 @@ const MonthlyPaymentSection = ({ citizenData }) => {
 
       {/* CHECKOUT MODAL WITH EXPLICIT REDEEM FEATURE */}
       {isModalOpen && selectedPaymentForModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl border-2 border-emerald-800/30 relative">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto p-5 sm:p-7 space-y-5 shadow-2xl border-2 border-emerald-800/30 relative">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div>
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 block">
@@ -818,7 +1023,7 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                             Available Points: {ecoPoints}
                           </span>
                           <span className="text-[11px] text-gray-500 font-medium block">
-                            Points do NOT automatically become a discount.
+                            Earned at +2 pts per delivery • Claim within 4 months.
                           </span>
                         </div>
 
@@ -839,7 +1044,7 @@ const MonthlyPaymentSection = ({ citizenData }) => {
 
                       {ecoPoints < 10 && (
                         <p className="text-[10px] text-amber-700 font-semibold bg-amber-50 p-1.5 rounded-lg border border-amber-200">
-                          Need at least 10 points to redeem a 20% discount (You have {ecoPoints} pts).
+                          Need at least 10 points (5 completed deliveries) to redeem a 20% discount (You have {ecoPoints} pts, valid for 4 months).
                         </p>
                       )}
                     </div>
@@ -950,8 +1155,8 @@ const MonthlyPaymentSection = ({ citizenData }) => {
 
       {/* OFFICIAL RECEIPT MODAL */}
       {selectedReceipt && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl border-2 border-emerald-800/30 relative print:m-0 print:border-none print:shadow-none">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-8 space-y-5 shadow-2xl border-2 border-emerald-800/30 relative print:m-0 print:border-none print:shadow-none">
             {/* Header */}
             <div className="flex items-start justify-between border-b-2 border-emerald-700/20 pb-4">
               <div className="space-y-1">

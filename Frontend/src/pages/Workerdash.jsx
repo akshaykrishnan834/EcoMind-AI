@@ -402,7 +402,7 @@ const WorkerDashboard = () => {
   const completionRate = totalCitizensCount > 0 ? Math.round((completedProfilesCount / totalCitizensCount) * 100) : 0;
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f6faf7] dark:bg-[#09110d] font-sans">
+    <div className="h-screen w-full max-w-full flex flex-col overflow-hidden bg-[#f6faf7] dark:bg-[#09110d] font-sans">
       {/* Top Header (Fixed at top) */}
       <div className="shrink-0 z-40">
         <Header
@@ -411,6 +411,7 @@ const WorkerDashboard = () => {
           role="worker"
           onLogout={handleLogout}
           user={profile}
+          onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         />
       </div>
 

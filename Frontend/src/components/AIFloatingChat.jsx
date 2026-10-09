@@ -14,10 +14,10 @@ const AIFloatingChat = ({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-50">
       {/* Floating Popup Window */}
       {isOpen && (
-        <div className="mb-3 w-[92vw] sm:w-[450px] max-w-lg h-[580px] sm:h-[620px] shadow-2xl rounded-3xl overflow-hidden border border-emerald-100/90 bg-white animate-scaleUp">
+        <div className="mb-2 sm:mb-3 w-[calc(100vw-24px)] sm:w-[450px] max-w-lg h-[min(580px,84vh)] sm:h-[620px] shadow-2xl rounded-3xl overflow-hidden border border-emerald-100/90 bg-white animate-scaleUp">
           <AIChatBot
             citizenData={citizenData}
             monthlyStatusData={monthlyStatusData}

@@ -123,9 +123,9 @@ const AdminSidebar = ({
       {/* Sidebar Drawer */}
       <aside
         className={`${
-          isCollapsed ? 'w-20' : 'w-[260px]'
-        } bg-white dark:bg-[#181b20] border-r border-gray-200/80 dark:border-white/10 text-gray-800 dark:text-gray-100 flex flex-col justify-between shrink-0 h-full overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden lg:flex'
+          isCollapsed ? 'w-20' : 'w-[260px] sm:w-[270px]'
+        } max-w-[85vw] bg-white dark:bg-[#181b20] border-r border-gray-200/80 dark:border-white/10 text-gray-800 dark:text-gray-100 flex flex-col justify-between shrink-0 h-full overflow-hidden transition-all duration-300 ease-in-out ${
+          isOpen ? 'fixed inset-y-0 left-0 z-50 shadow-2xl animate-slideInLeft' : 'hidden lg:flex'
         }`}
       >
         {/* Top Fixed Section: Admin Profile & Menu Toggle in One Line */}

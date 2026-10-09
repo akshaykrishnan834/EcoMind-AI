@@ -453,10 +453,16 @@ const Admin = () => {
     };
 
     return (
-        <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f4f9f5] dark:bg-[#0c1510] font-sans transition-colors duration-200">
+        <div className="h-screen w-full max-w-full flex flex-col overflow-hidden bg-[#f4f9f5] dark:bg-[#0c1510] font-sans transition-colors duration-200">
             {/* Main Top Header (Fixed at top) */}
             <div className="shrink-0 z-40 border-b border-emerald-100/80 dark:border-emerald-800/60 shadow-2xs">
-                <Header onSelectTab={setActiveTab} activeTab={activeTab} role="admin" onLogout={handleLogout} />
+                <Header
+                    onSelectTab={setActiveTab}
+                    activeTab={activeTab}
+                    role="admin"
+                    onLogout={handleLogout}
+                    onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+                />
             </div>
 
             {/* Body Container (Flex below Header) */}

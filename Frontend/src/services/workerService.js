@@ -67,6 +67,16 @@ export const getLiveWorkerByWard = async (wardId) => {
   try {
     const response = await axios.get(`${API_URL}/ward/${encodeURIComponent(wardId)}/live`);
     if (response.data) {
+      if (!response.data.isOnDuty) {
+        return {
+          ...response.data,
+          isOnDuty: false,
+          latitude: null,
+          longitude: null,
+          currentLatitude: null,
+          currentLongitude: null
+        };
+      }
       return response.data;
     }
   } catch (err) {
@@ -77,7 +87,18 @@ export const getLiveWorkerByWard = async (wardId) => {
   try {
     const cached = localStorage.getItem(cleanWardKey);
     if (cached) {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (!parsed.isOnDuty) {
+        return {
+          ...parsed,
+          isOnDuty: false,
+          latitude: null,
+          longitude: null,
+          currentLatitude: null,
+          currentLongitude: null
+        };
+      }
+      return parsed;
     }
   } catch (e) {
     console.warn('Error reading cached worker live location:', e);

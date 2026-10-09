@@ -390,6 +390,20 @@ namespace EcoMind.API.Services
 
             // Deduct the redeemed points from the user's balance and save in database
             citizen.EcoPoints -= pointsToRedeem;
+            if (citizen.EcoPoints < 0) citizen.EcoPoints = 0;
+
+            // Mark oldest valid point entries as used (FIFO)
+            if (citizen.PointEntries != null && citizen.PointEntries.Count > 0)
+            {
+                int needed = pointsToRedeem;
+                foreach (var entry in citizen.PointEntries.Where(e => !e.IsUsed && e.ExpiresAt > DateTime.UtcNow).OrderBy(e => e.EarnedAt))
+                {
+                    if (needed <= 0) break;
+                    entry.IsUsed = true;
+                    needed -= entry.Points;
+                }
+            }
+
             await _citizenRepository.UpdateCitizenAsync(citizen);
 
             // Apply existing 20% discount rule (₹10 off ₹50 base fee) and save in database
@@ -418,6 +432,18 @@ namespace EcoMind.API.Services
             if (citizen != null)
             {
                 citizen.EcoPoints = 17;
+                var nowUtc = DateTime.UtcNow;
+                citizen.PointEntries = new List<EcoPointEntry>
+                {
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-10), ExpiresAt = nowUtc.AddMonths(4).AddDays(-10), RequestId = "REQ101", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-22), ExpiresAt = nowUtc.AddMonths(4).AddDays(-22), RequestId = "REQ098", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-35), ExpiresAt = nowUtc.AddMonths(4).AddDays(-35), RequestId = "REQ089", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-48), ExpiresAt = nowUtc.AddMonths(4).AddDays(-48), RequestId = "REQ076", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-62), ExpiresAt = nowUtc.AddMonths(4).AddDays(-62), RequestId = "REQ065", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-75), ExpiresAt = nowUtc.AddMonths(4).AddDays(-75), RequestId = "REQ054", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-90), ExpiresAt = nowUtc.AddMonths(4).AddDays(-90), RequestId = "REQ042", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
+                    new EcoPointEntry { Points = 3, EarnedAt = nowUtc.AddDays(-5), ExpiresAt = nowUtc.AddMonths(4).AddDays(-5), RequestId = "REQ105", IsUsed = false, Description = "Welcome community segregation bonus" }
+                };
                 await _citizenRepository.UpdateCitizenAsync(citizen);
             }
 

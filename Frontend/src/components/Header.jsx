@@ -33,7 +33,8 @@ import {
   AlertTriangle,
   Clock,
   XCircle,
-  Check
+  Check,
+  Menu
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import ecomindlogo from '../assets/images/logo-ecomind.png';
@@ -82,17 +83,19 @@ const SIDEBAR_REGISTRY = {
   ]
 };
 
-export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propOnLogout, user: propUser }) => {
+export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propOnLogout, user: propUser, onToggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const searchContainerRef = useRef(null);
   const searchInputRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
 
@@ -357,34 +360,48 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/85 dark:bg-[#0c0e12]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10 shadow-xs transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-6">
         
-        {/* 1. Left: EcoMind AI Logo & Title */}
-        <Link
-          to="/"
-          className="flex items-center gap-3 group focus:outline-none shrink-0"
-          title="EcoMind AI Home"
-        >
-          <div className="relative">
-            <div className="absolute -inset-1 rounded-xl bg-emerald-500/20 blur-xs group-hover:bg-emerald-500/40 transition-colors" />
-            <img
-              src={ecomindlogo}
-              alt="EcoMind AI Logo"
-              className="relative w-9 h-9 object-contain drop-shadow-xs group-hover:scale-105 transition-transform duration-200"
-            />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5 leading-none">
-              EcoMind AI
-            </span>
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 tracking-tight hidden sm:block mt-0.5">
-              Smart Recyclable Waste System
-            </span>
-          </div>
-        </Link>
+        {/* 1. Left: Mobile Hamburger Toggle + Brand Identity */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="lg:hidden p-2 rounded-xl text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 bg-slate-100/90 dark:bg-[#181b20] hover:bg-emerald-50/50 dark:hover:bg-[#242930] border border-slate-200/80 dark:border-white/10 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+              title="Toggle Navigation Menu"
+              aria-label="Toggle Navigation Menu"
+            >
+              <Menu className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+            </button>
+          )}
 
-        {/* 2. Center: Interactive Search Bar with Sidebar Open Navigation */}
-        <div className="flex-1 max-w-md mx-2 sm:mx-6 relative" ref={searchContainerRef}>
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 group focus:outline-none shrink-0"
+            title="EcoMind AI Home"
+          >
+            <div className="relative shrink-0">
+              <div className="absolute -inset-1 rounded-xl bg-emerald-500/20 blur-xs group-hover:bg-emerald-500/40 transition-colors" />
+              <img
+                src={ecomindlogo}
+                alt="EcoMind AI Logo"
+                className="relative w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-xs group-hover:scale-105 transition-transform duration-200"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5 leading-none">
+                EcoMind AI
+              </span>
+              <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 tracking-tight hidden sm:block mt-0.5">
+                Smart Recyclable Waste System
+              </span>
+            </div>
+          </Link>
+        </div>
+
+        {/* 2. Center: Desktop Interactive Search Bar */}
+        <div className="hidden sm:block flex-1 max-w-md mx-2 sm:mx-6 relative" ref={searchContainerRef}>
           <div className="relative w-full">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
               <Search className="w-4 h-4" />
@@ -493,8 +510,24 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
           )}
         </div>
 
-        {/* 3. Right: Notification Symbol & Dark/White Mode Symbol */}
-        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        {/* 3. Right: Mobile Search Toggle, Notifications, Theme, User */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          
+          {/* Mobile Search Button (visible on < sm only) */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileSearchOpen(!isMobileSearchOpen);
+              if (!isMobileSearchOpen) {
+                setTimeout(() => mobileSearchInputRef.current?.focus(), 150);
+              }
+            }}
+            className="sm:hidden p-2 rounded-xl text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 bg-slate-100/90 dark:bg-[#181b20] hover:bg-emerald-50/50 dark:hover:bg-[#242930] border border-slate-200/80 dark:border-white/10 shadow-2xs transition-colors cursor-pointer flex items-center justify-center"
+            title="Search"
+            aria-label="Search items"
+          >
+            <Search className="w-4 h-4" />
+          </button>
           
           {/* Notification Button & Dropdown */}
           <div className="relative" ref={notifRef}>
@@ -517,7 +550,7 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
 
             {/* Notification Dropdown Panel */}
             {notifOpen && (
-              <div className="absolute right-0 mt-2.5 w-80 sm:w-96 rounded-2xl bg-white dark:bg-[#181b22] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-black/60 p-4 z-50 animate-fadeIn">
+              <div className="absolute right-0 mt-2.5 w-[calc(100vw-24px)] sm:w-96 max-w-sm rounded-2xl bg-white dark:bg-[#181b22] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-black/60 p-4 z-50 animate-fadeIn">
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-white/5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-900 dark:text-white">Notifications</span>
@@ -658,7 +691,7 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
 
             {/* User Dropdown Menu */}
             {userDropdownOpen && (
-              <div className="absolute right-0 mt-2.5 w-64 rounded-2xl bg-white dark:bg-[#181b22] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-black/70 p-2 z-50 animate-fadeIn">
+              <div className="absolute right-0 mt-2.5 w-[calc(100vw-24px)] sm:w-64 max-w-xs rounded-2xl bg-white dark:bg-[#181b22] border border-slate-200/90 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-black/70 p-2 z-50 animate-fadeIn">
                 
                 {/* User Info Header */}
                 <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-[#121418] border border-slate-100 dark:border-white/5 mb-1.5 flex items-center gap-3">
@@ -727,6 +760,89 @@ export const Header = ({ onSelectTab, activeTab, role: propRole, onLogout: propO
         </div>
 
       </div>
+
+      {/* Mobile Search Overlay Bar */}
+      {isMobileSearchOpen && (
+        <div className="sm:hidden px-3 py-2.5 bg-white/95 dark:bg-[#0c0e12]/95 border-t border-slate-200/80 dark:border-white/10 animate-fadeIn">
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              ref={mobileSearchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchOpen(true);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Search items (e.g. Pickup, Chat, Schedule)..."
+              className="w-full pl-9 pr-16 py-2 text-xs rounded-xl bg-slate-100 dark:bg-[#15181e] text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileSearchOpen(false);
+                  setIsSearchOpen(false);
+                }}
+                className="px-2 py-1 text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Search Dropdown on Mobile */}
+          {searchQuery.trim() && (
+            <div className="mt-2 rounded-2xl bg-white dark:bg-[#181b22] border border-slate-200/90 dark:border-white/10 shadow-2xl overflow-hidden max-h-72 overflow-y-auto">
+              <div className="p-1.5 space-y-1">
+                {filteredItems.length > 0 ? (
+                  filteredItems.map((item) => {
+                    const IconComponent = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          handleOpenItem(item);
+                          setIsMobileSearchOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl text-left hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                            <IconComponent className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="truncate">
+                            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{item.label}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{item.desc}</div>
+                          </div>
+                        </div>
+                        <CornerDownLeft className="w-3 h-3 text-emerald-600 shrink-0" />
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    No results for "{searchQuery}"
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 };

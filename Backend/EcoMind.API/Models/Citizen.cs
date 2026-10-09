@@ -47,6 +47,24 @@ namespace EcoMind.API.Models
         [BsonDefaultValue(17)]
         public int EcoPoints { get; set; } = 17;
 
+        public List<EcoPointEntry> PointEntries { get; set; } = new();
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    [BsonIgnoreExtraElements]
+    public class EcoPointEntry
+    {
+        public int Points { get; set; } = 2;
+
+        public DateTime EarnedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMonths(4);
+
+        public string RequestId { get; set; } = string.Empty;
+
+        public bool IsUsed { get; set; } = false;
+
+        public string Description { get; set; } = "Doorstep plastic collection (+2 Pts, 4 Months Validity)";
     }
 }

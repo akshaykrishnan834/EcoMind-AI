@@ -173,20 +173,31 @@ const CitizenLiveWorkerTracker = ({
   const loadWorkerState = async () => {
     try {
       const data = await getLiveWorkerByWard(wardId);
-      if (data) {
+      if (data && data.isOnDuty) {
         setLiveWorker(data);
+      } else if (data) {
+        // Worker exists but is off duty - ensure coordinates are null
+        setLiveWorker({
+          ...data,
+          isOnDuty: false,
+          latitude: null,
+          longitude: null,
+          currentLatitude: null,
+          currentLongitude: null
+        });
       } else if (assignedWorker) {
-        // Fallback to assigned worker profile with simulated nearby position
-        const defaultWorkerLat = citizenLat + 0.0028;
-        const defaultWorkerLng = citizenLng + 0.0024;
+        // Assigned worker fallback: strictly off duty unless assignedWorker is explicitly active
+        const isAssignedActive = Boolean(assignedWorker.isOnDuty);
         setLiveWorker({
           fullName: assignedWorker.fullName || assignedWorker.name || 'Haritha Karma Sena Worker',
           phoneNumber: assignedWorker.phoneNumber || assignedWorker.phone || '9847123456',
           wardId: wardId,
-          isOnDuty: true,
-          latitude: defaultWorkerLat,
-          longitude: defaultWorkerLng,
+          isOnDuty: isAssignedActive,
+          latitude: isAssignedActive ? (assignedWorker.latitude || assignedWorker.currentLatitude || null) : null,
+          longitude: isAssignedActive ? (assignedWorker.longitude || assignedWorker.currentLongitude || null) : null,
         });
+      } else {
+        setLiveWorker(null);
       }
       setLastRefreshedAt(new Date().toLocaleTimeString());
     } catch (err) {
@@ -200,9 +211,13 @@ const CitizenLiveWorkerTracker = ({
     // Listen for real-time broadcasts
     const handleBroadcast = (e) => {
       if (e.detail) {
+        const isDuty = Boolean(e.detail.isOnDuty);
         setLiveWorker((prev) => ({
           ...(prev || {}),
-          ...e.detail
+          ...e.detail,
+          isOnDuty: isDuty,
+          latitude: isDuty ? (e.detail.latitude ?? e.detail.currentLatitude) : null,
+          longitude: isDuty ? (e.detail.longitude ?? e.detail.currentLongitude) : null,
         }));
         setLastRefreshedAt(new Date().toLocaleTimeString());
       }
@@ -217,15 +232,24 @@ const CitizenLiveWorkerTracker = ({
     };
   }, [wardId]);
 
-  // Worker coordinates
-  const workerLat = parseFloat(liveWorker?.latitude || liveWorker?.currentLatitude) || (citizenLat + 0.0028);
-  const workerLng = parseFloat(liveWorker?.longitude || liveWorker?.currentLongitude) || (citizenLng + 0.0024);
-  const workerPos = [workerLat, workerLng];
+  // Worker coordinates - strictly only when active and on duty
   const isOnDuty = Boolean(liveWorker?.isOnDuty);
+  const parsedWorkerLat = parseFloat(liveWorker?.latitude ?? liveWorker?.currentLatitude);
+  const parsedWorkerLng = parseFloat(liveWorker?.longitude ?? liveWorker?.currentLongitude);
+  const hasValidWorkerCoords =
+    isOnDuty &&
+    !isNaN(parsedWorkerLat) &&
+    !isNaN(parsedWorkerLng) &&
+    parsedWorkerLat !== 0 &&
+    parsedWorkerLng !== 0;
 
-  // Proximity calculation
-  const distanceInfo = calculateHaversineDistance(citizenLat, citizenLng, workerLat, workerLng);
-  const isApproaching = isOnDuty && distanceInfo && distanceInfo.meters <= 150;
+  const workerPos = hasValidWorkerCoords ? [parsedWorkerLat, parsedWorkerLng] : null;
+
+  // Proximity calculation - only calculate if worker is active with valid coordinates
+  const distanceInfo = hasValidWorkerCoords
+    ? calculateHaversineDistance(citizenLat, citizenLng, parsedWorkerLat, parsedWorkerLng)
+    : null;
+  const isApproaching = Boolean(isOnDuty && distanceInfo && distanceInfo.meters <= 150);
 
   // GATED STATE: If citizen has no active pickup request, display locked guidance screen
   if (!activePickupRequest) {
@@ -359,7 +383,7 @@ const CitizenLiveWorkerTracker = ({
                 <p className="text-xs font-bold mt-0.5">
                   {isOnDuty && distanceInfo
                     ? `${distanceInfo.meters}m Away (~${distanceInfo.walkingMinutes} mins)`
-                    : `Sector: ${wardId}`}
+                    : 'Location Hidden (Inactive)'}
                 </p>
               </div>
             </div>
@@ -395,13 +419,19 @@ const CitizenLiveWorkerTracker = ({
         <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs border border-emerald-100/80 dark:border-white/5 space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-gray-500">
             <span className="uppercase tracking-wider">Assigned Worker</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px]">
-              {wardId}
+            <span className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
+              isOnDuty
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+            }`}>
+              {isOnDuty ? 'Active' : 'Off Duty'}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-[#0a4d2c] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+            <div className={`w-11 h-11 rounded-full text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0 ${
+              isOnDuty ? 'bg-[#0a4d2c]' : 'bg-gray-500'
+            }`}>
               {liveWorker?.fullName ? liveWorker.fullName[0].toUpperCase() : 'H'}
             </div>
             <div className="min-w-0">
@@ -409,7 +439,7 @@ const CitizenLiveWorkerTracker = ({
                 {liveWorker?.fullName || assignedWorker?.fullName || 'Haritha Sena Team'}
               </h4>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Doorstep Plastic Collector
+                {isOnDuty ? 'Doorstep Plastic Collector • Active Shift' : 'Doorstep Plastic Collector • Off Duty'}
               </p>
             </div>
           </div>
@@ -429,19 +459,23 @@ const CitizenLiveWorkerTracker = ({
         <div className="bg-white dark:bg-[#121e17] p-5 rounded-2xl shadow-xs border border-emerald-100/80 dark:border-white/5 space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-gray-500">
             <span className="uppercase tracking-wider">Estimated Distance</span>
-            <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-extrabold text-[10px]">
-              Haversine GIS
+            <span className={`px-2 py-0.5 rounded-full font-extrabold text-[10px] ${
+              isOnDuty && distanceInfo
+                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+            }`}>
+              {isOnDuty && distanceInfo ? 'Haversine GIS' : 'Inactive'}
             </span>
           </div>
 
           <div>
             <div className="text-2xl font-black text-gray-900 dark:text-white">
-              {isOnDuty && distanceInfo ? `${distanceInfo.meters} Meters` : 'Not In Route'}
+              {isOnDuty && distanceInfo ? `${distanceInfo.meters} Meters` : 'Location Offline'}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {isOnDuty && distanceInfo
                 ? `Approx. ${distanceInfo.walkingMinutes} mins walking pace`
-                : 'Worker will broadcast live location once duty begins'}
+                : 'Worker is currently off duty. Location is hidden until active shift begins.'}
             </p>
           </div>
 
@@ -494,17 +528,24 @@ const CitizenLiveWorkerTracker = ({
 
           {/* Quick Center Buttons */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setMapCenter(workerPos);
-                setMapZoom(17);
-              }}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-200 flex items-center gap-1.5 cursor-pointer transition-all"
-            >
-              <Truck className="w-3.5 h-3.5" />
-              <span>Focus Worker</span>
-            </button>
+            {isOnDuty && workerPos ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setMapCenter(workerPos);
+                  setMapZoom(17);
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-[#0a4d2c] border border-emerald-200 flex items-center gap-1.5 cursor-pointer transition-all"
+              >
+                <Truck className="w-3.5 h-3.5" />
+                <span>Focus Worker</span>
+              </button>
+            ) : (
+              <div className="px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-white/10 flex items-center gap-1.5 select-none">
+                <span className="w-2 h-2 rounded-full bg-gray-400" />
+                <span>Worker Offline</span>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -552,8 +593,8 @@ const CitizenLiveWorkerTracker = ({
               </Polygon>
             )}
 
-            {/* Connecting Polyline between worker and citizen */}
-            {isOnDuty && (
+            {/* Connecting Polyline between worker and citizen (only when active) */}
+            {isOnDuty && workerPos && (
               <Polyline
                 positions={[citizenPos, workerPos]}
                 pathOptions={{
@@ -582,32 +623,46 @@ const CitizenLiveWorkerTracker = ({
               </Popup>
             </Marker>
 
-            {/* Live Worker Vehicle Marker */}
-            <Marker position={workerPos} icon={createWorkerIcon(isOnDuty)}>
-              <Popup>
-                <div className="p-1 space-y-1.5 text-xs">
-                  <div className="font-extrabold text-emerald-800 flex items-center gap-1">
-                    <Truck className="w-4 h-4" />
-                    <span>Haritha Karma Sena</span>
-                  </div>
-                  <p className="font-bold text-gray-900">
-                    {liveWorker?.fullName || 'Assigned Collection Worker'}
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full ${isOnDuty ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                    <span className="font-bold text-gray-600">
-                      {isOnDuty ? 'Actively Collecting' : 'Off Duty'}
-                    </span>
-                  </div>
-                  {distanceInfo && (
-                    <p className="text-[11px] font-extrabold text-[#0a4d2c] bg-emerald-50 p-1 rounded">
-                      📏 Distance: {distanceInfo.meters}m (~{distanceInfo.walkingMinutes} mins)
+            {/* Live Worker Vehicle Marker - STRICTLY only when active / on duty */}
+            {isOnDuty && workerPos && (
+              <Marker position={workerPos} icon={createWorkerIcon(true)}>
+                <Popup>
+                  <div className="p-1 space-y-1.5 text-xs">
+                    <div className="font-extrabold text-emerald-800 flex items-center gap-1">
+                      <Truck className="w-4 h-4" />
+                      <span>Haritha Karma Sena</span>
+                    </div>
+                    <p className="font-bold text-gray-900">
+                      {liveWorker?.fullName || 'Assigned Collection Worker'}
                     </p>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                      <span className="font-bold text-emerald-700">
+                        Actively Collecting
+                      </span>
+                    </div>
+                    {distanceInfo && (
+                      <p className="text-[11px] font-extrabold text-[#0a4d2c] bg-emerald-50 p-1 rounded">
+                        📏 Distance: {distanceInfo.meters}m (~{distanceInfo.walkingMinutes} mins)
+                      </p>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            )}
           </MapContainer>
+
+          {/* In-map overlay notice when worker is not active */}
+          {(!isOnDuty || !workerPos) && (
+            <div className="absolute bottom-4 left-4 right-4 z-[500] pointer-events-none flex justify-center">
+              <div className="bg-slate-900/90 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-xl border border-white/10 flex items-center gap-2.5 max-w-md text-center pointer-events-auto">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+                <span className="text-xs font-semibold text-gray-200">
+                  Worker location is hidden because they are currently off duty. Live GPS coordinates will appear here once duty starts.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

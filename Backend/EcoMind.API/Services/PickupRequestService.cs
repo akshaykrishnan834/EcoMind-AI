@@ -551,12 +551,27 @@ namespace EcoMind.API.Services
             var updated = await _pickupRepository.CompleteRequestAsync(requestId);
             if (updated)
             {
-                // Award points (e.g. 5 points per verified pickup)
-                int pointsEarned = 5;
+                // Award points: 2 redeem points per verified collection delivery, valid for 4 months
+                int pointsEarned = 2;
                 var citizen = await _citizenRepository.GetCitizenByCitizenIdAsync(request.CitizenId);
                 if (citizen != null)
                 {
                     citizen.EcoPoints += pointsEarned;
+                    if (citizen.PointEntries == null)
+                    {
+                        citizen.PointEntries = new List<EcoPointEntry>();
+                    }
+
+                    citizen.PointEntries.Add(new EcoPointEntry
+                    {
+                        Points = pointsEarned,
+                        EarnedAt = DateTime.UtcNow,
+                        ExpiresAt = DateTime.UtcNow.AddMonths(4),
+                        RequestId = request.RequestId,
+                        IsUsed = false,
+                        Description = $"Doorstep plastic collection #{request.RequestId} (+2 Pts, Claim within 4 months)"
+                    });
+
                     await _citizenRepository.UpdateCitizenAsync(citizen);
                 }
 
@@ -564,7 +579,7 @@ namespace EcoMind.API.Services
                     request.CitizenId,
                     "Citizen",
                     $"Pickup Completed & +{pointsEarned} Eco-Points Earned!",
-                    $"Doorstep plastic collection for request {request.RequestId} has been verified and completed successfully by Haritha Karma Sena. You earned {pointsEarned} redeemable Eco-Points!",
+                    $"Doorstep plastic collection for request {request.RequestId} has been verified and completed successfully by Haritha Karma Sena. You earned {pointsEarned} redeemable Eco-Points (Valid to claim within 4 months)!",
                     "pickup_completed",
                     request.RequestId);
             }
