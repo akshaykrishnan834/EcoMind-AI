@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../config/apiConfig";
 import { MapPin, Building2, Layers, Plus, Trash2, CheckCircle2, ShieldCheck, AlertCircle } from "lucide-react";
 
 const PanchayatInfo = ({ initialEdit = false }) => {
@@ -36,7 +37,7 @@ const PanchayatInfo = ({ initialEdit = false }) => {
     const fetchPanchayatInfo = async (selectIndex = 0) => {
         setLoading(true);
         try {
-            const response = await axios.get("http://localhost:5214/api/Panchayat");
+            const response = await axios.get(`${API_BASE_URL}/api/Panchayat`);
             const rawData = response.data;
             const list = Array.isArray(rawData) ? rawData : (rawData ? [rawData] : []);
             setAllPanchayats(list);
@@ -67,7 +68,7 @@ const PanchayatInfo = ({ initialEdit = false }) => {
 
     const fetchWards = async (pName) => {
         try {
-            const res = await axios.get("http://localhost:5214/api/Ward");
+            const res = await axios.get(`${API_BASE_URL}/api/Ward`);
             const allWards = res.data || [];
             const filtered = pName
                 ? allWards.filter(w => (w.panchayatName || w.panchayat || "").trim().toLowerCase() === pName.trim().toLowerCase())
@@ -176,7 +177,7 @@ const PanchayatInfo = ({ initialEdit = false }) => {
         }
 
         try {
-            await axios.post("http://localhost:5214/api/Panchayat", {
+            await axios.post(`${API_BASE_URL}/api/Panchayat`, {
                 panchayatName: panchayat.panchayatName,
                 district: panchayat.district,
                 numberOfWards: parseInt(panchayat.numberOfWards, 10) || wardsList.length,

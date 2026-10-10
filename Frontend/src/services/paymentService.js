@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
-const API_URL = 'http://localhost:5214/api/Payment';
+const API_URL = `${API_BASE_URL}/api/Payment`;
 
 /**
  * Get all monthly payments (current + past months history) for a given citizen

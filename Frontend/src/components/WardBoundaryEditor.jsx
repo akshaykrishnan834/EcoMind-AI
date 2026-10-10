@@ -3,6 +3,7 @@ import { X, Save, Undo, MapPin, Globe, Sparkles, CheckCircle2 } from 'lucide-rea
 import { MapContainer, TileLayer, Polygon, Tooltip, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 function MapClickHandler({ onMapClick }) {
     useMapEvents({
@@ -43,7 +44,7 @@ const WardBoundaryEditor = ({ ward, onClose, onSaved }) => {
         setOfficialNotice('');
         try {
             const pName = ward.panchayatName || ward.panchayat || 'Chirakkadavu';
-            const res = await axios.get(`http://localhost:5214/api/Ward/official-boundary`, {
+            const res = await axios.get(`${API_BASE_URL}/api/Ward/official-boundary`, {
                 params: {
                     panchayatName: pName,
                     wardIdentifier: ward.wardId,
@@ -73,7 +74,7 @@ const WardBoundaryEditor = ({ ward, onClose, onSaved }) => {
 
         setLoading(true);
         try {
-            await axios.put(`http://localhost:5214/api/Ward/${ward.wardId}/boundary`, boundary);
+            await axios.put(`${API_BASE_URL}/api/Ward/${ward.wardId}/boundary`, boundary);
             onSaved();
             onClose();
         } catch (error) {

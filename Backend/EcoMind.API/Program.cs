@@ -85,15 +85,15 @@ var app = builder.Build();
 app.UseCors("ReactPolicy");
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Enable Swagger in all environments for testing hosted endpoints
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-else
-{
-    app.UseHttpsRedirection();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "EcoMind API v1");
+    c.RoutePrefix = "swagger";
+});
+
+app.MapGet("/", () => Results.Ok(new { message = "EcoMind API is running successfully!", status = "Healthy" }));
 
 app.UseAuthorization();
 app.MapControllers();

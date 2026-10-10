@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../config/apiConfig";
 import { Globe, Sparkles, CheckCircle2 } from "lucide-react";
 
 const AddWard = ({ onBack, onWardAdded }) => {
@@ -27,7 +28,7 @@ const AddWard = ({ onBack, onWardAdded }) => {
 
         const timer = setTimeout(async () => {
             try {
-                const res = await axios.get("http://localhost:5214/api/Ward/official-boundary", {
+                const res = await axios.get(`${API_BASE_URL}/api/Ward/official-boundary`, {
                     params: {
                         panchayatName: panchayatName || "Chirakkadavu",
                         wardIdentifier: wardId,
@@ -57,7 +58,7 @@ const AddWard = ({ onBack, onWardAdded }) => {
 
     const fetchPanchayats = async () => {
         try {
-            const res = await axios.get("http://localhost:5214/api/Panchayat");
+            const res = await axios.get(`${API_BASE_URL}/api/Panchayat`);
             const data = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
             setPanchayats(data);
             if (data.length > 0 && data[0].panchayatName) {
@@ -73,7 +74,7 @@ const AddWard = ({ onBack, onWardAdded }) => {
         setLoading(true);
         setMessage(null);
         try {
-            await axios.post("http://localhost:5214/api/Ward", {
+            await axios.post(`${API_BASE_URL}/api/Ward`, {
                 wardId,
                 wardName,
                 panchayatName,

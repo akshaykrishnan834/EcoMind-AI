@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/apiConfig";
 
-const API_URL = "http://localhost:5214/api/Worker";
+const API_URL = `${API_BASE_URL}/api/Worker`;
 
 export const getAllWorkers = async () => {
   const response = await axios.get(API_URL);

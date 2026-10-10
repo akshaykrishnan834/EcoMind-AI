@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
-const API_URL = 'http://localhost:5214/api/Message';
+const API_URL = `${API_BASE_URL}/api/Message`;
 
 const getAuthHeaders = (userId = '', userType = '') => {
   const token = localStorage.getItem('token');

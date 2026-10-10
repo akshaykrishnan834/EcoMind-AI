@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { API_BASE_URL } from '../../config/apiConfig';
 import {
   Truck,
   CheckCircle2,
@@ -81,7 +82,7 @@ const WorkerPickups = ({ wardId, workerId }) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           try {
-            const response = await fetch(`http://localhost:5214/api/Ward/identify?lat=${lat}&lng=${lng}`);
+            const response = await fetch(`${API_BASE_URL}/api/Ward/identify?lat=${lat}&lng=${lng}`);
             if (response.ok) {
               const data = await response.json();
               if (data.wardId) {

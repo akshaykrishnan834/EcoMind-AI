@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/apiConfig";
 
-const API_URL = "http://localhost:5214/api/ai";
+const API_URL = `${API_BASE_URL}/api/ai`;
 
 export const sendChatMessage = async (message, citizenContext = null) => {
   const fullMessage = citizenContext

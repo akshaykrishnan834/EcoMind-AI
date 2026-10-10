@@ -28,6 +28,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap, useMa
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 import {
   getCitizenByEmail,
   updateCitizenProfile,
@@ -331,7 +332,7 @@ export const CitizenProfile = () => {
   // Live GPS Location Detection & Ward Identification
   const identifyWard = async (lat, lng) => {
     try {
-      const response = await axios.get(`http://localhost:5214/api/Ward/identify?lat=${lat}&lng=${lng}`);
+      const response = await axios.get(`${API_BASE_URL}/api/Ward/identify?lat=${lat}&lng=${lng}`);
       if (response.data && response.data.wardId) {
         // Auto-select ward only if citizen has not selected one yet
         setFormData(prev => {

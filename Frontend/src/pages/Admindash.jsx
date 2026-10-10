@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 import Header from '../components/Header';
 import AdminSidebar from '../components/AdminSidebar';
 import PanchayatInfo from './admin/panchaytinfo';
@@ -113,7 +114,7 @@ const Admin = () => {
                 getAllWorkers().catch(() => []),
                 getAllCitizens().catch(() => []),
                 getAllPickupRequests().catch(() => []),
-                axios.get('http://localhost:5214/api/Ward').catch(() => ({ data: [] }))
+                axios.get(`${API_BASE_URL}/api/Ward`).catch(() => ({ data: [] }))
             ]);
 
             const validWorkers = Array.isArray(workersData) ? workersData : [];

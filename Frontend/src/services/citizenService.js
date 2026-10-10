@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/apiConfig";
 
-const API_URL = "http://localhost:5214/api/Citizen";
+const API_URL = `${API_BASE_URL}/api/Citizen`;
 
 export const getAllCitizens = async () => {
   const response = await axios.get(API_URL);
@@ -24,12 +25,12 @@ export const updateCitizenProfile = async (profileData) => {
 };
 
 export const getAllPanchayats = async () => {
-  const response = await axios.get("http://localhost:5214/api/Panchayat");
+  const response = await axios.get(`${API_BASE_URL}/api/Panchayat`);
   return response.data || [];
 };
 
 export const getAllWards = async () => {
-  const response = await axios.get("http://localhost:5214/api/Ward");
+  const response = await axios.get(`${API_BASE_URL}/api/Ward`);
   return response.data || [];
 };
 

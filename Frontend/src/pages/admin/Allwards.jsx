@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../config/apiConfig";
 import { Search, Filter, Plus, Building2, MapPin, CheckCircle2, RefreshCw, ChevronDown, Map as MapIcon, Globe, Sparkles } from "lucide-react";
 import WardBoundaryEditor from "../../components/WardBoundaryEditor";
 
@@ -26,7 +27,7 @@ const Wards = ({ onAddWard }) => {
 
     const fetchWards = async () => {
         try {
-            const response = await axios.get("http://localhost:5214/api/Ward");
+            const response = await axios.get(`${API_BASE_URL}/api/Ward`);
             setWards(response.data || []);
         } catch (error) {
             console.error("Error fetching wards:", error);
@@ -35,7 +36,7 @@ const Wards = ({ onAddWard }) => {
 
     const fetchPanchayats = async () => {
         try {
-            const response = await axios.get("http://localhost:5214/api/Panchayat");
+            const response = await axios.get(`${API_BASE_URL}/api/Panchayat`);
             const data = Array.isArray(response.data) ? response.data : (response.data ? [response.data] : []);
             setPanchayats(data);
         } catch (error) {
@@ -55,7 +56,7 @@ const Wards = ({ onAddWard }) => {
             for (const w of targetWards) {
                 const pName = w.panchayatName || w.panchayat || "Chirakkadavu";
                 try {
-                    const res = await axios.get("http://localhost:5214/api/Ward/official-boundary", {
+                    const res = await axios.get(`${API_BASE_URL}/api/Ward/official-boundary`, {
                         params: {
                             panchayatName: pName,
                             wardIdentifier: w.wardId,
@@ -64,7 +65,7 @@ const Wards = ({ onAddWard }) => {
                     });
 
                     if (res.data && res.data.boundary && res.data.boundary.length >= 3) {
-                        await axios.put(`http://localhost:5214/api/Ward/${w.wardId}/boundary`, res.data.boundary);
+                        await axios.put(`${API_BASE_URL}/api/Ward/${w.wardId}/boundary`, res.data.boundary);
                         updatedCount++;
                     }
                 } catch {
