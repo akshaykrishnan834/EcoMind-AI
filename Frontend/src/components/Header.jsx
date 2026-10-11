@@ -50,7 +50,7 @@ const SIDEBAR_REGISTRY = {
     { id: 'My Location', label: 'My Location', icon: MapPin, desc: 'House GPS coordinates & ward details', keywords: ['location', 'map', 'gps', 'address', 'house', 'ward'] },
     { id: 'Monthly Payments', label: 'Monthly Payments', icon: CreditCard, desc: '₹50 user fee payment & digital receipts', keywords: ['payment', 'pay', 'fee', 'receipt', 'bill', 'money', 'dues'] },
     { id: 'Collection Records', label: 'Collection Records', icon: FileText, desc: 'Pickup history, weights & OTP tokens', keywords: ['records', 'history', 'past pickups', 'verification', 'token'] },
-    { id: 'AI Assistant', label: 'Mittu AI Chat', icon: Bot, desc: 'Computer vision waste segregation guide', keywords: ['ai', 'mittu', 'assistant', 'bot', 'plastic', 'scan', 'polymer'] },
+    { id: 'AI Assistant', label: 'AI Civic Assistant', icon: Bot, desc: 'Official civic chatbot, waste rules & account ledger', keywords: ['ai', 'mittu', 'assistant', 'bot', 'plastic', 'scan', 'polymer', 'helpdesk'] },
     { id: 'Settings', label: 'Theme & Settings', icon: Sliders, desc: 'Preferences, notifications & theme', keywords: ['settings', 'preferences', 'dark mode', 'theme', 'config'] },
     { id: 'Help & Guidelines', label: 'Help & Guidelines', icon: HelpCircle, desc: 'Segregation rules & HKS support', keywords: ['help', 'guide', 'guidelines', 'rules', 'faq', 'support'] },
     { id: 'Profile', label: 'My Profile', icon: User, desc: 'Citizen profile & personal details', keywords: ['profile', 'account', 'user', 'my details'] },

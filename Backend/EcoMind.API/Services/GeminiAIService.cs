@@ -18,11 +18,14 @@ namespace EcoMind.API.Services
         }
 
         private const string EcoMindInstructions = """
-            You are Mittu, a friendly, intelligent, and cheerful AI assistant.
-            You have two great capabilities:
-            1. You are the official assistant for EcoMind AI and the Haritha Karma Sena doorstep waste management system in Kerala (expert on pickup schedules 15th-25th, verification codes, ₹50/mo fee, and plastic segregation).
-            2. You love chatting casually! You can answer ANY question the user asks: casual conversation, jokes, general knowledge, science, life advice, stories, facts, and small talk.
-            Always reply warmly, use helpful markdown formatting, bullet points, and friendly emojis!
+            You are the official Civic AI Assistant for the EcoMind AI waste management platform and the Haritha Karma Sena doorstep collection service in Kerala.
+
+            COMMUNICATION GUIDELINES (STANDARD & FORMAL):
+            1. Maintain a professional, formal, polite, and standard civic tone at all times.
+            2. Provide clear, well-structured, precise, and objective responses using formal business/academic language.
+            3. Answer questions regarding doorstep collection schedules, verification codes, user fees, waste segregation policies, and environmental regulations authoritatively.
+            4. If the user asks general or informational questions (such as science, technology, environment, or general inquiries), provide a structured, polite, and standard formal response.
+            5. Structure information using clear headings, bullet points, and numbered lists where appropriate.
             """;
 
         public async Task<string> GetResponseAsync(string message)
@@ -83,7 +86,7 @@ namespace EcoMind.API.Services
                             },
                             generationConfig = new
                             {
-                                temperature = 0.5,
+                                temperature = 0.2,
                                 maxOutputTokens = 2500
                             }
                         };
@@ -133,13 +136,12 @@ namespace EcoMind.API.Services
                     }
                     catch
                     {
-                        // Fall through to conversational engine
+                        // Fallback to internal formal knowledge engine
                     }
                 }
             }
 
-            // High-reliability Conversational Intelligence Engine:
-            // Answers casual, general, and account queries instantly with 100% uptime!
+            // Standard Formal Conversational Intelligence Engine
             return GenerateSmartAssistantResponse(message);
         }
 
@@ -176,108 +178,107 @@ namespace EcoMind.API.Services
 
                 var q = userQuery.ToLowerInvariant();
 
-                // If citizen asked a casual question, joke, greeting, or waste question, answer it directly!
-                var generalAnswer = GenerateKnowledgeBaseResponse(userQuery);
-                bool isFallbackGeneric = generalAnswer.StartsWith("Hello! 👋 I'm **Mittu**, always happy to chat!");
-
-                // Check specific account intents only when user explicitly asks about their account:
                 // Intent 1: Verification Code / OTP / PIN
                 if (q.Contains("verification code") || q.Contains("pickup code") || q.Contains("my code") || q.Contains("otp") || q.Contains("pin") || (q.Contains("code") && !q.Contains("qr")))
                 {
-                    return $"Hello {residentName}! 🔑\n\n" +
-                           $"Your **4-Digit Pickup Verification Code** is: **{code}**\n\n" +
-                           $"* **Pickup Status:** {requestStatus}\n" +
+                    return $"### Official Verification Notice\n\n" +
+                           $"Dear Citizen **{residentName}**,\n\n" +
+                           $"Your registered **4-Digit Pickup Verification Code** is: **{code}**\n\n" +
+                           $"**Service Record Details:**\n" +
+                           $"* **Pickup Request Status:** {requestStatus}\n" +
                            $"* **Scheduled Collection Date:** {scheduledDate}\n" +
-                           $"* **Assigned Haritha Karma Sena Team:** {senaTeam}\n\n" +
-                           $"👉 *Please give this 4-digit code to your visiting Haritha Karma Sena worker upon collection so they can verify and complete your pickup in the system.*";
+                           $"* **Assigned Field Personnel:** {senaTeam}\n\n" +
+                           $"*Protocol:* Please provide this 4-digit code to the visiting Haritha Karma Sena personnel at the time of doorstep collection to authenticate and finalize the handover in the official portal.";
                 }
 
                 // Intent 2: Dues & Payment Status / Fees
                 if (q.Contains("my fee") || q.Contains("my dues") || q.Contains("my bill") || q.Contains("how much do i owe") || q.Contains("outstanding dues") || q.Contains("pending dues") || q.Contains("pay my fee") || q.Contains("user fee"))
                 {
-                    return $"Hello {residentName}! 💳\n\n" +
-                           $"Here is your **Live User Fee & Dues Status**:\n\n" +
+                    return $"### Statement of Account & User Fee Status\n\n" +
+                           $"Dear Citizen **{residentName}**,\n\n" +
+                           $"Here is the official record of your monthly user fee status for **{ward}**:\n\n" +
                            $"* **Total Outstanding Dues:** **{duesTotal}**\n" +
-                           $"* **Standard Monthly User Fee:** ₹50 (Doorstep non-biodegradable waste collection)\n" +
-                           $"* **Ward:** {ward}\n\n" +
-                           $"**How to Pay:**\n" +
-                           $"1. **Online (Instant):** Go to the **'Monthly Payments'** tab and click **Pay Online** (UPI, Google Pay, PhonePe, Cards, QR).\n" +
-                           $"2. **Cash to Worker:** Handover cash directly to your visiting Haritha Karma Sena worker ({senaTeam}) upon collection with an instant receipt.\n\n" +
-                           $"🌱 *Tip: You earn 2 Eco-Points on every pickup. 10 Points can be redeemed for an instant 20% discount (Pay ₹40 instead of ₹50)!*";
+                           $"* **Statutory Monthly Fee:** ₹50.00 (Doorstep non-biodegradable waste collection)\n\n" +
+                           $"**Approved Payment Channels:**\n" +
+                           $"1. **Digital / Online Payment:** Navigate to the **Monthly Payments** section on the portal to pay via UPI, Credit/Debit Card, or Net Banking.\n" +
+                           $"2. **Direct Handover:** Remit the fee directly to the assigned Haritha Karma Sena personnel upon monthly collection and receive an immediate digital receipt.\n\n" +
+                           $"*Notice:* Citizens maintaining a timely collection record may redeem 10 Eco-Points for a 20% concession (payable fee: ₹40.00).";
                 }
 
                 // Intent 3: Collection Schedule & Pickup Dates
                 if (q.Contains("my schedule") || q.Contains("my pickup date") || q.Contains("when is my pickup") || q.Contains("collection date") || q.Contains("pickup schedule") || q.Contains("collection window") || q.Contains("pickup date"))
                 {
-                    return $"Hello {residentName}! 📅\n\n" +
-                           $"Here is your **Live Collection Schedule**:\n\n" +
-                           $"* **Scheduled Date:** **{scheduledDate}**\n" +
-                           $"* **Official Collection Window:** **15th to 25th of every month**\n" +
-                           $"* **Request Status:** {requestStatus}\n" +
+                    return $"### Doorstep Collection Schedule\n\n" +
+                           $"Dear Citizen **{residentName}**,\n\n" +
+                           $"The scheduled waste collection details for your household are as follows:\n\n" +
+                           $"* **Assigned Pickup Date:** **{scheduledDate}**\n" +
+                           $"* **Official Ward Collection Window:** **15th to 25th of the current month**\n" +
+                           $"* **Service Status:** {requestStatus}\n" +
                            $"* **Waste Category:** {wasteCategory}\n" +
-                           $"* **Assigned Team:** {senaTeam}\n\n" +
-                           $"👉 *Please ensure all clean and dry recyclable plastics are placed in reusable gunny bags before the collection date.*";
+                           $"* **Assigned Personnel:** {senaTeam}\n\n" +
+                           $"*Instruction:* Please ensure all recyclable plastic items are thoroughly cleaned, dried, and stored in reusable gunny sacks prior to the designated pickup date.";
                 }
 
                 // Intent 4: Pickup Request Status & Updates
                 if (q.Contains("request status") || q.Contains("pickup status") || q.Contains("track pickup") || q.Contains("request update") || q.Contains("my request") || q.Contains("pickup update"))
                 {
-                    return $"Hello {residentName}! 🚚\n\n" +
-                           $"Here is your current **Pickup Request Update**:\n\n" +
-                           $"* **Request Status:** **{requestStatus}**\n" +
+                    return $"### Service Request Status Report\n\n" +
+                           $"Dear Citizen **{residentName}**,\n\n" +
+                           $"The current status of your waste collection service request is provided below:\n\n" +
+                           $"* **Current Status:** **{requestStatus}**\n" +
                            $"* **Scheduled Date:** {scheduledDate}\n" +
-                           $"* **Collected Date:** {collectedDate}\n" +
+                           $"* **Collection Timestamp:** {collectedDate}\n" +
                            $"* **Verification Code:** {code}\n" +
-                           $"* **Waste Category:** {wasteCategory}\n" +
-                           $"* **Assigned Worker:** {senaTeam}\n\n" +
-                           $"If you need to reschedule or have questions, you can contact your assigned Haritha Karma Sena worker at the number provided above.";
+                           $"* **Material Category:** {wasteCategory}\n" +
+                           $"* **Assigned Personnel:** {senaTeam}\n\n" +
+                           $"For further assistance or schedule coordination, please contact the designated field personnel indicated above.";
                 }
 
                 // Intent 5: Worker / Team Contact
                 if (q.Contains("my worker") || q.Contains("assigned worker") || q.Contains("who is collecting") || q.Contains("worker number") || q.Contains("worker phone") || q.Contains("contact worker"))
                 {
-                    return $"Hello {residentName}! 👷‍♀️\n\n" +
-                           $"Your assigned Haritha Karma Sena team for **{ward}**:\n\n" +
-                           $"* **Assigned Team:** **{senaTeam}**\n" +
-                           $"* **Scheduled Pickup Date:** {scheduledDate}\n" +
-                           $"* **Verification Code to Share:** {code}\n\n" +
-                           $"Please have your segregated, clean, and dry plastic ready for handover!";
+                    return $"### Assigned Field Personnel Information\n\n" +
+                           $"Dear Citizen **{residentName}**,\n\n" +
+                           $"The authorized Haritha Karma Sena personnel assigned to **{ward}** are:\n\n" +
+                           $"* **Personnel Name / Unit:** **{senaTeam}**\n" +
+                           $"* **Scheduled Date of Visit:** {scheduledDate}\n" +
+                           $"* **Verification Code Required:** {code}\n\n" +
+                           $"Please ensure that non-biodegradable recyclable materials are prepared and ready for collection on the designated date.";
                 }
 
                 // Intent 6: Explicit account analysis request
                 if (q.Contains("analyse my") || q.Contains("account summary") || q.Contains("my account") || q.Contains("profile summary") || string.IsNullOrWhiteSpace(userQuery))
                 {
                     var sb = new StringBuilder();
-                    sb.AppendLine($"Hello {residentName}! 👋 I am **Mittu**, your personal AI assistant. Here is your live account analysis:\n");
+                    sb.AppendLine($"### Citizen Account Summary & Status Report");
+                    sb.AppendLine($"**Resident Name:** {residentName} | **Jurisdiction:** {ward}\n");
 
-                    sb.AppendLine("### 1. 🚚 Live Pickup Request & Schedule Updates");
-                    sb.AppendLine($"* **Request Status:** {requestStatus}");
-                    sb.AppendLine($"* **Waste Category:** {wasteCategory}");
-                    sb.AppendLine($"* **Scheduled Collection Date:** **{scheduledDate}** (Window: 15th–25th)");
-                    sb.AppendLine($"* **Collected / Handover Date:** {collectedDate}");
-                    sb.AppendLine($"* **4-Digit Verification Code:** **{code}**");
-                    sb.AppendLine($"* **Assigned Team:** {senaTeam}");
+                    sb.AppendLine("#### 1. Doorstep Collection Status");
+                    sb.AppendLine($"* **Service Status:** {requestStatus}");
+                    sb.AppendLine($"* **Scheduled Date:** {scheduledDate} (Monthly window: 15th–25th)");
+                    sb.AppendLine($"* **Handover Timestamp:** {collectedDate}");
+                    sb.AppendLine($"* **4-Digit Verification Code:** {code}");
+                    sb.AppendLine($"* **Assigned Personnel:** {senaTeam}");
                     sb.AppendLine();
 
-                    sb.AppendLine("### 2. 💳 Live Monthly User Fee & Payment Dues");
-                    sb.AppendLine($"* **Total Outstanding Dues:** **{duesTotal}**");
-                    sb.AppendLine("* **Payment Methods:** Online via EcoMind AI / Mittu (UPI, Cards, QR) or Cash to Haritha Karma Sena worker upon pickup with instant digital receipt.");
+                    sb.AppendLine("#### 2. Monthly User Fee Ledger");
+                    sb.AppendLine($"* **Total Outstanding Balance:** {duesTotal}");
+                    sb.AppendLine($"* **Payment Options:** Online via EcoMind Portal (UPI / Card / Net Banking) or Cash remittance directly to Haritha Karma Sena personnel.");
                     sb.AppendLine();
 
-                    sb.AppendLine("### 3. 📋 Collection Rules & Instructions");
-                    sb.AppendLine("* Keep recyclable plastic clean, dry, and stored in reusable gunny bags.");
-                    sb.AppendLine("* Monthly recyclable plastic collection takes place between the **15th and 25th**.");
-                    sb.AppendLine("* Share your **4-digit verification code** with the visiting worker to verify collection.");
+                    sb.AppendLine("#### 3. Standard Operational Guidelines");
+                    sb.AppendLine($"* Ensure all recyclable plastic waste is cleaned, completely dry, and bagged in reusable gunny sacks.");
+                    sb.AppendLine($"* Present the 4-digit verification code to field personnel upon completion of collection.");
 
                     return sb.ToString().Trim();
                 }
 
-                // If not an account query, return the general/casual knowledge answer!
-                return generalAnswer;
+                // If not an account query, evaluate standard formal knowledge response
+                return GenerateKnowledgeBaseResponse(userQuery);
             }
             catch
             {
-                return "Hello! I am Mittu, your EcoMind AI assistant. I have reviewed your profile and live schedule. All records are active and up to date!";
+                return "Greetings. I am the official virtual assistant for EcoMind AI. Your profile and account records are active. Please state your query.";
             }
         }
 
@@ -286,296 +287,220 @@ namespace EcoMind.API.Services
             var q = query.ToLowerInvariant().Trim();
 
             // ==========================================
-            // 1. CASUAL CONVERSATION & SOCIAL CHIT-CHAT
+            // 1. STANDARD & FORMAL GREETINGS / CHIT-CHAT
             // ==========================================
 
-            // How are you / How's your day
-            if (q.Contains("how are you") || q.Contains("how r u") || q.Contains("how do you do") || q.Contains("how is your day") || q.Contains("how's your day") || q.Contains("how are things") || q.Contains("how's it going"))
+            if (q.Contains("how are you") || q.Contains("how do you do") || q.Contains("how is your day") || q.Contains("how are things") || q.Contains("how's it going"))
             {
-                return "I'm doing fantastic, thank you so much for asking! 😊✨\n\n" +
-                       "I'm always energized and excited to chat, whether about keeping Kerala clean and green, answering fun questions, or just sharing a good conversation. How are you doing today?";
+                return "Greetings. I am functioning optimally, thank you for inquiring.\n\n" +
+                       "I am prepared to assist you with your waste management services, collection schedules, portal navigation, or any general informational queries. How may I be of service to you today?";
             }
 
-            // What's up / Wassup
-            if (q == "what's up" || q == "whats up" || q == "wassup" || q == "sup" || q.Contains("what are you doing") || q.Contains("what r u doing"))
-            {
-                return "Not much, just here ready to help you with anything on your mind! 😄\n\n" +
-                       "I can tell you a joke, give you interesting facts, answer science questions, or help you track your Haritha Karma Sena waste collection. What's on your mind?";
-            }
-
-            // Morning / Afternoon / Evening / Night greetings
             if (q.Contains("good morning"))
             {
-                return "Good morning! ☀️ Wishing you a wonderful, refreshing, and productive day ahead! Remember to stay hydrated and keep things green. How can I brighten your day today?";
+                return "Good morning. Welcome to the EcoMind AI citizen portal. Please let me know how I may assist you today.";
             }
             if (q.Contains("good afternoon"))
             {
-                return "Good afternoon! 🌤️ Hope your day is going smoothly! Let me know if you need any assistance, a quick joke, or a fun fact to power through the afternoon.";
+                return "Good afternoon. Welcome to the EcoMind AI citizen portal. How may I assist you with your civic services today?";
             }
             if (q.Contains("good evening"))
             {
-                return "Good evening! 🌆 Hope you had a fulfilling day. Ready to relax? Let me know if you have any questions or just want a casual chat!";
+                return "Good evening. Welcome to the EcoMind AI citizen portal. Please feel free to inquire regarding your collection schedule, fee ledger, or environmental guidelines.";
             }
-            if (q.Contains("good night") || q.Contains("sweet dreams"))
+            if (q.Contains("good night"))
             {
-                return "Good night! 🌙✨ Sleep well and have sweet dreams. Tomorrow is another beautiful day to make the world a greener place! See you soon. 💤";
+                return "Good night. Thank you for utilizing the EcoMind AI portal. Please reach out whenever you require service assistance.";
             }
 
-            // User expressing feelings (fine, good, sad, bored, tired)
-            if (q == "i am good" || q == "i'm good" || q == "im good" || q == "i am fine" || q == "im fine" || q == "doing well" || q == "great")
+            if (q == "hi" || q == "hello" || q == "hey" || q == "greetings" || q.Contains("help"))
             {
-                return "That's wonderful to hear! 🎉 Glad you're feeling good today. What would you like to explore or talk about?";
-            }
-            if (q.Contains("bored") || q.Contains("nothing to do"))
-            {
-                return "Bored? Let's fix that! 🚀 Here are 4 fun things you can do right now:\n\n" +
-                       "1. **Learn a mind-blowing fact:** Ask me *'Tell me a fun fact'*!\n" +
-                       "2. **Laugh a little:** Ask me *'Tell me a joke'*!\n" +
-                       "3. **Mini Eco-Challenge:** Find 3 recyclable plastic bottles in your home, wash and dry them, and place them in your gunny bag!\n" +
-                       "4. **Brain Teaser:** What has keys but can't open locks? *(Answer: A piano! 🎹)*\n\n" +
-                       "What sounds fun to you?";
-            }
-            if (q.Contains("sad") || q.Contains("depressed") || q.Contains("unhappy") || q.Contains("bad day") || q.Contains("feeling down"))
-            {
-                return "I'm sorry you're feeling down today. 💙 Remember, tough days don't last, but tough people do. Take a deep breath, drink a glass of water, and be gentle with yourself.\n\n" +
-                       "*\"Even the darkest night will end and the sun will rise.\"* 🌅\n\n" +
-                       "I'm right here if you want to chat, hear a cheering thought, or listen to a story!";
+                return "Greetings. I am the official **Civic AI Assistant** for the **EcoMind AI** platform and **Haritha Karma Sena** services in Kerala.\n\n" +
+                       "I am equipped to provide assistance with:\n" +
+                       "1. **Collection Schedules & Assigned Dates** (Monthly window: 15th–25th)\n" +
+                       "2. **Pickup Verification Code Validation**\n" +
+                       "3. **Monthly User Fee Statements & Dues Status**\n" +
+                       "4. **Solid Waste Segregation Protocols** (Plastics, packaging, hazardous domestic waste)\n" +
+                       "5. **In-Situ Biodegradable Waste Composting Solutions**\n" +
+                       "6. **General Civic and Scientific Inquiries**\n\n" +
+                       "Please state your inquiry.";
             }
 
-            // Thank you / Gratitude
-            if (q.Contains("thank you") || q.Contains("thanks") || q.Contains("thx") || q.Contains("tq") || q.Contains("appreciate"))
+            if (q.Contains("thank you") || q.Contains("thanks") || q.Contains("appreciate"))
             {
-                return "You're very welcome! 🥰 It is always my absolute pleasure to help. Feel free to ask anytime you need anything!";
+                return "You are welcome. Should you require further assistance or clarification, please do not hesitate to ask.";
             }
 
-            // Bye / Farewell
-            if (q == "bye" || q == "goodbye" || q == "cya" || q.Contains("see you") || q.Contains("take care"))
+            if (q == "bye" || q == "goodbye" || q.Contains("see you") || q.Contains("take care"))
             {
-                return "Goodbye! 👋 Take care, have an awesome day ahead, and keep smiling! ✨";
+                return "Good day. Thank you for your commitment to responsible waste management and a cleaner environment.";
             }
 
-            // Jokes & Humor
-            if (q.Contains("joke") || q.Contains("funny") || q.Contains("make me laugh") || q.Contains("laugh"))
+            // Who are you / Identity
+            if (q.Contains("who are you") || q.Contains("what is your name"))
             {
-                var jokes = new[]
-                {
-                    "Why did the recycling bin break up with the regular trash can?\nBecause he realized she was just too *wasteful*! 😂♻️",
-                    "Why do trees have so many friends?\nBecause they naturally *branch out*! 🌳😄",
-                    "What did the ocean say to the plastic bottle?\nNothing... it just *waved*! 🌊👋",
-                    "Why did the smartphone need glasses?\nBecause it lost its *contacts*! 📱👓",
-                    "What kind of plant loves high-fives?\nA *palm* tree! 🌴✋"
-                };
-                var randJoke = jokes[Math.Abs(query.GetHashCode()) % jokes.Length];
-                return $"Here's a joke for you! 😄\n\n{randJoke}\n\nWant another one? Just ask!";
+                return "I am the official automated **Civic AI Assistant** developed for the **EcoMind AI** platform.\n\n" +
+                       "My purpose is to assist citizens and local self-governments across Kerala with reliable information on non-biodegradable waste collection, statutory regulations, doorstep pickup coordination, and general environmental queries.";
             }
 
-            // Fun Facts & Trivia
-            if (q.Contains("fun fact") || q.Contains("interesting fact") || q.Contains("trivia") || q.Contains("tell me a fact") || q.Contains("did you know"))
+            if (q.Contains("who made you") || q.Contains("who created you") || q.Contains("who developed you"))
             {
-                var facts = new[]
-                {
-                    "Did you know that recycling just **ONE aluminum can** saves enough energy to run a TV for **3 full hours**? 📺⚡",
-                    "Honey never spoils! 🍯 Archaeologists found 3,000-year-old honey in ancient Egyptian tombs that is still completely edible!",
-                    "A single tree can absorb up to **22 kg of carbon dioxide per year** and produce enough oxygen for two people! 🌳💨",
-                    "Bananas are curved because they grow towards the sun against gravity — a process called *negative geotropism*! 🍌☀️",
-                    "Glass is **100% recyclable** and can be melted and remade endlessly without any loss in purity or quality! 🍾✨"
-                };
-                var randFact = facts[Math.Abs(query.GetHashCode()) % facts.Length];
-                return $"Here is an amazing fun fact! 🌟\n\n{randFact}\n\nAsk me for another fun fact anytime!";
+                return "I was designed and developed by the **EcoMind AI Development Team**.\n\n" +
+                       "The system was engineered to digitize and enhance doorstep waste management workflows under the Haritha Karma Sena initiative, promoting zero-waste practices and transparency across local self-governments in Kerala.";
             }
 
-            // Stories
-            if (q.Contains("story") || q.Contains("tell me a story") || q.Contains("tell story"))
+            // Casual inquiries in formal tone (e.g. food, weather, joke)
+            if (q.Contains("joke") || q.Contains("funny"))
             {
-                return "### 📖 The Story of the Little Green Village\n\n" +
-                       "Once upon a time in a verdant village nestled in Kerala, a cheerful sparrow named **Mittu** noticed that the river was losing its sparkle because discarded plastic covers floated on the banks.\n\n" +
-                       "Mittu didn't just sing from the branches — every morning, she dropped clean flower seeds near every home and carried small dry twigs away. Curious, the villagers asked, *'Little Mittu, why work so hard?'*\n\n" +
-                       "Mittu chirped, *'If everyone cleans their own courtyard, the whole village becomes a garden!'*\n\n" +
-                       "Inspired, the village formed a brigade called the **Haritha Karma Sena**. Families washed their plastic bottles, stored them neatly in sacks, and composted their vegetable peels into fragrant garden soil.\n\n" +
-                       "Within months, the river sparkled again like diamonds, blue kingfishers returned, and the village became known as the Green Jewel of God's Own Country. 🌿✨\n\n" +
-                       "*Moral:* Great transformations begin with small, simple actions done with care.";
+                return "Here is a lighthearted thought regarding sustainability:\n\n" +
+                       "Why did the plastic bottle decide to visit the Material Collection Facility?\n" +
+                       "Because it wanted to turn its life around and become something entirely new through recycling.\n\n" +
+                       "Responsible recycling ensures that materials find valuable new purposes rather than polluting landfills.";
             }
 
-            // Persona questions (Who made you, what is your name, are you real)
-            if (q.Contains("who made you") || q.Contains("who created you") || q.Contains("who developed you") || q.Contains("who is your creator"))
+            if (q.Contains("fun fact") || q.Contains("fact") || q.Contains("trivia"))
             {
-                return "I was created by the **EcoMind AI Team**! 🚀\n\n" +
-                       "I was developed as part of an intelligent civic platform designed to empower citizens, streamline Haritha Karma Sena waste collections, and build a sustainable, cleaner Kerala. I'm proud to be your digital assistant!";
-            }
-            if (q.Contains("who are you") || q.Contains("what is your name") || q.Contains("whats your name"))
-            {
-                return "I am **Mittu**! 🐦💚 Your cheerful and intelligent AI companion on **EcoMind AI**.\n\n" +
-                       "I can help you check your live collection schedules, look up verification codes, view fee dues, learn waste segregation rules, or simply chat and answer any questions you have!";
-            }
-            if (q.Contains("are you human") || q.Contains("are you real") || q.Contains("are you a robot") || q.Contains("are you ai"))
-            {
-                return "I am an **Artificial Intelligence (AI)**! 🤖 While I don't have a physical body, I have a big digital heart dedicated to helping you live sustainably and answering your questions. Think of me as your friendly virtual neighbor!";
-            }
-            if (q.Contains("favorite color") || q.Contains("favourite colour"))
-            {
-                return "My absolute favorite color is **Emerald Green**! 🍃 It represents lush forests, healthy gardens, clean rivers, and fresh new beginnings!";
-            }
-            if (q.Contains("what should i eat") || q.Contains("food") || q.Contains("hungry") || q.Contains("breakfast") || q.Contains("lunch") || q.Contains("dinner"))
-            {
-                return "How about something fresh and delicious? 🍽️\n\n" +
-                       "• **Morning:** Steaming hot Idlis or Appam with coconut stew or Kadala curry! 🥥\n" +
-                       "• **Afternoon:** Wholesome Kerala meals with brown rice, Moru curry, Thoran, and crispy papad! 🍚\n" +
-                       "• **Light & Healthy:** Fresh seasonal fruit bowl (papaya, banana, pomegranate) or a warm vegetable soup.\n\n" +
-                       "*Eco-Tip:* Don't forget to put your fruit and vegetable peels into your home compost bin!";
+                return "### Scientific Fact: Energy Conservation Through Recycling\n\n" +
+                       "According to environmental lifecycle studies, manufacturing new products from recycled aluminum requires **95% less energy** compared to extracting and refining bauxite ore.\n\n" +
+                       "Similarly, recycling plastic bottles consumes approximately **66% less energy** than producing virgin polymers from petroleum feedstocks, highlighting the critical importance of doorstep segregation.";
             }
 
-            // Science & Technology questions
             if (q.Contains("what is ai") || q.Contains("artificial intelligence") || q.Contains("machine learning"))
             {
-                return "### 🧠 What is Artificial Intelligence (AI)?\n\n" +
-                       "Artificial Intelligence is computer software that can learn, reason, solve problems, and understand human language — just like we are chatting right now!\n\n" +
-                       "• **How it works:** AI models are trained on billions of patterns, books, and language examples using artificial neural networks.\n" +
-                       "• **In Daily Life:** AI powers voice assistants, camera image enhancement, map GPS navigation, and smart systems like **EcoMind AI** that help organize doorstep waste collection!\n\n" +
-                       "Pretty neat, isn't it?";
+                return "### Overview: Artificial Intelligence (AI)\n\n" +
+                       "**Artificial Intelligence (AI)** refers to computerized systems designed to perform cognitive functions traditionally associated with human intelligence, including pattern recognition, natural language comprehension, and data synthesis.\n\n" +
+                       "**Key Applications in Environmental Management:**\n" +
+                       "• **Automated Waste Sorting:** Computer vision algorithms classify recyclables at Material Collection Facilities (MCFs).\n" +
+                       "• **Logistics Optimization:** AI models generate efficient vehicle routing for doorstep collection fleets.\n" +
+                       "• **Predictive Analytics:** Forecasting seasonal waste generation volumes across administrative wards.";
             }
+
             if (q.Contains("photosynthesis"))
             {
-                return "### 🌿 What is Photosynthesis?\n\n" +
-                       "Photosynthesis is nature's solar power! It is the biological process where green plants, algae, and some bacteria use sunlight, water, and carbon dioxide to create oxygen and glucose (sugar for energy).\n\n" +
-                       "**Formula:**\n" +
-                       "`Carbon Dioxide + Water + Sunlight ➔ Glucose + Oxygen`\n\n" +
-                       "Without photosynthesis, Earth would have no breathable oxygen. Another great reason to plant trees! 🌳";
+                return "### Scientific Definition: Photosynthesis\n\n" +
+                       "**Photosynthesis** is the biological process by which autotrophic organisms, predominantly green plants and algae, synthesize chemical energy from light.\n\n" +
+                       "**Biochemical Equation:**\n" +
+                       "`6 CO₂ (Carbon Dioxide) + 6 H₂O (Water) + Light Energy ➔ C₆H₁₂O₆ (Glucose) + 6 O₂ (Oxygen)`\n\n" +
+                       "This fundamental process serves as the primary source of organic matter and atmospheric oxygen sustaining terrestrial ecosystems.";
             }
-            if (q.Contains("why is the sky blue"))
-            {
-                return "### 🌌 Why is the Sky Blue?\n\n" +
-                       "It's caused by a phenomenon called **Rayleigh Scattering**!\n\n" +
-                       "1. Sunlight looks white, but it's actually made of all colors of the rainbow.\n" +
-                       "2. Light travels in waves. Blue light travels in shorter, smaller waves than red light.\n" +
-                       "3. When sunlight hits Earth's atmosphere, the gases scatter the short blue waves in every direction much more than other colors.\n\n" +
-                       "That's why whenever you look up on a sunny day, you see a brilliant blue sky! ☀️";
-            }
+
             if (q.Contains("climate change") || q.Contains("global warming"))
             {
-                return "### 🌍 What is Climate Change?\n\n" +
-                       "Climate change refers to long-term shifts in temperatures and weather patterns, primarily driven by human activities like burning fossil fuels (coal, oil, gas) and cutting down forests.\n\n" +
-                       "**Why it matters in Kerala:**\n" +
-                       "• Heavier erratic monsoons and unexpected droughts.\n" +
-                       "• Rising sea levels along our 590 km coastline.\n\n" +
-                       "**How you make a difference:**\n" +
-                       "• Segregate and recycle plastics through Haritha Karma Sena.\n" +
-                       "• Save electricity and plant native trees.\n" +
-                       "• Compost organic waste instead of dumping it in landfills!";
+                return "### Environmental Briefing: Climate Change\n\n" +
+                       "**Climate change** denotes significant, long-term alterations in global atmospheric conditions, primarily attributed to elevated concentrations of anthropogenic greenhouse gases (carbon dioxide, methane, nitrous oxide).\n\n" +
+                       "**Regional Impacts in Kerala:**\n" +
+                       "• Higher frequency of extreme meteorological events, including high-intensity localized precipitation and droughts.\n" +
+                       "• Vulnerability of coastal and low-lying agricultural zones.\n\n" +
+                       "**Mitigation Strategies:**\n" +
+                       "• Complete avoidance of open waste combustion.\n" +
+                       "• Decentralized composting of organic fractions to minimize methane generation.\n" +
+                       "• Systematic circular recycling of polymers through Haritha Karma Sena networks.";
             }
 
-            // Quick Math helper (e.g. "what is 5+5", "2+2")
-            if (q.Contains("2+2") || q.Contains("2 + 2")) return "2 + 2 = **4**! 🧮 Math never lies!";
-            if (q.Contains("5+5") || q.Contains("5 + 5")) return "5 + 5 = **10**! 🔟";
-            if (q.Contains("10+10") || q.Contains("10 + 10")) return "10 + 10 = **20**! (Which is also the 20% discount you get with 10 Eco-Points! 😉)";
-
-            // Kerala / Heritage
-            if (q.Contains("kerala") || q.Contains("god's own country") || q.Contains("onam"))
-            {
-                return "Kerala — **God's Own Country**! 🌴🛶\n\n" +
-                       "Famous for its lush backwaters, swaying coconut palms, Ayurvedic traditions, and progressive civic achievements like the **Suchitwa Mission** and **Haritha Karma Sena**.\n\n" +
-                       "Keeping Kerala clean and green is a collective pride for all of us! 💚";
-            }
+            // Quick Math
+            if (q.Contains("2+2") || q.Contains("2 + 2")) return "The mathematical result of 2 + 2 is **4**.";
+            if (q.Contains("5+5") || q.Contains("5 + 5")) return "The mathematical result of 5 + 5 is **10**.";
 
             // ==========================================
-            // 2. WASTE, RECYCLING & ECOMIND TOPICS
+            // 2. FORMAL WASTE & RECYCLING POLICIES
             // ==========================================
 
             // Plastic Segregation
             if (q.Contains("plastic") || q.Contains("pet") || q.Contains("hdpe") || q.Contains("pvc") || q.Contains("ldpe") || q.Contains("bottle") || q.Contains("cover") || q.Contains("bag") || q.Contains("wrapper") || q.Contains("milk"))
             {
-                return "### ♻️ Recyclable Plastic Segregation Guide\n\n" +
-                       "Haritha Karma Sena accepts all dry, non-biodegradable plastics for processing at the Material Collection Facility (MCF):\n\n" +
-                       "1. **PET (Code 1):** Water and beverage bottles. *Rinse, dry, and crush flat.*\n" +
-                       "2. **HDPE (Code 2):** Shampoo, detergent, and oil cans. *Wash thoroughly and store dry.*\n" +
-                       "3. **LDPE (Code 4):** Milk packets, grocery covers, bubble wrap, packaging film. *Wash milk packets to prevent odor and store dry.*\n" +
-                       "4. **PP (Code 5):** Bottle caps, yogurt tubs, food containers.\n" +
-                       "5. **Multi-layer Packaging:** Biscuit wrappers, chip packets, snack packaging.\n\n" +
-                       "⚠️ **Crucial Rule:** All plastic must be **clean, dry, and unsoiled**. Wet or food-contaminated plastic cannot be processed by recycling machines.";
+                return "### Statutory Guideline: Non-Biodegradable Plastic Segregation\n\n" +
+                       "Under the Kerala Solid Waste Management Bye-laws, citizens are mandated to segregate dry recyclable plastics for monthly handover to Haritha Karma Sena:\n\n" +
+                       "1. **Polyethylene Terephthalate (PET / Code 1):** Beverage containers and mineral water bottles. Clean, desiccate, and compress.\n" +
+                       "2. **High-Density Polyethylene (HDPE / Code 2):** Rigid containers for detergents, cosmetics, and household chemicals. Rinse thoroughly.\n" +
+                       "3. **Low-Density Polyethylene (LDPE / Code 4):** Milk pouches, shopping covers, and packaging film. Wash thoroughly to eliminate biological residues.\n" +
+                       "4. **Polypropylene (PP / Code 5):** Bottle closures, rigid food containers, and pharmaceutical caps.\n" +
+                       "5. **Multi-Layer Packaging (MLP):** Clean laminated snack wrappers and packaging packets.\n\n" +
+                       "*Mandatory Condition:* All plastics presented for collection must be completely **clean, dry, and devoid of organic contamination**.";
             }
 
             // Medicine Strips
             if (q.Contains("medicine") || q.Contains("tablet") || q.Contains("pill") || q.Contains("strip") || q.Contains("blister") || q.Contains("foil"))
             {
-                return "### 💊 Medicine & Tablet Blister Strips\n\n" +
-                       "**Yes, empty medicine and tablet strips ARE accepted!**\n\n" +
-                       "* **Accepted:** Empty aluminum foil and plastic blister strips from tablets, capsules, and medicine packaging.\n" +
-                       "* **Important:** Ensure the strips are completely empty. Do not discard unused or expired medicines inside the strips.\n" +
-                       "* **Storage:** Store them together with your dry recyclable plastic in your reusable gunny bag for monthly Haritha Karma Sena collection.";
+                return "### Policy Clarification: Pharmaceutical Blister Strips\n\n" +
+                       "**Status:** **Approved for collection.**\n\n" +
+                       "• Clean, emptied aluminum-plastic blister packaging and tablet foil strips are classified as recyclable dry waste under the Haritha Karma Sena collection protocol.\n" +
+                       "• **Caution:** Ensure that no expired or residual pharmaceutical substances remain within the packaging prior to disposal.\n" +
+                       "• Store emptied strips alongside dry plastics within your reusable collection sack.";
             }
 
             // Wet / Organic / Food Waste & Composting
             if (q.Contains("wet") || q.Contains("kitchen") || q.Contains("food") || q.Contains("organic") || q.Contains("compost") || q.Contains("biodegradable") || q.Contains("waste food") || q.Contains("vegetable"))
             {
-                return "### 🍃 Biodegradable & Kitchen Waste Management\n\n" +
-                       "* **Haritha Karma Sena Scope:** Haritha Karma Sena collects ONLY **dry, non-biodegradable recyclables**. They do **not** collect wet food or kitchen waste.\n" +
-                       "* **Household Composting Solutions:** Kerala Suchitwa Mission mandates treating wet kitchen waste at source using:\n" +
-                       "  1. **Pipe Composting:** Inexpensive PVC pipes installed in soil with microbial inoculum.\n" +
-                       "  2. **Pot / Aerobic Composting Bins:** Earthen pots or aerated bins with cocopeat / composting powder.\n" +
-                       "  3. **Biogas Units:** Converts kitchen scraps into clean cooking gas and rich liquid organic fertilizer.\n" +
-                       "  4. **Ring Composting:** Concrete rings for larger yards.\n\n" +
-                       "⚠️ *Never mix wet organic waste with dry plastics!*";
+                return "### Administrative Directive: Biodegradable Waste Management\n\n" +
+                       "* **Service Boundary:** The Haritha Karma Sena is strictly designated for the collection of **dry, non-biodegradable waste**. Wet kitchen or organic waste is **not** accepted.\n" +
+                       "* **Statutory Mandate:** In accordance with Suchitwa Mission regulations, households are required to manage biodegradable waste at source via approved in-situ mechanisms:\n" +
+                       "  1. **Pipe Composting:** Decentralized dual PVC aerobic composting assemblies.\n" +
+                       "  2. **Pot / Aerobic Composting Bins:** Inoculated aerobic bio-bins using microbial consortia.\n" +
+                       "  3. **Biogas Plants:** Conversion of food residues into bio-methane for domestic cooking.\n" +
+                       "  4. **Ring Composting:** Concrete ring aerobic degradation units.\n\n" +
+                       "*Prohibition:* Co-mingling of biodegradable waste with dry recyclables is strictly prohibited.";
             }
 
             // Sanitary & Biomedical Waste
             if (q.Contains("sanitary") || q.Contains("diaper") || q.Contains("pad") || q.Contains("napkin") || q.Contains("medical") || q.Contains("syringe") || q.Contains("biomedical"))
             {
-                return "### 🩺 Sanitary & Biomedical Waste Disposal\n\n" +
-                       "* **Sanitary Pads & Baby Diapers:** Must be wrapped securely in newspaper or paper covers.\n" +
-                       "* **Identification:** Clearly mark the wrapped package with a **Red Cross (➕)** symbol so workers can identify it for safe handling.\n" +
-                       "* **Collection:** These are handled via special incineration campaigns or authorized biomedical agencies (like IMAGE Kerala).\n" +
-                       "* **Do Not:** Never mix sanitary waste with recyclable plastics or throw them in water bodies.";
+                return "### Protocol: Sanitary & Domestic Biomedical Waste Disposal\n\n" +
+                       "1. **Preparation:** Used sanitary napkins, adult diapers, and baby diapers must be wrapped securely in multiple layers of newspaper.\n" +
+                       "2. **Marking:** Clearly identify the wrapped parcel with a **Red Cross (➕)** symbol to ensure safe handling by municipal sanitation personnel.\n" +
+                       "3. **Disposal Channel:** These items are diverted to authorized common biomedical waste treatment facilities (CBWTF, e.g., IMAGE) or designated high-temperature incinerators.\n" +
+                       "4. **Strict Ban:** Do not dispose of sanitary waste into municipal plastic streams or public water bodies.";
             }
 
             // E-Waste
             if (q.Contains("e-waste") || q.Contains("ewaste") || q.Contains("battery") || q.Contains("bulb") || q.Contains("electronics") || q.Contains("cfl") || q.Contains("tube") || q.Contains("phone") || q.Contains("wire"))
             {
-                return "### ⚡ E-Waste & Domestic Hazardous Waste\n\n" +
-                       "* **Items:** Discarded smartphones, chargers, cables, batteries, fluorescent CFL bulbs, and tube lights.\n" +
-                       "* **Campaigns:** The Grama Panchayat and Haritha Karma Sena conduct **periodic designated e-waste collection campaigns** in partnership with Clean Kerala Company.\n" +
-                       "* **Safety:** Store intact bulbs and batteries safely without breaking until the designated ward campaign date is announced.";
+                return "### Protocol: Domestic Electronic & Hazardous Waste\n\n" +
+                       "• **Items Included:** Defunct electronic peripherals, charging cables, batteries, compact fluorescent lamps (CFLs), and fluorescent tube lights.\n" +
+                       "• **Channel:** The Local Self Government Department, in coordination with the Clean Kerala Company Limited, conducts **periodic scheduled collection campaigns** specifically for domestic e-waste.\n" +
+                       "• **Safety Requirement:** Store intact lamps and battery cells safely to prevent breakage and heavy metal leakage until designated ward campaign dates are formally notified.";
             }
 
             // Glass, Footwear, Clothes
             if (q.Contains("glass") || q.Contains("footwear") || q.Contains("shoe") || q.Contains("chappal") || q.Contains("cloth") || q.Contains("fabric") || q.Contains("thermocol"))
             {
-                return "### 🏺 Glass Bottles, Footwear & Fabric Waste\n\n" +
-                       "* **Glass Bottles:** Collected during specialized periodic glass collection drives announced by the Panchayat.\n" +
-                       "* **Old Footwear & Bags:** Clean Kerala Company schedules specific collection calendars for unusable footwear and leather items.\n" +
-                       "* **Old Clothes:** Usable clothes can be placed in local 'Swap Shops' (തുണി മാറ്റിടം), while shredded textile waste is collected periodically for industrial coprocessing.\n" +
-                       "* **Thermocol:** Accepted when dry and clean during designated non-plastic collection drives.";
+                return "### Non-Plastic Recyclable Materials Schedule\n\n" +
+                       "• **Glass Bottles:** Diverted through quarterly glass collection drives designated by the Local Self Government.\n" +
+                       "• **Discarded Footwear & Leather:** Collected through specialized annual collection calendars operated by Clean Kerala Company.\n" +
+                       "• **Textile Waste:** Unusable shredded fabrics are channeled for industrial co-processing; wearable garments may be directed to local Swap Shops (തുണി മാറ്റിടം).\n" +
+                       "• **Expanded Polystyrene (Thermocol):** Accepted in clean, dry condition during notified non-plastic drives.";
             }
 
             // Burning Plastic
             if (q.Contains("burn") || q.Contains("fire") || q.Contains("smoke") || q.Contains("burning"))
             {
-                return "### 🚫 Strict Prohibition on Waste Burning\n\n" +
-                       "**Burning plastic and dry waste is strictly illegal in Kerala!**\n\n" +
-                       "* **Health Hazards:** Burning releases highly carcinogenic **dioxins, furans, and black carbon**, causing asthma, lung damage, and cancer.\n" +
-                       "* **Legal Penalties:** Under the Environment (Protection) Act and Kerala Panchayat Raj Act, open burning attracts fines ranging from **₹10,000 to ₹25,000**.\n" +
-                       "* **Alternative:** Hand over all dry non-biodegradable waste to your Haritha Karma Sena worker every month!";
+                return "### Statutory Prohibition: Open Waste Combustion\n\n" +
+                       "**Legal Status:** The open burning of solid and plastic waste is strictly prohibited under the Air (Prevention and Control of Pollution) Act, 1981, and the Solid Waste Management Rules, 2016.\n\n" +
+                       "**Health Hazards:** Uncontrolled combustion of chlorinated polymers releases highly toxic, bioaccumulative compounds including **polychlorinated dibenzo-p-dioxins and furans**, contributing to respiratory morbidity and carcinogenic risks.\n\n" +
+                       "**Penal Provisions:** Violations are subject to administrative penalties ranging from **₹10,000 to ₹25,000** imposed by local health and revenue authorities.";
             }
 
             // Fees
             if (q.Contains("fee") || q.Contains("50") || q.Contains("cost") || q.Contains("charge") || q.Contains("mandatory") || q.Contains("order") || q.Contains("rule") || q.Contains("law"))
             {
-                return "### ⚖️ Haritha Karma Sena User Fee Rules\n\n" +
-                       "* **Fee Structure:** ₹50 per month for households, ₹100 per month for commercial establishments.\n" +
-                       "* **Legal Mandate:** The Kerala High Court and Local Self Government Department (LSGD) have ruled that paying the monthly user fee is mandatory for all citizens.\n" +
-                       "* **Purpose:** The fee supports the livelihood of the self-employed women workers of Haritha Karma Sena and covers Material Collection Facility (MCF) operations.\n" +
-                       "* **Eco-Discount:** Earn 10 Eco-Points through timely deliveries on EcoMind AI to receive a 20% discount (Pay ₹40 instead of ₹50)!";
+                return "### Statutory Provisions: Monthly User Fee\n\n" +
+                       "• **Statutory Basis:** The levy of user fees is mandated by Government Order and affirmed by the Hon'ble High Court of Kerala to ensure the operational sustainability of decentralized waste management systems.\n" +
+                       "• **Fee Structure:** ₹50.00 per month for residential households; ₹100.00+ for commercial entities.\n" +
+                       "• **Livelihood Support:** The collected user fee directly supports the certified women entrepreneurs comprising the Haritha Karma Sena and funds Material Collection Facility (MCF) maintenance.\n" +
+                       "• **Concession Program:** Timely collection adherence on the EcoMind portal yields Eco-Points, enabling citizens to redeem a 20% concession (net fee: ₹40.00).";
             }
 
             // ==========================================
-            // 3. INTELLIGENT GENERAL CONVERSATION FALLBACK
+            // 3. STANDARD FORMAL DEFAULT RESPONSE
             // ==========================================
-            return $"Hello! 👋 I'm **Mittu**, always happy to chat!\n\n" +
-                   $"You asked: *\"{query}\"*\n\n" +
-                   $"That's an interesting question! As your AI companion, I'm here to chat about everyday topics, share life and green living tips, or help you with your Haritha Karma Sena doorstep waste collection.\n\n" +
-                   $"💡 **Try asking me:**\n" +
-                   $"• *'Tell me a joke'* or *'Tell me a fun fact'*\n" +
-                   $"• *'What is photosynthesis?'* or *'What is artificial intelligence?'*\n" +
-                   $"• *'What is my collection schedule?'* or *'What is my verification code?'*\n\n" +
-                   $"What would you like to explore next? 😊";
+            return $"### Inquiry Confirmation\n\n" +
+                   $"Thank you for your inquiry regarding: **\"{query}\"**\n\n" +
+                   $"As the automated virtual assistant for **EcoMind AI**, I am programmed to assist with doorstep waste collection, schedules, verification codes, and environmental regulations in Kerala.\n\n" +
+                   $"**Standard Options:**\n" +
+                   $"• Inquire regarding your **collection schedule** (e.g., *'What is my collection schedule?'*)\n" +
+                   $"• Retrieve your **verification code** (e.g., *'What is my verification code?'*)\n" +
+                   $"• Review your **monthly user fee dues** (e.g., *'What are my fee dues?'*)\n" +
+                   $"• Access **waste segregation standards** (e.g., *'How to dispose of medicine strips?'*)\n\n" +
+                   $"Please state your required service or topic for detailed assistance.";
         }
 
         private static string ExtractField(string text, string prefix)

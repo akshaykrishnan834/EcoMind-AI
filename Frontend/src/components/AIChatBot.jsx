@@ -147,7 +147,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
 - Current Month (${currentMonthName} ${currentYearNum}): ${isCurrentPaid ? 'PAID (₹50 paid)' : 'UNPAID (₹50 due)'}
 - Overdue Past Unpaid Months: ${pastMonthsText}
 - Total Outstanding Dues: ₹${totalDueAmount} (${isCurrentPaid && pendingPastDues.length === 0 ? 'All fees up to date' : `Needs payment of ₹${totalDueAmount}`})
-- Payment Methods: Online via EcoMind AI / Mittu ("Monthly Payments" tab using UPI/QR/Cards) or Cash to Haritha Karma Sena worker upon pickup with instant digital receipt.`;
+- Payment Methods: Online via EcoMind AI Portal ("Monthly Payments" tab using UPI/QR/Cards) or Cash to Haritha Karma Sena worker upon pickup with instant digital receipt.`;
   }, [
     citizenName,
     citizenId,
@@ -173,7 +173,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
     {
       id: 'welcome',
       sender: 'ai',
-      text: `Hello ${citizenName}! 👋 I am **Mittu**, your smart AI assistant for waste collection, pickup schedules, and dues analysis in **${panchayatName} (${wardId})**.\n\nI can analyze your **live collection schedule**, **pickup request updates**, and **payment dues**, or answer any questions about Haritha Karma Sena recycling rules!`,
+      text: `Greetings, **${citizenName}**. Welcome to the **EcoMind Civic Virtual Helpdesk** for **${panchayatName} (${wardId})**.\n\nI am your official automated assistant for municipal solid waste collection schedules, special pickup request tracking, statutory monthly user fee management, and Haritha Karma Sena segregation regulations.\n\nHow may I assist you today?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -229,7 +229,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
       const errorMessage =
         err.response?.data?.message ||
         err.response?.data?.error ||
-        "I'm sorry, Mittu is currently unable to reach the service. Please verify your connection or try again shortly.";
+        "The assistance service is momentarily unavailable. Please check your network connection or try again shortly.";
 
       setMessages((prev) => [
         ...prev,
@@ -264,7 +264,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
       {
         id: `welcome-${Date.now()}`,
         sender: 'ai',
-        text: `Chat reset. Ask Mittu to analyze your schedule updates, dues, or pickup request status!`,
+        text: `Conversation reset. Please submit your inquiry regarding waste collection schedules, pickup requests, or monthly fee statements.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
@@ -325,28 +325,28 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
 
   const quickAnalysisPrompts = [
     {
-      label: "⚡ Analyse Full Account",
-      prompt: "Please give me a complete analysis of my schedule updates, dues, and pickup request updates."
+      label: "📋 Account Statement",
+      prompt: "Please provide a formal account statement detailing my collection schedule, request status, and monthly user fee ledger."
     },
     {
-      label: "📅 Upcoming Pickup Date",
-      prompt: "What is my upcoming collection date and is the pickup scheduled or completed?"
+      label: "📅 Collection Schedule",
+      prompt: "What is the scheduled doorstep collection date for my ward and residence?"
     },
     {
-      label: "💰 Check Pending Dues",
-      prompt: "Do I have any pending monthly user fee dues, and what is the total amount due?"
+      label: "🔑 Verification Code",
+      prompt: "What is my 4-digit pickup verification code for the visiting Haritha Karma Sena personnel?"
     },
     {
-      label: "📦 Pickup Request Status",
-      prompt: "What is the latest update on my monthly plastic pickup request and verification code?"
+      label: "💳 User Fee Dues",
+      prompt: "Please state my monthly user fee status and any outstanding balance."
     },
     {
-      label: "👤 Assigned Team Info",
-      prompt: "Who is the Haritha Karma Sena worker assigned to my ward, and how can I contact them?"
+      label: "♻️ Segregation Guidelines",
+      prompt: "What are the statutory segregation rules for non-biodegradable plastics and dry waste?"
     },
     {
-      label: "♻ Eligible Plastics",
-      prompt: "What plastic items are accepted for recycling by Haritha Karma Sena?"
+      label: "🌱 Organic Waste Protocol",
+      prompt: "What are the prescribed guidelines for managing kitchen and biodegradable waste?"
     }
   ];
 
@@ -372,14 +372,14 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-white">
-                Mittu AI Assistant
+                EcoMind AI Assistant
               </h2>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/25 text-emerald-200 border border-emerald-400/30 backdrop-blur-xs">
-                <Sparkles className="w-2.5 h-2.5 text-emerald-300" /> Live AI
+                <Sparkles className="w-2.5 h-2.5 text-emerald-300" /> Official Helpdesk
               </span>
             </div>
             <p className="text-[11px] text-emerald-100/80 font-medium">
-              Live Analysis • {wardId}, {panchayatName}
+              Civic Inquiry Desk • {wardId}, {panchayatName}
             </p>
           </div>
         </div>
@@ -472,7 +472,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
           className="px-3 py-1.5 bg-gradient-to-r from-[#0a4d2c] to-emerald-700 hover:from-emerald-900 hover:to-emerald-800 text-white font-extrabold text-[11px] rounded-xl transition-all shadow-xs hover:shadow flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
         >
           <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-          <span>Analyse Account</span>
+          <span>Statement Summary</span>
         </button>
       </div>
 
@@ -558,7 +558,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
                 <span className="w-2 h-2 rounded-full bg-emerald-600 animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
               <span className="text-xs font-semibold text-emerald-900">
-                Mittu is analyzing live data...
+                Processing civic records and guidelines...
               </span>
             </div>
           </div>
@@ -572,9 +572,9 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-[#0a4d2c]">
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Suggested Queries for Mittu</span>
+            <span>Recommended Civic Inquiries</span>
           </div>
-          <span className="text-[10px] text-gray-400 font-medium hidden sm:inline">Tap to ask instantly</span>
+          <span className="text-[10px] text-gray-400 font-medium hidden sm:inline">Select to submit inquiry</span>
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
@@ -608,7 +608,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              placeholder="Ask Mittu: 'Analyse schedule updates', 'Check dues', 'Verification code'..."
+              placeholder="Type your civic inquiry (e.g., 'Collection schedule', 'Verification code', 'Plastic rules')..."
               className="w-full bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/15 rounded-2xl py-2.5 sm:py-3 pl-4 pr-4 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all shadow-inner"
             />
           </div>
@@ -619,14 +619,14 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
             className="px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-[#0a4d2c] to-emerald-700 hover:from-emerald-900 hover:to-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
           >
             <Send className="w-4 h-4" />
-            <span className="hidden sm:inline">Ask Mittu</span>
+            <span className="hidden sm:inline">Submit Inquiry</span>
           </button>
         </form>
 
         <div className="flex items-center justify-between text-[10px] text-gray-400 px-1 font-medium">
           <span className="flex items-center gap-1">
             <ShieldCheck className="w-3 h-3 text-emerald-600" />
-            Analyzes live collection, pickup requests & dues
+            Official municipal portal for waste collection schedules, verification & dues
           </span>
           <span>EcoMind AI • Haritha Karma Sena</span>
         </div>

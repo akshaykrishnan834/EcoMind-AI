@@ -239,7 +239,7 @@ export const LandingPage = () => {
       step: '02',
       title: 'Request Pickup',
       badge: '1-Click Portal',
-      desc: 'Schedule on-demand plastic pickup or get segregation advice from AI Assistant Mittu.'
+      desc: 'Schedule on-demand plastic pickup or get segregation advice from EcoMind Civic AI Assistant.'
     },
     {
       step: '03',
@@ -751,7 +751,7 @@ export const LandingPage = () => {
                 <Bot className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white mt-5">
-                AI Mittu Waste Classifier
+                EcoMind AI Waste Classifier
               </h3>
               <p className="text-xs font-bold text-[#0a4d2c] dark:text-emerald-400 mt-1">
                 Computer Vision Polymer Identification
