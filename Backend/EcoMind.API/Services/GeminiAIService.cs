@@ -176,8 +176,13 @@ namespace EcoMind.API.Services
 
                 var q = userQuery.ToLowerInvariant();
 
+                // If citizen asked a casual question, joke, greeting, or waste question, answer it directly!
+                var generalAnswer = GenerateKnowledgeBaseResponse(userQuery);
+                bool isFallbackGeneric = generalAnswer.StartsWith("Hello! 👋 I'm **Mittu**, always happy to chat!");
+
+                // Check specific account intents only when user explicitly asks about their account:
                 // Intent 1: Verification Code / OTP / PIN
-                if (q.Contains("code") || q.Contains("verification") || q.Contains("otp") || q.Contains("pin") || q.Contains("4-digit"))
+                if (q.Contains("verification code") || q.Contains("pickup code") || q.Contains("my code") || q.Contains("otp") || q.Contains("pin") || (q.Contains("code") && !q.Contains("qr")))
                 {
                     return $"Hello {residentName}! 🔑\n\n" +
                            $"Your **4-Digit Pickup Verification Code** is: **{code}**\n\n" +
@@ -188,7 +193,7 @@ namespace EcoMind.API.Services
                 }
 
                 // Intent 2: Dues & Payment Status / Fees
-                if (q.Contains("due") || q.Contains("fee") || q.Contains("pay") || q.Contains("money") || q.Contains("bill") || q.Contains("cost") || q.Contains("rate") || q.Contains("price"))
+                if (q.Contains("my fee") || q.Contains("my dues") || q.Contains("my bill") || q.Contains("how much do i owe") || q.Contains("outstanding dues") || q.Contains("pending dues") || q.Contains("pay my fee") || q.Contains("user fee"))
                 {
                     return $"Hello {residentName}! 💳\n\n" +
                            $"Here is your **Live User Fee & Dues Status**:\n\n" +
@@ -202,7 +207,7 @@ namespace EcoMind.API.Services
                 }
 
                 // Intent 3: Collection Schedule & Pickup Dates
-                if (q.Contains("schedule") || q.Contains("date") || q.Contains("when") || q.Contains("time") || q.Contains("visit") || q.Contains("day") || q.Contains("window"))
+                if (q.Contains("my schedule") || q.Contains("my pickup date") || q.Contains("when is my pickup") || q.Contains("collection date") || q.Contains("pickup schedule") || q.Contains("collection window") || q.Contains("pickup date"))
                 {
                     return $"Hello {residentName}! 📅\n\n" +
                            $"Here is your **Live Collection Schedule**:\n\n" +
@@ -215,7 +220,7 @@ namespace EcoMind.API.Services
                 }
 
                 // Intent 4: Pickup Request Status & Updates
-                if (q.Contains("request") || q.Contains("status") || q.Contains("update") || q.Contains("pickup") || q.Contains("progress") || q.Contains("pending") || q.Contains("completed"))
+                if (q.Contains("request status") || q.Contains("pickup status") || q.Contains("track pickup") || q.Contains("request update") || q.Contains("my request") || q.Contains("pickup update"))
                 {
                     return $"Hello {residentName}! 🚚\n\n" +
                            $"Here is your current **Pickup Request Update**:\n\n" +
@@ -229,7 +234,7 @@ namespace EcoMind.API.Services
                 }
 
                 // Intent 5: Worker / Team Contact
-                if (q.Contains("worker") || q.Contains("team") || q.Contains("phone") || q.Contains("contact") || q.Contains("who is coming") || q.Contains("collector") || q.Contains("number"))
+                if (q.Contains("my worker") || q.Contains("assigned worker") || q.Contains("who is collecting") || q.Contains("worker number") || q.Contains("worker phone") || q.Contains("contact worker"))
                 {
                     return $"Hello {residentName}! 👷‍♀️\n\n" +
                            $"Your assigned Haritha Karma Sena team for **{ward}**:\n\n" +
@@ -239,37 +244,36 @@ namespace EcoMind.API.Services
                            $"Please have your segregated, clean, and dry plastic ready for handover!";
                 }
 
-                // If citizen asked a casual or specific question while logged in, answer that directly!
-                if (!string.IsNullOrWhiteSpace(userQuery) &&
-                    !q.Contains("analyse") && !q.Contains("summary") && !q.Contains("account"))
+                // Intent 6: Explicit account analysis request
+                if (q.Contains("analyse my") || q.Contains("account summary") || q.Contains("my account") || q.Contains("profile summary") || string.IsNullOrWhiteSpace(userQuery))
                 {
-                    return GenerateKnowledgeBaseResponse(userQuery);
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"Hello {residentName}! 👋 I am **Mittu**, your personal AI assistant. Here is your live account analysis:\n");
+
+                    sb.AppendLine("### 1. 🚚 Live Pickup Request & Schedule Updates");
+                    sb.AppendLine($"* **Request Status:** {requestStatus}");
+                    sb.AppendLine($"* **Waste Category:** {wasteCategory}");
+                    sb.AppendLine($"* **Scheduled Collection Date:** **{scheduledDate}** (Window: 15th–25th)");
+                    sb.AppendLine($"* **Collected / Handover Date:** {collectedDate}");
+                    sb.AppendLine($"* **4-Digit Verification Code:** **{code}**");
+                    sb.AppendLine($"* **Assigned Team:** {senaTeam}");
+                    sb.AppendLine();
+
+                    sb.AppendLine("### 2. 💳 Live Monthly User Fee & Payment Dues");
+                    sb.AppendLine($"* **Total Outstanding Dues:** **{duesTotal}**");
+                    sb.AppendLine("* **Payment Methods:** Online via EcoMind AI / Mittu (UPI, Cards, QR) or Cash to Haritha Karma Sena worker upon pickup with instant digital receipt.");
+                    sb.AppendLine();
+
+                    sb.AppendLine("### 3. 📋 Collection Rules & Instructions");
+                    sb.AppendLine("* Keep recyclable plastic clean, dry, and stored in reusable gunny bags.");
+                    sb.AppendLine("* Monthly recyclable plastic collection takes place between the **15th and 25th**.");
+                    sb.AppendLine("* Share your **4-digit verification code** with the visiting worker to verify collection.");
+
+                    return sb.ToString().Trim();
                 }
 
-                // Default: Full Executive Account Summary & Analysis
-                var sb = new StringBuilder();
-                sb.AppendLine($"Hello {residentName}! 👋 I am **Mittu**, your personal AI assistant. Here is your live account analysis:\n");
-
-                sb.AppendLine("### 1. 🚚 Live Pickup Request & Schedule Updates");
-                sb.AppendLine($"* **Request Status:** {requestStatus}");
-                sb.AppendLine($"* **Waste Category:** {wasteCategory}");
-                sb.AppendLine($"* **Scheduled Collection Date:** **{scheduledDate}** (Window: 15th–25th)");
-                sb.AppendLine($"* **Collected / Handover Date:** {collectedDate}");
-                sb.AppendLine($"* **4-Digit Verification Code:** **{code}**");
-                sb.AppendLine($"* **Assigned Team:** {senaTeam}");
-                sb.AppendLine();
-
-                sb.AppendLine("### 2. 💳 Live Monthly User Fee & Payment Dues");
-                sb.AppendLine($"* **Total Outstanding Dues:** **{duesTotal}**");
-                sb.AppendLine("* **Payment Methods:** Online via EcoMind AI / Mittu (UPI, Cards, QR) or Cash to Haritha Karma Sena worker upon pickup with instant digital receipt.");
-                sb.AppendLine();
-
-                sb.AppendLine("### 3. 📋 Collection Rules & Instructions");
-                sb.AppendLine("* Keep recyclable plastic clean, dry, and stored in reusable gunny bags.");
-                sb.AppendLine("* Monthly recyclable plastic collection takes place between the **15th and 25th**.");
-                sb.AppendLine("* Share your **4-digit verification code** with the visiting worker to verify collection.");
-
-                return sb.ToString().Trim();
+                // If not an account query, return the general/casual knowledge answer!
+                return generalAnswer;
             }
             catch
             {
