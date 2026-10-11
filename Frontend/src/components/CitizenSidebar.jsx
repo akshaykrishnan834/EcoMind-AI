@@ -48,7 +48,7 @@ const CitizenSidebar = ({
     { id: 'My Location', label: 'My Location', icon: MapPin },
     { id: 'Monthly Payments', label: 'Monthly Payments', icon: CreditCard, badge: '₹' },
     { id: 'Collection Records', label: 'Collection Records', icon: FileText },
-    { id: 'AI Assistant', label: 'AI Civic Assistant', icon: Bot },
+    { id: 'AI Assistant', label: 'Mittu AI Chat', icon: Bot },
   ];
 
   const bottomMenuItems = [
@@ -61,7 +61,7 @@ const CitizenSidebar = ({
     if (item.id === 'Live Worker Tracker' && (activeItem === 'Live Worker Tracker' || activeItem === 'Live Tracker' || activeItem === 'Track Worker')) return true;
     if (item.id === 'Messages' && (activeItem === 'Worker Chat' || activeItem === 'Messages' || activeItem === 'Chat')) return true;
     if (item.id === 'Collection Schedule' && (activeItem === 'My Collection Schedule' || activeItem === 'Collection Schedule')) return true;
-    if (item.id === 'AI Assistant' && (activeItem === 'AI Civic Assistant' || activeItem === 'Mittu AI Chat' || activeItem === 'EcoMind AI Chat' || activeItem === 'AI Assistant' || activeItem === 'Mittu AI' || activeItem === 'Mittu')) return true;
+    if (item.id === 'AI Assistant' && (activeItem === 'Mittu AI Chat' || activeItem === 'Mittu AI' || activeItem === 'AI Civic Assistant' || activeItem === 'EcoMind AI Chat' || activeItem === 'AI Assistant' || activeItem === 'Mittu')) return true;
     if (item.id === 'Settings' && (activeItem === 'Theme & Settings' || activeItem === 'Settings')) return true;
     if (item.id === 'Help & Guidelines' && (activeItem === 'Help & Guidelines' || activeItem === 'Guidelines')) return true;
     return false;

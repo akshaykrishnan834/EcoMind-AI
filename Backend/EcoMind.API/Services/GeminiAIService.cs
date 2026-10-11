@@ -18,7 +18,7 @@ namespace EcoMind.API.Services
         }
 
         private const string EcoMindInstructions = """
-            You are the official Civic AI Assistant for the EcoMind AI waste management platform and the Haritha Karma Sena doorstep collection service in Kerala.
+            You are Mittu AI, the official Civic AI Assistant for the EcoMind AI waste management platform and the Haritha Karma Sena doorstep collection service in Kerala.
 
             COMMUNICATION GUIDELINES (STANDARD & FORMAL):
             1. Maintain a professional, formal, polite, and standard civic tone at all times.
@@ -278,7 +278,7 @@ namespace EcoMind.API.Services
             }
             catch
             {
-                return "Greetings. I am the official virtual assistant for EcoMind AI. Your profile and account records are active. Please state your query.";
+                return "Greetings. I am Mittu AI, the official virtual assistant for EcoMind AI. Your profile and account records are active. Please state your query.";
             }
         }
 
@@ -298,15 +298,15 @@ namespace EcoMind.API.Services
 
             if (q.Contains("good morning"))
             {
-                return "Good morning. Welcome to the EcoMind AI citizen portal. Please let me know how I may assist you today.";
+                return "Good morning. Welcome to the EcoMind AI citizen portal. I am Mittu AI. Please let me know how I may assist you today.";
             }
             if (q.Contains("good afternoon"))
             {
-                return "Good afternoon. Welcome to the EcoMind AI citizen portal. How may I assist you with your civic services today?";
+                return "Good afternoon. Welcome to the EcoMind AI citizen portal. I am Mittu AI. How may I assist you with your civic services today?";
             }
             if (q.Contains("good evening"))
             {
-                return "Good evening. Welcome to the EcoMind AI citizen portal. Please feel free to inquire regarding your collection schedule, fee ledger, or environmental guidelines.";
+                return "Good evening. Welcome to the EcoMind AI citizen portal. I am Mittu AI. Please feel free to inquire regarding your collection schedule, fee ledger, or environmental guidelines.";
             }
             if (q.Contains("good night"))
             {
@@ -315,7 +315,7 @@ namespace EcoMind.API.Services
 
             if (q == "hi" || q == "hello" || q == "hey" || q == "greetings" || q.Contains("help"))
             {
-                return "Greetings. I am the official **Civic AI Assistant** for the **EcoMind AI** platform and **Haritha Karma Sena** services in Kerala.\n\n" +
+                return "Greetings. I am **Mittu AI**, the official virtual assistant for the **EcoMind AI** platform and **Haritha Karma Sena** services in Kerala.\n\n" +
                        "I am equipped to provide assistance with:\n" +
                        "1. **Collection Schedules & Assigned Dates** (Monthly window: 15th–25th)\n" +
                        "2. **Pickup Verification Code Validation**\n" +
@@ -337,9 +337,9 @@ namespace EcoMind.API.Services
             }
 
             // Who are you / Identity
-            if (q.Contains("who are you") || q.Contains("what is your name"))
+            if (q.Contains("who are you") || q.Contains("what is your name") || q.Contains("who is mittu") || q.Contains("mittu ai") || q.Contains("who's mittu"))
             {
-                return "I am the official automated **Civic AI Assistant** developed for the **EcoMind AI** platform.\n\n" +
+                return "I am **Mittu AI**, the official automated virtual assistant developed for the **EcoMind AI** civic platform.\n\n" +
                        "My purpose is to assist citizens and local self-governments across Kerala with reliable information on non-biodegradable waste collection, statutory regulations, doorstep pickup coordination, and general environmental queries.";
             }
 

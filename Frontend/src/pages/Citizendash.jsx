@@ -565,7 +565,7 @@ const CitizenDashboard = () => {
                         className="px-4 py-3 bg-emerald-950/60 hover:bg-emerald-950/80 text-emerald-200 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Bot className="w-4 h-4 text-emerald-300" />
-                        <span>Civic AI Desk</span>
+                        <span>Mittu AI</span>
                       </button>
                       <button
                         type="button"

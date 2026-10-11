@@ -173,7 +173,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
     {
       id: 'welcome',
       sender: 'ai',
-      text: `Greetings, **${citizenName}**. Welcome to the **EcoMind Civic Virtual Helpdesk** for **${panchayatName} (${wardId})**.\n\nI am your official automated assistant for municipal solid waste collection schedules, special pickup request tracking, statutory monthly user fee management, and Haritha Karma Sena segregation regulations.\n\nHow may I assist you today?`,
+      text: `Greetings, **${citizenName}**. I am **Mittu AI**, your official civic virtual assistant for **${panchayatName} (${wardId})**.\n\nI can assist you with your **collection schedule**, **pickup verification code**, **monthly user fee ledger**, and official **Haritha Karma Sena waste segregation guidelines**.\n\nHow may I assist you today?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -372,14 +372,14 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-white">
-                EcoMind AI Assistant
+                Mittu AI
               </h2>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/25 text-emerald-200 border border-emerald-400/30 backdrop-blur-xs">
-                <Sparkles className="w-2.5 h-2.5 text-emerald-300" /> Official Helpdesk
+                <Sparkles className="w-2.5 h-2.5 text-emerald-300" /> Civic Assistant
               </span>
             </div>
             <p className="text-[11px] text-emerald-100/80 font-medium">
-              Civic Inquiry Desk • {wardId}, {panchayatName}
+              Official Virtual Desk • {wardId}, {panchayatName}
             </p>
           </div>
         </div>
@@ -558,7 +558,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
                 <span className="w-2 h-2 rounded-full bg-emerald-600 animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
               <span className="text-xs font-semibold text-emerald-900">
-                Processing civic records and guidelines...
+                Mittu AI is reviewing civic records...
               </span>
             </div>
           </div>
@@ -572,9 +572,9 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-[#0a4d2c]">
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Recommended Civic Inquiries</span>
+            <span>Recommended Queries for Mittu AI</span>
           </div>
-          <span className="text-[10px] text-gray-400 font-medium hidden sm:inline">Select to submit inquiry</span>
+          <span className="text-[10px] text-gray-400 font-medium hidden sm:inline">Select to ask Mittu AI</span>
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
@@ -608,7 +608,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              placeholder="Type your civic inquiry (e.g., 'Collection schedule', 'Verification code', 'Plastic rules')..."
+              placeholder="Ask Mittu AI: 'Collection schedule', 'Verification code', 'Fee statement'..."
               className="w-full bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/15 rounded-2xl py-2.5 sm:py-3 pl-4 pr-4 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all shadow-inner"
             />
           </div>
@@ -619,7 +619,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
             className="px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-[#0a4d2c] to-emerald-700 hover:from-emerald-900 hover:to-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
           >
             <Send className="w-4 h-4" />
-            <span className="hidden sm:inline">Submit Inquiry</span>
+            <span className="hidden sm:inline">Ask Mittu AI</span>
           </button>
         </form>
 
@@ -628,7 +628,7 @@ LIVE MONTHLY USER FEE & PAYMENT DUES UPDATES:
             <ShieldCheck className="w-3 h-3 text-emerald-600" />
             Official municipal portal for waste collection schedules, verification & dues
           </span>
-          <span>EcoMind AI • Haritha Karma Sena</span>
+          <span>EcoMind • Mittu AI • Haritha Karma Sena</span>
         </div>
       </div>
     </div>

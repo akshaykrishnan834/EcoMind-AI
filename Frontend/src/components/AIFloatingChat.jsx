@@ -40,7 +40,7 @@ const AIFloatingChat = ({
           {/* Floating Compact Speech Bubble Tag */}
           <div className="mb-1.5 bg-[#0a4d2c]/95 text-white border border-emerald-400/50 text-[11px] font-bold px-3 py-1 rounded-xl shadow-lg flex items-center gap-1.5 group-hover:scale-105 transition-all duration-300 pointer-events-none backdrop-blur-md">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            <span className="tracking-wide">Civic AI Desk</span>
+            <span className="tracking-wide">Mittu AI</span>
             <Sparkles className="w-3 h-3 text-emerald-300" />
             <div className="absolute -bottom-1 right-6 w-2 h-2 bg-[#0a4d2c] border-r border-b border-emerald-400/50 rotate-45" />
           </div>
@@ -49,7 +49,7 @@ const AIFloatingChat = ({
           <button
             onClick={() => setIsOpen(true)}
             className="relative flex items-center justify-center p-1 cursor-pointer transition-all duration-300 transform hover:scale-110 active:scale-95 focus:outline-none filter drop-shadow-[0_8px_20px_rgba(5,150,105,0.4)]"
-            title="Click to open EcoMind Civic AI Assistant"
+            title="Click to chat with Mittu AI"
           >
             {/* Ambient glowing radial blur */}
             <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/30 to-teal-400/30 rounded-full blur-xl -z-10 group-hover:blur-2xl transition-all" />
