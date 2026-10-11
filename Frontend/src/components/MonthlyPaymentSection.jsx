@@ -64,6 +64,9 @@ const MonthlyPaymentSection = ({ citizenData }) => {
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [redemptionFeedback, setRedemptionFeedback] = useState(null);
+  const [simulatedOrder, setSimulatedOrder] = useState(null);
+  const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
+  const [simulatedMethod, setSimulatedMethod] = useState('upi');
 
   // Available points state (default 17 for demo if not yet recorded)
   const [ecoPoints, setEcoPoints] = useState(
@@ -225,21 +228,37 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                           selectedPaymentForModal.amount === 40;
 
       if (selectedMode === 'Online') {
-        // Step 1: Load Razorpay Checkout SDK
-        const scriptLoaded = await loadRazorpayScript();
-        if (!scriptLoaded) {
-          setError('Razorpay SDK failed to load. Please check your internet connection.');
-          setIsSubmitting(false);
-          return;
-        }
-
-        // Step 2: Create Razorpay Order from backend (uses already-redeemed discount if citizen clicked Redeem)
+        // Step 1: Create Razorpay Order from backend (uses already-redeemed discount if citizen clicked Redeem)
         const orderData = await createRazorpayOrder({
           citizenId,
           month: selectedPaymentForModal.month,
           year: selectedPaymentForModal.year,
           applyEcoDiscount: hasDiscount
         });
+
+        // If backend operates in simulated test mode (Razorpay key secret not configured in local environment)
+        if (orderData.isSimulated) {
+          setSimulatedOrder({
+            ...orderData,
+            targetMonthName,
+            hasDiscount
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Step 2: Load Razorpay Checkout SDK
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          setError('Razorpay SDK failed to load. Falling back to test gateway.');
+          setSimulatedOrder({
+            ...orderData,
+            targetMonthName,
+            hasDiscount
+          });
+          setIsSubmitting(false);
+          return;
+        }
 
         // Step 3: Launch Razorpay Checkout Modal
         const options = {
@@ -293,13 +312,23 @@ const MonthlyPaymentSection = ({ citizenData }) => {
           }
         };
 
-        const razorpayInstance = new window.Razorpay(options);
-        razorpayInstance.on('payment.failed', function (resp) {
-          console.error('Razorpay payment failed:', resp.error);
-          setError(`Payment failed: ${resp.error.description || 'Transaction declined'}`);
+        try {
+          const razorpayInstance = new window.Razorpay(options);
+          razorpayInstance.on('payment.failed', function (resp) {
+            console.error('Razorpay payment failed:', resp.error);
+            setError(`Payment failed: ${resp.error.description || 'Transaction declined'}`);
+            setIsSubmitting(false);
+          });
+          razorpayInstance.open();
+        } catch (openErr) {
+          console.warn('Razorpay popup open error, falling back to simulated modal:', openErr);
+          setSimulatedOrder({
+            ...orderData,
+            targetMonthName,
+            hasDiscount
+          });
           setIsSubmitting(false);
-        });
-        razorpayInstance.open();
+        }
 
       } else {
         // Option 2: Pay Through Worker
@@ -321,6 +350,38 @@ const MonthlyPaymentSection = ({ citizenData }) => {
       console.error('Payment initialization failed:', err);
       setError(err.response?.data?.message || 'Payment processing failed. Please try again.');
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCompleteSimulatedPayment = async () => {
+    if (!simulatedOrder) return;
+    setIsSimulatingPayment(true);
+    setError('');
+    try {
+      const verifyResult = await verifyRazorpayPayment({
+        citizenId,
+        month: simulatedOrder.month,
+        year: simulatedOrder.year,
+        razorpayOrderId: simulatedOrder.razorpayOrderId,
+        razorpayPaymentId: `pay_sim_${Date.now()}`,
+        razorpaySignature: 'simulated_signature_verified'
+      });
+
+      if (verifyResult.success) {
+        const discountNote = simulatedOrder.hasDiscount ? ' (20% Discount Applied: Paid ₹40)' : ' (Paid ₹50)';
+        setSuccessMessage(`Payment successful & verified! Fee for ${simulatedOrder.targetMonthName} ${simulatedOrder.year} marked as Paid.${discountNote}`);
+        setSimulatedOrder(null);
+        setIsModalOpen(false);
+        setSelectedPaymentForModal(null);
+        await loadPayments();
+      } else {
+        setError(verifyResult.message || 'Payment simulation verification failed.');
+      }
+    } catch (verErr) {
+      console.error('Simulated payment error:', verErr);
+      setError(verErr.response?.data?.message || 'Payment verification failed.');
+    } finally {
+      setIsSimulatingPayment(false);
     }
   };
 
@@ -1268,6 +1329,129 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                 <Printer className="w-4 h-4" />
                 <span>Print Receipt</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SIMULATED RAZORPAY PAYMENT GATEWAY MODAL (FOR TESTING/DEMO) */}
+      {simulatedOrder && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 space-y-0">
+            {/* Header styled like Razorpay Checkout */}
+            <div className="bg-[#0c2340] text-white p-5 space-y-2 relative">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-400/40 flex items-center justify-center">
+                    <Smartphone className="w-4 h-4 text-blue-300" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-sm tracking-wide">Razorpay</span>
+                      <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-400/30">
+                        Test Mode
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-gray-300 block">Haritha Karma Sena User Fee</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSimulatedOrder(null)}
+                  disabled={isSimulatingPayment}
+                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 flex items-center justify-center text-xs transition cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Amount Display */}
+              <div className="pt-2 flex items-baseline justify-between border-t border-white/10">
+                <span className="text-xs text-gray-300 font-medium">
+                  {simulatedOrder.targetMonthName} {simulatedOrder.year}
+                </span>
+                <div className="text-right">
+                  <span className="text-2xl font-black text-white">₹{simulatedOrder.netAmount || (simulatedOrder.amount / 100)}.00</span>
+                  {simulatedOrder.hasDiscount && (
+                    <span className="text-[10px] text-emerald-400 block font-bold">20% Eco-Discount Applied</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-[11px] text-blue-900 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Simulated Payment Gateway Active</span>
+                </div>
+                <p className="text-blue-800/80">
+                  Razorpay test order <strong className="font-mono text-[10px]">{simulatedOrder.razorpayOrderId}</strong> generated. Complete this transaction using the test methods below.
+                </p>
+              </div>
+
+              {/* Simulated Method selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-700 block">Select Demo Payment Method:</label>
+                
+                <div
+                  onClick={() => setSimulatedMethod('upi')}
+                  className={`p-3 rounded-xl border-2 flex items-center gap-3 cursor-pointer transition ${
+                    simulatedMethod === 'upi' ? 'border-emerald-600 bg-emerald-50/60' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Smartphone className="w-4 h-4 text-emerald-600" />
+                  <div className="flex-1">
+                    <span className="text-xs font-bold text-gray-900 block">UPI / QR (Google Pay, PhonePe, Paytm)</span>
+                    <span className="text-[10px] text-gray-500 font-mono">instant@testupi</span>
+                  </div>
+                  {simulatedMethod === 'upi' && <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />}
+                </div>
+
+                <div
+                  onClick={() => setSimulatedMethod('card')}
+                  className={`p-3 rounded-xl border-2 flex items-center gap-3 cursor-pointer transition ${
+                    simulatedMethod === 'card' ? 'border-emerald-600 bg-emerald-50/60' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4 text-emerald-600" />
+                  <div className="flex-1">
+                    <span className="text-xs font-bold text-gray-900 block">Debit / Credit Card (Test Card)</span>
+                    <span className="text-[10px] text-gray-500 font-mono">•••• •••• •••• 4242</span>
+                  </div>
+                  {simulatedMethod === 'card' && <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSimulatedOrder(null)}
+                  disabled={isSimulatingPayment}
+                  className="w-1/3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCompleteSimulatedPayment}
+                  disabled={isSimulatingPayment}
+                  className="w-2/3 py-2.5 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSimulatingPayment ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-emerald-200" />
+                      <span>Verifying Payment...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                      <span>Complete Test Payment (₹{simulatedOrder.netAmount || (simulatedOrder.amount / 100)})</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

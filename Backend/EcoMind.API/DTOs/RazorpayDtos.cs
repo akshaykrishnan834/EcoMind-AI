@@ -20,6 +20,7 @@ namespace EcoMind.API.DTOs
         public double DiscountAmount { get; set; } = 0.0;
         public int PointsRedeemed { get; set; } = 0;
         public double NetAmount { get; set; } = 50.0;
+        public bool IsSimulated { get; set; } = false;
     }
 
     public class VerifyRazorpayPaymentDto
