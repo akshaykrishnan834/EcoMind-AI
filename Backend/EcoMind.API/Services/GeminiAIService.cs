@@ -114,17 +114,21 @@ namespace EcoMind.API.Services
             {
                 modelCandidates.Add(configuredModel);
             }
-            if (!modelCandidates.Contains("gemini-3.1-flash-lite"))
+            if (!modelCandidates.Contains("gemini-1.5-flash"))
             {
-                modelCandidates.Add("gemini-3.1-flash-lite");
+                modelCandidates.Add("gemini-1.5-flash");
             }
-            if (!modelCandidates.Contains("gemini-3.5-flash-lite"))
+            if (!modelCandidates.Contains("gemini-2.0-flash"))
             {
-                modelCandidates.Add("gemini-3.5-flash-lite");
+                modelCandidates.Add("gemini-2.0-flash");
             }
-            if (!modelCandidates.Contains("gemini-3.6-flash"))
+            if (!modelCandidates.Contains("gemini-1.5-pro"))
             {
-                modelCandidates.Add("gemini-3.6-flash");
+                modelCandidates.Add("gemini-1.5-pro");
+            }
+            if (!modelCandidates.Contains("gemini-2.5-flash"))
+            {
+                modelCandidates.Add("gemini-2.5-flash");
             }
 
             // Gemini API authentication
