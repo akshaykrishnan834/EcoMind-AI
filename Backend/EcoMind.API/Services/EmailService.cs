@@ -23,6 +23,13 @@ namespace EcoMind.API.Services
                 throw new ArgumentException("Recipient email address is required.");
             }
 
+            string appPassword = (_emailSettings.Password ?? "").Trim().Replace(" ", "");
+            if (string.IsNullOrWhiteSpace(appPassword) || string.IsNullOrWhiteSpace(_emailSettings.Email))
+            {
+                Console.WriteLine("[EcoMind Email] No Gmail App Password configured in appsettings.json. Skipping network SMTP attempt.");
+                throw new InvalidOperationException("No SMTP password configured.");
+            }
+
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress("EcoMind AI Security", _emailSettings.Email.Trim()));
             message.To.Add(new MailboxAddress("", toEmail.Trim()));
@@ -36,21 +43,26 @@ namespace EcoMind.API.Services
 
             using var client = new SmtpClient();
 
+            // Set strict 5-second timeout to prevent UI hanging
+            client.Timeout = 5000;
+
             // Accept SSL certificates safely in development
             client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
             // Connect using STARTTLS for Gmail on port 587
             await client.ConnectAsync(
                 string.IsNullOrWhiteSpace(_emailSettings.Host) ? "smtp.gmail.com" : _emailSettings.Host.Trim(),
                 _emailSettings.Port == 0 ? 587 : _emailSettings.Port,
-                SecureSocketOptions.StartTls);
+                SecureSocketOptions.StartTls,
+                cts.Token);
 
-            // Authenticate with Gmail Email & App Password (automatically strip any spaces from App Passwords)
-            string appPassword = (_emailSettings.Password ?? "").Trim().Replace(" ", "");
-            await client.AuthenticateAsync(_emailSettings.Email.Trim(), appPassword);
+            // Authenticate with Gmail Email & App Password
+            await client.AuthenticateAsync(_emailSettings.Email.Trim(), appPassword, cts.Token);
 
-            await client.SendAsync(message);
-            await client.DisconnectAsync(true);
+            await client.SendAsync(message, cts.Token);
+            await client.DisconnectAsync(true, cts.Token);
         }
 
         public async Task SendOtpEmailAsync(string toEmail, string otpCode)
