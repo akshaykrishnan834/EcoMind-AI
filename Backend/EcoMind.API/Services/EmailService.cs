@@ -43,30 +43,20 @@ namespace EcoMind.API.Services
             };
             message.Body = bodyBuilder.ToMessageBody();
 
-            using var client = new SmtpClient();
-
-            // Set 15-second timeout suitable for cloud hosting environments
-            client.Timeout = 15000;
-
-            // Accept SSL certificates safely in development and hosted environments
-            client.ServerCertificateValidationCallback = (s, c, h, e) => true;
-
-            int port = _emailSettings.Port == 0 ? 587 : _emailSettings.Port;
+            int configuredPort = _emailSettings.Port == 0 ? 465 : _emailSettings.Port;
             string host = string.IsNullOrWhiteSpace(_emailSettings.Host) ? "smtp.gmail.com" : _emailSettings.Host.Trim();
 
-            // Candidate connections: try configured port first, then fallback port (essential for cloud platforms like Render)
-            var connectionAttempts = new List<(int Port, SecureSocketOptions Options)>
-            {
-                (port, port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls)
-            };
-
-            if (port == 587)
+            // Prioritize Port 465 (SSL) first, as cloud hosts like Render block Port 587
+            var connectionAttempts = new List<(int Port, SecureSocketOptions Options)>();
+            if (configuredPort == 465)
             {
                 connectionAttempts.Add((465, SecureSocketOptions.SslOnConnect));
-            }
-            else if (port == 465)
-            {
                 connectionAttempts.Add((587, SecureSocketOptions.StartTls));
+            }
+            else
+            {
+                connectionAttempts.Add((465, SecureSocketOptions.SslOnConnect));
+                connectionAttempts.Add((configuredPort, SecureSocketOptions.StartTls));
             }
 
             bool sent = false;
@@ -74,9 +64,13 @@ namespace EcoMind.API.Services
 
             foreach (var attempt in connectionAttempts)
             {
+                using var client = new SmtpClient();
+                client.Timeout = 15000;
+                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+
                 try
                 {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                     await client.ConnectAsync(host, attempt.Port, attempt.Options, cts.Token);
                     await client.AuthenticateAsync(_emailSettings.Email.Trim(), appPassword, cts.Token);
                     await client.SendAsync(message, cts.Token);
@@ -89,7 +83,6 @@ namespace EcoMind.API.Services
                 {
                     lastEx = ex;
                     _logger.LogWarning("SMTP attempt via {Host}:{Port} failed: {Message}", host, attempt.Port, ex.Message);
-                    try { if (client.IsConnected) await client.DisconnectAsync(true); } catch { }
 
                     // If credentials failed authentication (535), do not retry another port with same wrong credentials
                     if (ex.Message.Contains("535") || ex.Message.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
