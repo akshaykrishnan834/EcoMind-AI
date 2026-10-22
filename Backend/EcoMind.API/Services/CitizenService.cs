@@ -1,4 +1,5 @@
 using EcoMind.API.DTOs;
+using EcoMind.API.Helpers;
 using EcoMind.API.Interfaces;
 using EcoMind.API.Models;
 
@@ -8,13 +9,19 @@ namespace EcoMind.API.Services
     {
         private readonly ICitizenRepository _citizenRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IPickupRequestRepository _pickupRepository;
+        private readonly IPaymentRepository _paymentRepository;
 
         public CitizenService(
             ICitizenRepository citizenRepository,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            IPickupRequestRepository pickupRepository,
+            IPaymentRepository paymentRepository)
         {
             _citizenRepository = citizenRepository;
             _userRepository = userRepository;
+            _pickupRepository = pickupRepository;
+            _paymentRepository = paymentRepository;
         }
 
         // ============================================================
@@ -54,6 +61,10 @@ namespace EcoMind.API.Services
 
                 IsVerified = false,
 
+                EcoPoints = 0,
+
+                PointEntries = new List<EcoPointEntry>(),
+
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -77,10 +88,30 @@ namespace EcoMind.API.Services
             // --------------------------------------------------------
             if (citizen != null)
             {
+                bool needsUpdate = false;
+
+                // Auto-synchronize EcoPoints based purely on completed pickups & redemptions
+                // (Cleanses any old hardcoded 17 points default)
+                var requests = await _pickupRepository.GetByCitizenIdAsync(citizen.CitizenId);
+                var completed = requests
+                    .Where(r => r.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                                r.Status.Equals("Collected", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(r => r.CollectedAt ?? r.RequestedAt)
+                    .ToList();
+
+                int earnedFromPickups = EcoPointsCalculator.CalculateTotalPointsFromPickups(completed);
+                var payments = await _paymentRepository.GetByCitizenIdAsync(citizen.CitizenId);
+                int redeemed = payments?.Sum(p => p.PointsRedeemed) ?? 0;
+                int accuratePoints = Math.Max(0, earnedFromPickups - redeemed);
+
+                if (citizen.EcoPoints != accuratePoints)
+                {
+                    citizen.EcoPoints = accuratePoints;
+                    needsUpdate = true;
+                }
+
                 if (user != null)
                 {
-                    bool needsUpdate = false;
-
                     // Synchronize phone number
                     if (
                         string.IsNullOrWhiteSpace(citizen.PhoneNumber)
@@ -102,11 +133,11 @@ namespace EcoMind.API.Services
                         citizen.FullName = user.FullName;
                         needsUpdate = true;
                     }
+                }
 
-                    if (needsUpdate)
-                    {
-                        await _citizenRepository.UpdateCitizenAsync(citizen);
-                    }
+                if (needsUpdate)
+                {
+                    await _citizenRepository.UpdateCitizenAsync(citizen);
                 }
 
                 return citizen;
@@ -155,6 +186,10 @@ namespace EcoMind.API.Services
                     ProfileCompleted = false,
 
                     IsVerified = false,
+
+                    EcoPoints = 0,
+
+                    PointEntries = new List<EcoPointEntry>(),
 
                     CreatedAt = DateTime.UtcNow
                 };

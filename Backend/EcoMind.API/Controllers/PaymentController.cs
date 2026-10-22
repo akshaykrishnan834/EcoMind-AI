@@ -160,6 +160,28 @@ namespace EcoMind.API.Controllers
         }
 
         /// <summary>
+        /// Check if citizen is eligible for points redemption based on continuous waste pickups streak
+        /// </summary>
+        [HttpGet("redemption-eligibility/{citizenId}")]
+        public async Task<IActionResult> GetRedemptionEligibility(string citizenId, [FromQuery] int? year, [FromQuery] int? month)
+        {
+            if (string.IsNullOrWhiteSpace(citizenId))
+            {
+                return BadRequest(new { message = "Citizen ID is required." });
+            }
+
+            try
+            {
+                var result = await _paymentService.GetRedemptionEligibilityAsync(citizenId, year, month);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Reset test citizen points to 17 and clear current month fee discount for demo testing
         /// </summary>
         [HttpPost("reset-demo-points/{citizenId}")]
@@ -171,7 +193,7 @@ namespace EcoMind.API.Controllers
             }
 
             await _paymentService.ResetDemoPointsAsync(citizenId);
-            return Ok(new { success = true, citizenId, ecoPoints = 17, message = "Demo points reset to 17." });
+            return Ok(new { success = true, citizenId, ecoPoints = 10, message = "Demo points reset to 10." });
         }
     }
 }

@@ -12,6 +12,7 @@ namespace EcoMind.API.Interfaces
         Task<Payment> VerifyRazorpayPaymentAsync(VerifyRazorpayPaymentDto dto);
         Task<Payment> ProcessWorkerPaymentAsync(ProcessWorkerPaymentDto dto);
         Task<RedeemPointsResponseDto> RedeemPointsAsync(RedeemPointsDto dto);
+        Task<RedemptionEligibilityDto> GetRedemptionEligibilityAsync(string citizenId, int? year = null, int? month = null);
         Task<bool> ResetDemoPointsAsync(string citizenId);
     }
 }

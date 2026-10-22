@@ -22,14 +22,16 @@ import {
   Calendar,
   Truck,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Zap
 } from 'lucide-react';
 import {
   getCitizenPayments,
   createRazorpayOrder,
   verifyRazorpayPayment,
   processWorkerPayment,
-  redeemPoints
+  redeemPoints,
+  getRedemptionEligibility
 } from '../services/paymentService';
 import { getCitizenByEmail } from '../services/citizenService';
 
@@ -72,6 +74,17 @@ const MonthlyPaymentSection = ({ citizenData }) => {
   const [ecoPoints, setEcoPoints] = useState(
     citizenData?.ecoPoints !== undefined && citizenData?.ecoPoints !== null ? citizenData.ecoPoints : 17
   );
+  // Continuous waste pickups streak & redemption eligibility state
+  const [redemptionEligibility, setRedemptionEligibility] = useState({
+    isEligible: false,
+    consecutivePickupsCount: 0,
+    requiredConsecutivePickups: 2,
+    ecoPoints: 0,
+    requiredPoints: 10,
+    hasEnoughPoints: false,
+    message: '',
+    recentCompletedMonths: []
+  });
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [showValidityLedger, setShowValidityLedger] = useState(false);
 
@@ -95,6 +108,13 @@ const MonthlyPaymentSection = ({ citizenData }) => {
     try {
       const data = await getCitizenPayments(citizenId);
       setPayments(data || []);
+
+      // Check redemption eligibility (requires at least 2 consecutive completed pickups)
+      const elig = await getRedemptionEligibility(citizenId).catch(() => null);
+      if (elig) {
+        setRedemptionEligibility(elig);
+      }
+
       // Refresh citizen profile points if email is available
       if (userEmail) {
         const freshProfile = await getCitizenByEmail(userEmail).catch(() => null);
@@ -159,6 +179,14 @@ const MonthlyPaymentSection = ({ citizenData }) => {
       return;
     }
 
+    if (redemptionEligibility && !redemptionEligibility.isEligible && redemptionEligibility.consecutivePickupsCount < (redemptionEligibility.requiredConsecutivePickups || 2)) {
+      setError(
+        redemptionEligibility.message ||
+        `Points redemption is only allowed for citizens who have completed continuous waste pickups. You need at least ${redemptionEligibility.requiredConsecutivePickups || 2} consecutive completed pickups without a break (Current streak: ${redemptionEligibility.consecutivePickupsCount || 0}).`
+      );
+      return;
+    }
+
     if (targetPayment.pointsRedeemed > 0 || targetPayment.discountAmount > 0) {
       setError('Points have already been redeemed for this month. The same points cannot be redeemed twice.');
       return;
@@ -193,6 +221,14 @@ const MonthlyPaymentSection = ({ citizenData }) => {
 
         if (selectedPaymentForModal && selectedPaymentForModal.month === targetPayment.month && selectedPaymentForModal.year === targetPayment.year) {
           setSelectedPaymentForModal(updatedPayment);
+        }
+
+        if (res.consecutivePickupsCount !== undefined) {
+          setRedemptionEligibility(prev => ({
+            ...prev,
+            consecutivePickupsCount: res.consecutivePickupsCount,
+            isEligible: res.consecutivePickupsCount >= (res.requiredConsecutivePickups || 2)
+          }));
         }
 
         setRedemptionFeedback({
@@ -750,15 +786,22 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                         <span className="text-[11px] text-gray-500 font-medium">Available: {ecoPoints} pts</span>
                         <button
                           onClick={() => handleRedeemPoints(p)}
-                          disabled={isRedeeming || ecoPoints < 10}
+                          disabled={isRedeeming || ecoPoints < 10 || (redemptionEligibility && !redemptionEligibility.isEligible)}
+                          title={redemptionEligibility && !redemptionEligibility.isEligible ? "Requires 2+ consecutive completed pickups" : "Redeem 10 Points"}
                           className={`px-2.5 py-1 text-[11px] font-extrabold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                            ecoPoints >= 10
+                            ecoPoints >= 10 && redemptionEligibility?.isEligible
                               ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
                               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                           }`}
                         >
                           <Gift className="w-3 h-3" />
-                          <span>{isRedeeming ? 'Redeeming...' : 'Redeem 10 Pts'}</span>
+                          <span>
+                            {isRedeeming
+                              ? 'Redeeming...'
+                              : !redemptionEligibility?.isEligible
+                              ? 'Streak Req'
+                              : 'Redeem 10 Pts'}
+                          </span>
                         </button>
                       </div>
                     )}
@@ -807,10 +850,31 @@ const MonthlyPaymentSection = ({ citizenData }) => {
 
         {/* Current Month Fee & Explicit Redemption Row */}
         <div className="bg-[#f2faf5] rounded-2xl p-6 border-2 border-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 flex-1">
-            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">
-              Doorstep Waste Collection Fee
-            </span>
+          <div className="space-y-3 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">
+                Doorstep Waste Collection Fee
+              </span>
+
+              {/* Continuous Pickups Streak Pill */}
+              <div className={`px-3 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${
+                redemptionEligibility?.isEligible
+                  ? 'bg-emerald-100 border-emerald-300 text-emerald-900 shadow-2xs'
+                  : 'bg-amber-50 border-amber-300 text-amber-900'
+              }`}>
+                <Zap className={`w-3.5 h-3.5 ${redemptionEligibility?.isEligible ? 'text-amber-500 fill-amber-400' : 'text-amber-600'}`} />
+                <span>Continuous Pickups: <strong>{redemptionEligibility?.consecutivePickupsCount || 0} Months Streak</strong></span>
+                {redemptionEligibility?.isEligible ? (
+                  <span className="text-[10px] bg-emerald-700 text-white px-2 py-0.5 rounded-md font-black uppercase tracking-wider">
+                    Eligible
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                    {redemptionEligibility?.consecutivePickupsCount || 0}/2 Completed
+                  </span>
+                )}
+              </div>
+            </div>
             
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="text-2xl sm:text-3xl font-black text-[#0a4d2c] tracking-tight">
@@ -825,7 +889,7 @@ const MonthlyPaymentSection = ({ citizenData }) => {
 
             {/* Points & Redemption Action block on card if unpaid */}
             {!isCurrentPaid && (
-              <div className="pt-2">
+              <div className="pt-1">
                 {(currentPayment.pointsRedeemed > 0 || currentPayment.discountAmount > 0 || currentPayment.amount === 40) ? (
                   <div className="p-3 bg-white rounded-xl border border-emerald-300 text-xs font-bold text-emerald-900 flex flex-wrap items-center gap-3">
                     <span className="flex items-center gap-1 text-emerald-700">
@@ -836,29 +900,45 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                     <span className="text-[#0a4d2c]">• Remaining Points: <strong>{ecoPoints}</strong></span>
                   </div>
                 ) : (
-                  <div className="p-3 bg-white rounded-xl border border-emerald-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <div className="font-extrabold text-gray-900 flex items-center gap-1.5">
+                  <div className="p-3.5 bg-white rounded-xl border border-emerald-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="font-extrabold text-gray-900 flex items-center gap-2">
                         <Gift className="w-4 h-4 text-amber-500" />
                         <span>Available Points: <strong>{ecoPoints}</strong></span>
+                        <span className="text-gray-300">•</span>
+                        <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-amber-500" />
+                          Continuous Streak: <strong>{redemptionEligibility?.consecutivePickupsCount || 0}/2 Pickups</strong>
+                        </span>
                       </div>
                       <p className="text-[11px] text-gray-500">
-                        Earn +2 pts on each delivery (4-month claim validity). Redeem 10 pts for 20% discount (₹10 off).
+                        {redemptionEligibility?.isEligible
+                          ? '🎉 Continuous waste pickups verified! Redeem 10 pts for 20% discount (₹10 off).'
+                          : `⚠️ Points redemption is only allowed for users with continuous waste pickups. Minimum 2 consecutive completed collections required without a break.`}
                       </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleRedeemPoints(currentPayment)}
-                      disabled={isRedeeming || ecoPoints < 10}
+                      disabled={isRedeeming || ecoPoints < 10 || (redemptionEligibility && !redemptionEligibility.isEligible)}
+                      title={redemptionEligibility && !redemptionEligibility.isEligible ? "Requires 2+ consecutive completed pickups" : "Redeem 10 Points"}
                       className={`px-4 py-2 font-extrabold text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                        ecoPoints >= 10
+                        ecoPoints >= 10 && redemptionEligibility?.isEligible
                           ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       }`}
                     >
                       <Gift className="w-3.5 h-3.5 text-emerald-300" />
-                      <span>{isRedeeming ? 'Redeeming...' : 'Redeem'}</span>
+                      <span>
+                        {isRedeeming
+                          ? 'Redeeming...'
+                          : ecoPoints < 10
+                          ? 'Need 10 Pts'
+                          : !redemptionEligibility?.isEligible
+                          ? 'Streak Req (2+)'
+                          : 'Redeem 10 Pts'}
+                      </span>
                     </button>
                   </div>
                 )}
@@ -1080,34 +1160,54 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                     <div className="p-3 bg-white rounded-xl border border-emerald-200 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <span className="text-xs font-extrabold text-gray-900 block">
-                            Available Points: {ecoPoints}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-extrabold text-gray-900 block">
+                              Available Points: {ecoPoints}
+                            </span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                              <Zap className="w-2.5 h-2.5 text-amber-500" />
+                              Streak: {redemptionEligibility?.consecutivePickupsCount || 0}/2
+                            </span>
+                          </div>
                           <span className="text-[11px] text-gray-500 font-medium block">
-                            Earned at +2 pts per delivery • Claim within 4 months.
+                            Earned at +2 pts per delivery • 4-month validity.
                           </span>
                         </div>
 
                         <button
                           type="button"
                           onClick={() => handleRedeemPoints(selectedPaymentForModal)}
-                          disabled={isRedeeming || ecoPoints < 10}
+                          disabled={isRedeeming || ecoPoints < 10 || (redemptionEligibility && !redemptionEligibility.isEligible)}
+                          title={redemptionEligibility && !redemptionEligibility.isEligible ? "Requires 2+ consecutive completed pickups" : "Redeem 10 Points"}
                           className={`px-4 py-2 font-extrabold text-xs uppercase tracking-wider rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                            ecoPoints >= 10
+                            ecoPoints >= 10 && redemptionEligibility?.isEligible
                               ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
                               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                           }`}
                         >
                           <Gift className="w-3.5 h-3.5 text-emerald-300" />
-                          <span>{isRedeeming ? 'Redeeming...' : 'Redeem'}</span>
+                          <span>
+                            {isRedeeming
+                              ? 'Redeeming...'
+                              : ecoPoints < 10
+                              ? 'Need 10 Pts'
+                              : !redemptionEligibility?.isEligible
+                              ? 'Streak Req'
+                              : 'Redeem 10 Pts'}
+                          </span>
                         </button>
                       </div>
 
-                      {ecoPoints < 10 && (
+                      {ecoPoints < 10 ? (
                         <p className="text-[10px] text-amber-700 font-semibold bg-amber-50 p-1.5 rounded-lg border border-amber-200">
                           Need at least 10 points (5 completed deliveries) to redeem a 20% discount (You have {ecoPoints} pts, valid for 4 months).
                         </p>
-                      )}
+                      ) : !redemptionEligibility?.isEligible ? (
+                        <p className="text-[10px] text-amber-800 font-semibold bg-amber-50 p-1.5 rounded-lg border border-amber-200 flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>Continuous pickups required: You need at least 2 consecutive completed pickups without a break to redeem points (Current streak: {redemptionEligibility?.consecutivePickupsCount || 0}/2).</span>
+                        </p>
+                      ) : null}
                     </div>
                   )}
 

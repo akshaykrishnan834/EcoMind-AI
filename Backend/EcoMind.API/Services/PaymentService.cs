@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using EcoMind.API.Configurations;
 using EcoMind.API.DTOs;
+using EcoMind.API.Helpers;
 using EcoMind.API.Interfaces;
 using EcoMind.API.Models;
 using Microsoft.Extensions.Options;
@@ -14,17 +15,20 @@ namespace EcoMind.API.Services
     {
         private readonly IPaymentRepository _paymentRepository;
         private readonly ICitizenRepository _citizenRepository;
+        private readonly IPickupRequestRepository _pickupRequestRepository;
         private readonly RazorpaySettings _razorpaySettings;
         private readonly HttpClient _httpClient;
 
         public PaymentService(
             IPaymentRepository paymentRepository,
             ICitizenRepository citizenRepository,
+            IPickupRequestRepository pickupRequestRepository,
             IOptions<RazorpaySettings> razorpayOptions,
             HttpClient httpClient)
         {
             _paymentRepository = paymentRepository;
             _citizenRepository = citizenRepository;
+            _pickupRequestRepository = pickupRequestRepository;
             _razorpaySettings = razorpayOptions.Value;
             _httpClient = httpClient;
         }
@@ -438,6 +442,8 @@ namespace EcoMind.API.Services
                 };
             }
 
+            var eligibility = await GetRedemptionEligibilityAsync(dto.CitizenId, dto.Year, dto.Month);
+
             int pointsToRedeem = 10;
             if (citizen.EcoPoints < pointsToRedeem)
             {
@@ -445,7 +451,23 @@ namespace EcoMind.API.Services
                 {
                     Success = false,
                     Message = $"Insufficient points. You need at least {pointsToRedeem} points to redeem 20% discount (Available: {citizen.EcoPoints}).",
-                    RemainingPoints = citizen.EcoPoints
+                    RemainingPoints = citizen.EcoPoints,
+                    ConsecutivePickupsCount = eligibility.ConsecutivePickupsCount,
+                    RequiredConsecutivePickups = eligibility.RequiredConsecutivePickups,
+                    IsContinuousPickupEligible = eligibility.ConsecutivePickupsCount >= eligibility.RequiredConsecutivePickups
+                };
+            }
+
+            if (eligibility.ConsecutivePickupsCount < eligibility.RequiredConsecutivePickups)
+            {
+                return new RedeemPointsResponseDto
+                {
+                    Success = false,
+                    Message = $"Points redemption is only allowed for citizens who have completed continuous waste pickups. You need at least {eligibility.RequiredConsecutivePickups} consecutive completed pickups without a break (Current streak: {eligibility.ConsecutivePickupsCount}).",
+                    RemainingPoints = citizen.EcoPoints,
+                    ConsecutivePickupsCount = eligibility.ConsecutivePickupsCount,
+                    RequiredConsecutivePickups = eligibility.RequiredConsecutivePickups,
+                    IsContinuousPickupEligible = false
                 };
             }
 
@@ -483,7 +505,163 @@ namespace EcoMind.API.Services
                 BaseAmount = 50.0,
                 DiscountAmount = 10.0,
                 NetAmount = 40.0,
-                Payment = payment
+                Payment = payment,
+                ConsecutivePickupsCount = eligibility.ConsecutivePickupsCount,
+                RequiredConsecutivePickups = eligibility.RequiredConsecutivePickups,
+                IsContinuousPickupEligible = true
+            };
+        }
+
+        public async Task<RedemptionEligibilityDto> GetRedemptionEligibilityAsync(string citizenId, int? year = null, int? month = null)
+        {
+            if (string.IsNullOrWhiteSpace(citizenId))
+            {
+                return new RedemptionEligibilityDto
+                {
+                    CitizenId = citizenId ?? string.Empty,
+                    IsEligible = false,
+                    Message = "Citizen ID is required."
+                };
+            }
+
+            var citizen = await _citizenRepository.GetCitizenByCitizenIdAsync(citizenId);
+            if (citizen == null)
+            {
+                return new RedemptionEligibilityDto
+                {
+                    CitizenId = citizenId,
+                    IsEligible = false,
+                    Message = "Citizen profile not found."
+                };
+            }
+
+            // Fetch pickup requests for citizen
+            var requests = await _pickupRequestRepository.GetByCitizenIdAsync(citizenId);
+            var completedPickupRequests = requests
+                .Where(r => r.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                            r.Status.Equals("Collected", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => r.CollectedAt ?? r.RequestedAt)
+                .ToList();
+
+            // Calculate points accurately from completed pickups using progressive scaling & volume bonus
+            int earnedFromPickups = EcoPointsCalculator.CalculateTotalPointsFromPickups(completedPickupRequests);
+            var citizenPayments = await _paymentRepository.GetByCitizenIdAsync(citizenId);
+            int pointsRedeemedTotal = citizenPayments?.Sum(p => p.PointsRedeemed) ?? 0;
+            int accuratePoints = Math.Max(0, earnedFromPickups - pointsRedeemedTotal);
+
+            // Cleanse any legacy hardcoded 17 points default if points do not match actual pickups
+            if (citizen.EcoPoints != accuratePoints)
+            {
+                citizen.EcoPoints = accuratePoints;
+                await _citizenRepository.UpdateCitizenAsync(citizen);
+            }
+
+            int ecoPoints = accuratePoints;
+            bool hasEnoughPoints = ecoPoints >= 10;
+
+            var completedPeriods = new HashSet<(int Year, int Month)>();
+
+            // 1. Periods from completed PickupRequests
+            foreach (var req in completedPickupRequests)
+            {
+                if (req.CollectionYear.HasValue && req.CollectionMonth.HasValue &&
+                    req.CollectionMonth.Value >= 1 && req.CollectionMonth.Value <= 12)
+                {
+                    completedPeriods.Add((req.CollectionYear.Value, req.CollectionMonth.Value));
+                }
+                else
+                {
+                    var targetDate = req.CollectedAt ?? (req.RequestedAt != default ? req.RequestedAt : DateTime.UtcNow);
+                    var (calcYear, calcMonth, _) = PickupRequestService.CalculateAssignedCollectionPeriod(targetDate);
+                    completedPeriods.Add((calcYear, calcMonth));
+                }
+            }
+
+            // 2. Periods from citizen's doorstep collection PointEntries (for verified pickups or demo resets)
+            if (citizen.PointEntries != null && citizen.PointEntries.Count > 0)
+            {
+                foreach (var entry in citizen.PointEntries)
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.RequestId) &&
+                        (entry.Points >= 2 ||
+                         entry.Description.Contains("collection", StringComparison.OrdinalIgnoreCase) ||
+                         entry.Description.Contains("pickup", StringComparison.OrdinalIgnoreCase) ||
+                         entry.Description.Contains("plastic", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var (calcYear, calcMonth, _) = PickupRequestService.CalculateAssignedCollectionPeriod(entry.EarnedAt);
+                        completedPeriods.Add((calcYear, calcMonth));
+                    }
+                }
+            }
+
+            // Determine reference starting period
+            var nowUtc = DateTime.UtcNow;
+            int refYear = year ?? nowUtc.Year;
+            int refMonth = month ?? nowUtc.Month;
+            var refDate = new DateTime(refYear, refMonth, 1);
+
+            // Compute consecutive completed pickups streak without a break
+            int streak = 0;
+            if (completedPeriods.Contains((refDate.Year, refDate.Month)))
+            {
+                streak = 1;
+                var cursor = refDate.AddMonths(-1);
+                while (completedPeriods.Contains((cursor.Year, cursor.Month)))
+                {
+                    streak++;
+                    cursor = cursor.AddMonths(-1);
+                }
+            }
+            else
+            {
+                // If reference month is current calendar month (ongoing), check backward from previous month
+                if (refDate.Year == nowUtc.Year && refDate.Month == nowUtc.Month)
+                {
+                    var cursor = refDate.AddMonths(-1);
+                    while (completedPeriods.Contains((cursor.Year, cursor.Month)))
+                    {
+                        streak++;
+                        cursor = cursor.AddMonths(-1);
+                    }
+                }
+            }
+
+            var recentMonths = completedPeriods
+                .OrderByDescending(p => p.Year * 12 + p.Month)
+                .Take(5)
+                .Select(p => $"{System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(p.Month)} {p.Year}")
+                .ToList();
+
+            int requiredConsecutive = 2;
+            int requiredPoints = 10;
+            bool isStreakMet = streak >= requiredConsecutive;
+            bool isEligible = isStreakMet && hasEnoughPoints;
+
+            string message;
+            if (!hasEnoughPoints)
+            {
+                message = $"Insufficient points. You need at least {requiredPoints} points to redeem 20% discount (Available: {ecoPoints}).";
+            }
+            else if (!isStreakMet)
+            {
+                message = $"Redemption is only allowed for citizens with continuous waste pickups. You need at least {requiredConsecutive} consecutive completed pickups without a break (Current streak: {streak}).";
+            }
+            else
+            {
+                message = $"Eligible to redeem points! You have an active streak of {streak} continuous completed pickups.";
+            }
+
+            return new RedemptionEligibilityDto
+            {
+                CitizenId = citizenId,
+                IsEligible = isEligible,
+                ConsecutivePickupsCount = streak,
+                RequiredConsecutivePickups = requiredConsecutive,
+                EcoPoints = ecoPoints,
+                RequiredPoints = requiredPoints,
+                HasEnoughPoints = hasEnoughPoints,
+                Message = message,
+                RecentCompletedMonths = recentMonths
             };
         }
 
@@ -492,19 +670,15 @@ namespace EcoMind.API.Services
             var citizen = await _citizenRepository.GetCitizenByCitizenIdAsync(citizenId);
             if (citizen != null)
             {
-                citizen.EcoPoints = 17;
                 var nowUtc = DateTime.UtcNow;
                 citizen.PointEntries = new List<EcoPointEntry>
                 {
-                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-10), ExpiresAt = nowUtc.AddMonths(4).AddDays(-10), RequestId = "REQ101", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
-                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-22), ExpiresAt = nowUtc.AddMonths(4).AddDays(-22), RequestId = "REQ098", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
-                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-35), ExpiresAt = nowUtc.AddMonths(4).AddDays(-35), RequestId = "REQ089", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
-                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-48), ExpiresAt = nowUtc.AddMonths(4).AddDays(-48), RequestId = "REQ076", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
-                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-62), ExpiresAt = nowUtc.AddMonths(4).AddDays(-62), RequestId = "REQ065", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
-                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-75), ExpiresAt = nowUtc.AddMonths(4).AddDays(-75), RequestId = "REQ054", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
-                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-90), ExpiresAt = nowUtc.AddMonths(4).AddDays(-90), RequestId = "REQ042", IsUsed = false, Description = "Doorstep plastic pickup (+2 Pts, Valid for 4 months)" },
-                    new EcoPointEntry { Points = 3, EarnedAt = nowUtc.AddDays(-5), ExpiresAt = nowUtc.AddMonths(4).AddDays(-5), RequestId = "REQ105", IsUsed = false, Description = "Welcome community segregation bonus" }
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-10), ExpiresAt = nowUtc.AddMonths(4).AddDays(-10), RequestId = "REQ101", IsUsed = false, Description = "Doorstep collection (Pickup #1, Small: +2 Pts)" },
+                    new EcoPointEntry { Points = 2, EarnedAt = nowUtc.AddDays(-22), ExpiresAt = nowUtc.AddMonths(4).AddDays(-22), RequestId = "REQ098", IsUsed = false, Description = "Doorstep collection (Pickup #2, Small: +2 Pts)" },
+                    new EcoPointEntry { Points = 3, EarnedAt = nowUtc.AddDays(-35), ExpiresAt = nowUtc.AddMonths(4).AddDays(-35), RequestId = "REQ089", IsUsed = false, Description = "Doorstep collection (Pickup #3, Small: +3 Pts)" },
+                    new EcoPointEntry { Points = 3, EarnedAt = nowUtc.AddDays(-48), ExpiresAt = nowUtc.AddMonths(4).AddDays(-48), RequestId = "REQ076", IsUsed = false, Description = "Doorstep collection (Pickup #4, Small: +3 Pts)" }
                 };
+                citizen.EcoPoints = citizen.PointEntries.Sum(e => e.Points); // 10 points
                 await _citizenRepository.UpdateCitizenAsync(citizen);
             }
 

@@ -218,11 +218,11 @@ namespace EcoMind.API.Repositories
 
                 var pendingFilter = Builders<PickupRequest>.Filter.And(
                     wardFilter,
-                    Builders<PickupRequest>.Filter.Regex(x => x.Status, new MongoDB.Bson.BsonRegularExpression("^Pending$", "i")),
                     Builders<PickupRequest>.Filter.Or(
+                        Builders<PickupRequest>.Filter.Regex(x => x.Status, new MongoDB.Bson.BsonRegularExpression("^(Pending|Due|Due / Review Required)$", "i")),
+                        Builders<PickupRequest>.Filter.Ne(x => x.DueStatus, null),
                         Builders<PickupRequest>.Filter.Eq(x => x.AcceptedByWorkerId, null),
-                        Builders<PickupRequest>.Filter.Eq(x => x.AcceptedByWorkerId, ""),
-                        Builders<PickupRequest>.Filter.Or(workerFilters)
+                        Builders<PickupRequest>.Filter.Eq(x => x.AcceptedByWorkerId, "")
                     )
                 );
 
@@ -304,6 +304,12 @@ namespace EcoMind.API.Repositories
             string workerId,
             DateTime collectionDate)
         {
+            var req = await GetByRequestIdAsync(requestId);
+            if (req == null) return false;
+
+            var monthName = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(collectionDate.Month);
+            var periodName = $"{monthName} {collectionDate.Year}";
+
             var update = Builders<PickupRequest>
                 .Update
                 .Set(x => x.Status, "Scheduled")
@@ -311,6 +317,9 @@ namespace EcoMind.API.Repositories
                 .Set(x => x.AcceptedAt, DateTime.UtcNow)
                 .Set(x => x.CollectionDate, collectionDate)
                 .Set(x => x.ScheduledDate, collectionDate)
+                .Set(x => x.CollectionYear, collectionDate.Year)
+                .Set(x => x.CollectionMonth, collectionDate.Month)
+                .Set(x => x.CollectionPeriodName, periodName)
                 .Set(x => x.DueStatus, null)
                 .Set(x => x.DueReason, null)
                 .Set(x => x.DueReasonSubmittedAt, null)
@@ -321,10 +330,10 @@ namespace EcoMind.API.Repositories
                 .Set(x => x.AdminApprovedAt, null);
 
             var result = await _requests.UpdateOneAsync(
-                x => x.RequestId == requestId,
+                x => x.Id == req.Id || x.RequestId == req.RequestId,
                 update);
 
-            return result.ModifiedCount > 0;
+            return result.ModifiedCount > 0 || result.MatchedCount > 0;
         }
 
         public async Task<bool> CompleteRequestAsync(

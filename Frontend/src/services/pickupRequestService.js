@@ -272,17 +272,33 @@ export const getValidCollectionDateRange = (request = null) => {
     periodName = period.periodName;
   }
 
+  // Check if assigned collection period has already expired (past 25th)
+  const isPeriodExpired =
+    targetYear < todayYear ||
+    (targetYear === todayYear && (targetMonthIndex < todayMonth || (targetMonthIndex === todayMonth && todayDay > 25)));
+
+  const isApprovedReschedule =
+    request?.adminApprovalStatus === 'Approved' ||
+    request?.dueStatus === 'Approved for Reschedule';
+
+  if (isPeriodExpired) {
+    const nextPeriod = getAssignedCollectionPeriod(now);
+    targetYear = nextPeriod.targetYear;
+    targetMonthIndex = nextPeriod.targetMonthIndex;
+    periodName = nextPeriod.periodName;
+  }
+
   // The collection period is strictly from the 20th to 25th
   let startDay = 20;
 
   // Past dates must NEVER be allowed!
   // If target month is current month, and today is already >= 20th, past days in this month are barred
   if (targetYear === todayYear && targetMonthIndex === todayMonth && todayDay >= 20) {
-    startDay = todayDay;
+    startDay = Math.min(todayDay, 25);
   }
 
   const pad = (n) => String(n).padStart(2, '0');
-  const minDate = `${targetYear}-${pad(targetMonthIndex + 1)}-${pad(Math.min(startDay, 25))}`;
+  const minDate = `${targetYear}-${pad(targetMonthIndex + 1)}-${pad(startDay)}`;
   const maxDate = `${targetYear}-${pad(targetMonthIndex + 1)}-25`;
   const defaultDate = minDate;
 
@@ -292,7 +308,8 @@ export const getValidCollectionDateRange = (request = null) => {
     defaultDate,
     targetYear,
     targetMonth: targetMonthIndex + 1,
-    periodName
+    periodName,
+    isApprovedReschedule
   };
 };
 
@@ -320,23 +337,35 @@ export const validateScheduledDate = (selectedDateStr, request = null) => {
     return { valid: false, error: 'Past dates must never be allowed. Please select a valid future date.' };
   }
 
-  // 2. Must be within the request's assigned collection month
-  const selYear = selectedDate.getFullYear();
-  const selMonth = selectedDate.getMonth() + 1;
+  // 2. Must be between 20th and 25th
   const selDay = selectedDate.getDate();
-
-  if (selYear !== range.targetYear || selMonth !== range.targetMonth) {
-    return {
-      valid: false,
-      error: `Selected date must be within the request's assigned collection month (${range.periodName}). Selected date was ${selDay} ${selectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}.`
-    };
-  }
-
-  // 3. Must be between 20th and 25th
   if (selDay < 20 || selDay > 25) {
     return {
       valid: false,
       error: 'Worker collection date must be scheduled between the 20th and 25th of the collection period.'
+    };
+  }
+
+  // 3. Must be within the request's assigned collection month or upcoming window for reschedule
+  const selYear = selectedDate.getFullYear();
+  const selMonth = selectedDate.getMonth() + 1;
+
+  const isApprovedReschedule =
+    request?.adminApprovalStatus === 'Approved' ||
+    request?.dueStatus === 'Approved for Reschedule';
+
+  const isAssignedMonth = selYear === range.targetYear && selMonth === range.targetMonth;
+
+  // Next month window
+  const nextTargetDate = new Date(range.targetYear, range.targetMonth, 1);
+  const nextYear = nextTargetDate.getFullYear();
+  const nextMonth = nextTargetDate.getMonth() + 1;
+  const isNextMonth = selYear === nextYear && selMonth === nextMonth;
+
+  if (!isAssignedMonth && !(isApprovedReschedule && isNextMonth)) {
+    return {
+      valid: false,
+      error: `Selected date must be within the request's assigned collection month (${range.periodName}). Selected date was ${selDay} ${selectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}.`
     };
   }
 

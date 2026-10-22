@@ -127,12 +127,14 @@ const WorkerPickups = ({ wardId, workerId }) => {
             : [];
       setRequests(items);
 
-      // Pre-fill default collection date from valid future range for pending requests
+      // Pre-fill default collection date from valid future range for pending and approved-for-reschedule requests
       const initialDates = {};
       items.forEach(req => {
-        if ((req.status || '').toLowerCase() === 'pending' || req.dueStatus === 'Approved for Reschedule') {
+        const sched = getPickupScheduleStatus(req);
+        if (sched.isPending || sched.isApprovedForReschedule) {
           const reqRange = getValidCollectionDateRange(req);
-          initialDates[req.requestId] = reqRange.defaultDate;
+          if (req.requestId) initialDates[req.requestId] = reqRange.defaultDate;
+          if (req.id) initialDates[req.id] = reqRange.defaultDate;
         }
       });
       setSelectedDates(prev => ({ ...initialDates, ...prev }));
@@ -161,23 +163,31 @@ const WorkerPickups = ({ wardId, workerId }) => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Worker Schedules & Accepts Request
+  // Worker Schedules & Accepts Request (or Reschedules after Admin Approval)
   const handleSchedule = async (requestId) => {
-    const chosenDateStr = selectedDates[requestId];
-    const targetReq = requests.find(r => r.requestId === requestId);
+    const targetReq = requests.find(r => r.requestId === requestId || r.id === requestId);
+    const validRange = getValidCollectionDateRange(targetReq);
+    const chosenDateStr =
+      selectedDates[requestId] ||
+      (targetReq?.requestId && selectedDates[targetReq.requestId]) ||
+      (targetReq?.id && selectedDates[targetReq.id]) ||
+      validRange?.defaultDate;
+
     const validation = validateScheduledDate(chosenDateStr, targetReq);
     if (!validation.valid) {
       setError(validation.error);
       return;
     }
 
+    const reqIdToSubmit = targetReq?.requestId || requestId;
+
     setActionLoadingId(requestId);
     setError('');
     setSuccessMsg('');
 
     try {
-      await schedulePickupRequest(requestId, workerId || 'WORKER001', chosenDateStr);
-      setSuccessMsg(`Pickup Request ${requestId} scheduled for ${chosenDateStr} (Status: Scheduled)!`);
+      await schedulePickupRequest(reqIdToSubmit, workerId || 'WORKER001', chosenDateStr);
+      setSuccessMsg(`Pickup Request ${reqIdToSubmit} scheduled for ${chosenDateStr} (Status: Scheduled)!`);
       setTimeout(() => setSuccessMsg(''), 5000);
       await fetchPickups();
     } catch (err) {
@@ -220,7 +230,7 @@ const WorkerPickups = ({ wardId, workerId }) => {
     // 1. Status Filter
     const filtered = requests.filter(req => {
       const sched = getPickupScheduleStatus(req);
-      if (statusFilter === 'Pending') return sched.isPending;
+      if (statusFilter === 'Pending') return sched.isPending || sched.isApprovedForReschedule;
       if (statusFilter === 'Scheduled') return sched.isScheduled && !sched.isToday;
       if (statusFilter === 'Today') return sched.isToday;
       if (statusFilter === 'Due') return sched.isDue || sched.isReasonSubmitted;
@@ -385,7 +395,10 @@ const WorkerPickups = ({ wardId, workerId }) => {
   const counts = useMemo(() => {
     return {
       all: requests.length,
-      pending: requests.filter(r => getPickupScheduleStatus(r).isPending).length,
+      pending: requests.filter(r => {
+        const s = getPickupScheduleStatus(r);
+        return s.isPending || s.isApprovedForReschedule;
+      }).length,
       scheduled: requests.filter(r => {
         const s = getPickupScheduleStatus(r);
         return s.isScheduled && !s.isToday;

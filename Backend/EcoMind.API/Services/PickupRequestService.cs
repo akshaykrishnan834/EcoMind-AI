@@ -1,4 +1,5 @@
 using EcoMind.API.DTOs;
+using EcoMind.API.Helpers;
 using EcoMind.API.Interfaces;
 using EcoMind.API.Models;
 
@@ -417,36 +418,20 @@ namespace EcoMind.API.Services
             ApplyDueState(request);
 
             var localToday = GetLocalTodayDate();
-            var (targetYear, targetMonth, periodName) = GetRequestCollectionPeriod(request);
-
-            // 1. Past dates must never be allowed
-            if (collectionDate.Date < localToday)
-            {
-                throw new ArgumentException("Past dates are not allowed. Please select a valid future date.");
-            }
-
-            // 2. Scheduled date must be within request's assigned collection month & year
-            if (collectionDate.Year != targetYear || collectionDate.Month != targetMonth)
-            {
-                throw new ArgumentException($"Scheduled date must be within the request's assigned collection month ({periodName}). Selected date was {collectionDate:dd MMM yyyy}.");
-            }
-
-            // 3. Valid date within 20–25 collection period
-            if (collectionDate.Day < 20 || collectionDate.Day > 25)
-            {
-                throw new ArgumentException("Worker collection date must be scheduled between the 20th and 25th of the collection period.");
-            }
-
             var scheduledDate = request.ScheduledDate ?? request.CollectionDate;
             bool isPast = scheduledDate.HasValue && localToday > scheduledDate.Value.Date;
             bool isDueState = isPast || request.Status.Contains("Due", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrWhiteSpace(request.DueStatus);
 
+            bool isApprovedForReschedule = request.AdminApprovalStatus?.Equals("Approved", StringComparison.OrdinalIgnoreCase) == true ||
+                                          request.DueStatus?.Equals("Approved for Reschedule", StringComparison.OrdinalIgnoreCase) == true;
+
             if (isDueState)
             {
                 // Worker must NOT be allowed to reschedule before Admin approval
-                if (request.AdminApprovalStatus?.Equals("Approved", StringComparison.OrdinalIgnoreCase) != true)
+                if (!isApprovedForReschedule)
                 {
-                    if (request.AdminApprovalStatus?.Equals("Rejected", StringComparison.OrdinalIgnoreCase) == true)
+                    if (request.AdminApprovalStatus?.Equals("Rejected", StringComparison.OrdinalIgnoreCase) == true ||
+                        request.DueStatus?.Equals("Rejected", StringComparison.OrdinalIgnoreCase) == true)
                     {
                         throw new InvalidOperationException("Admin rejected this missed pickup. The pickup remains locked and cannot be rescheduled.");
                     }
@@ -454,16 +439,55 @@ namespace EcoMind.API.Services
                 }
             }
 
-            var updated = await _pickupRepository.ScheduleRequestAsync(requestId, workerId, collectionDate);
+            // 1. Past dates must never be allowed
+            if (collectionDate.Date < localToday)
+            {
+                throw new ArgumentException("Past dates are not allowed. Please select a valid future date.");
+            }
+
+            // 2. Valid date within 20–25 collection period
+            if (collectionDate.Day < 20 || collectionDate.Day > 25)
+            {
+                throw new ArgumentException("Worker collection date must be scheduled between the 20th and 25th of the collection period.");
+            }
+
+            // 3. Collection month & year validation
+            var (targetYear, targetMonth, periodName) = GetRequestCollectionPeriod(request);
+            var periodEnd = new DateTime(targetYear, targetMonth, 25);
+            if (periodEnd < localToday)
+            {
+                // Original assigned period has expired; advance to active/next valid period
+                var activePeriod = CalculateAssignedCollectionPeriod(localToday);
+                targetYear = activePeriod.Year;
+                targetMonth = activePeriod.Month;
+                periodName = activePeriod.PeriodName;
+            }
+
+            var nextDate = new DateTime(targetYear, targetMonth, 1).AddMonths(1);
+            int nextYear = nextDate.Year;
+            int nextMonth = nextDate.Month;
+
+            bool isAssignedMonth = collectionDate.Year == targetYear && collectionDate.Month == targetMonth;
+            bool isNextMonth = collectionDate.Year == nextYear && collectionDate.Month == nextMonth;
+
+            if (!isAssignedMonth && !(isApprovedForReschedule && isNextMonth))
+            {
+                throw new ArgumentException($"Scheduled date must be within the valid collection period (20th–25th of {periodName}). Selected date was {collectionDate:dd MMM yyyy}.");
+            }
+
+            var updated = await _pickupRepository.ScheduleRequestAsync(request.RequestId, workerId, collectionDate);
             if (updated)
             {
                 // Notify Citizen when Worker schedules the date
                 string dateStr = collectionDate.ToString("dd MMM yyyy");
+                var newMonthName = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(collectionDate.Month);
+                var newPeriodName = $"{newMonthName} {collectionDate.Year}";
+
                 await _notificationService.NotifyUserAsync(
                     request.CitizenId,
                     "Citizen",
                     "New Pickup Date Scheduled",
-                    $"A collection date has been scheduled for request {request.RequestId} on {dateStr} (20th–25th collection window of {periodName}). Please keep dry recyclable plastic ready.",
+                    $"A collection date has been scheduled for request {request.RequestId} on {dateStr} (20th–25th collection window of {newPeriodName}). Please keep dry recyclable plastic ready.",
                     "pickup_scheduled",
                     request.RequestId);
 
@@ -551,16 +575,37 @@ namespace EcoMind.API.Services
             var updated = await _pickupRepository.CompleteRequestAsync(requestId);
             if (updated)
             {
-                // Award points: 2 redeem points per verified collection delivery, valid for 4 months
-                int pointsEarned = 2;
+                var citizenRequests = await _pickupRepository.GetByCitizenIdAsync(request.CitizenId);
+                int completedPickupNumber = citizenRequests.Count(r =>
+                    r.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                    r.Status.Equals("Collected", StringComparison.OrdinalIgnoreCase) ||
+                    r.RequestId == request.RequestId);
+
+                if (completedPickupNumber < 1) completedPickupNumber = 1;
+
+                // Allocate points based on number of pickups (progressive scaling: 2 pts for 1-2, 3 pts for 3-4, 4 pts for 5+) + volume bonus
+                int pointsEarned = EcoPointsCalculator.CalculatePointsForPickup(completedPickupNumber, request.EstimatedVolume);
+
                 var citizen = await _citizenRepository.GetCitizenByCitizenIdAsync(request.CitizenId);
                 if (citizen != null)
                 {
-                    citizen.EcoPoints += pointsEarned;
-                    if (citizen.PointEntries == null)
+                    // Cleanly recalculate past earned points from completed pickups to remove any legacy hardcoded 17 defaults
+                    var pastCompleted = citizenRequests.Where(r =>
+                        (r.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                         r.Status.Equals("Collected", StringComparison.OrdinalIgnoreCase)) &&
+                        r.RequestId != request.RequestId)
+                        .OrderBy(r => r.CollectedAt ?? r.RequestedAt)
+                        .ToList();
+
+                    int pastPointsEarned = EcoPointsCalculator.CalculateTotalPointsFromPickups(pastCompleted);
+                    int pointsUsed = 0;
+                    if (citizen.PointEntries != null)
                     {
-                        citizen.PointEntries = new List<EcoPointEntry>();
+                        pointsUsed = citizen.PointEntries.Where(e => e.IsUsed).Sum(e => e.Points);
                     }
+
+                    citizen.EcoPoints = Math.Max(0, pastPointsEarned + pointsEarned - pointsUsed);
+                    citizen.PointEntries ??= new List<EcoPointEntry>();
 
                     citizen.PointEntries.Add(new EcoPointEntry
                     {
@@ -569,7 +614,7 @@ namespace EcoMind.API.Services
                         ExpiresAt = DateTime.UtcNow.AddMonths(4),
                         RequestId = request.RequestId,
                         IsUsed = false,
-                        Description = $"Doorstep plastic collection #{request.RequestId} (+2 Pts, Claim within 4 months)"
+                        Description = EcoPointsCalculator.GetPointsDescription(completedPickupNumber, request.EstimatedVolume, pointsEarned)
                     });
 
                     await _citizenRepository.UpdateCitizenAsync(citizen);
@@ -579,7 +624,7 @@ namespace EcoMind.API.Services
                     request.CitizenId,
                     "Citizen",
                     $"Pickup Completed & +{pointsEarned} Eco-Points Earned!",
-                    $"Doorstep plastic collection for request {request.RequestId} has been verified and completed successfully by Haritha Karma Sena. You earned {pointsEarned} redeemable Eco-Points (Valid to claim within 4 months)!",
+                    $"Doorstep plastic collection #{request.RequestId} has been verified! You earned +{pointsEarned} Eco-Points (Pickup #{completedPickupNumber}, {request.EstimatedVolume ?? "Medium"} volume). Available balance: {citizen?.EcoPoints ?? pointsEarned} pts.",
                     "pickup_completed",
                     request.RequestId);
             }
@@ -669,6 +714,17 @@ namespace EcoMind.API.Services
                         $"Admin has reviewed and approved the missed pickup reason for request {request.RequestId}. Worker is now authorized to schedule a new collection date.",
                         "admin_approved",
                         request.RequestId);
+
+                    if (!string.IsNullOrWhiteSpace(request.AcceptedByWorkerId))
+                    {
+                        await _notificationService.NotifyUserAsync(
+                            request.AcceptedByWorkerId,
+                            "Worker",
+                            "Reschedule Request Approved by Admin",
+                            $"Admin has approved the rescheduling for pickup request {request.RequestId}. You can now schedule a new collection date.",
+                            "admin_approved",
+                            request.RequestId);
+                    }
                 }
                 else
                 {
@@ -679,6 +735,17 @@ namespace EcoMind.API.Services
                         $"Admin has reviewed and rejected the missed pickup explanation for request {request.RequestId}. The pickup remains locked.",
                         "admin_rejected",
                         request.RequestId);
+
+                    if (!string.IsNullOrWhiteSpace(request.AcceptedByWorkerId))
+                    {
+                        await _notificationService.NotifyUserAsync(
+                            request.AcceptedByWorkerId,
+                            "Worker",
+                            "Missed Pickup Rejected by Admin",
+                            $"Admin has reviewed and rejected the missed pickup explanation for request {request.RequestId}. The pickup remains locked.",
+                            "admin_rejected",
+                            request.RequestId);
+                    }
                 }
             }
 

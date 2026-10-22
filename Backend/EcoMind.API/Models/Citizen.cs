@@ -44,8 +44,8 @@ namespace EcoMind.API.Models
 
         public string VerifiedBy { get; set; } = string.Empty;
 
-        [BsonDefaultValue(17)]
-        public int EcoPoints { get; set; } = 17;
+        [BsonDefaultValue(0)]
+        public int EcoPoints { get; set; } = 0;
 
         public List<EcoPointEntry> PointEntries { get; set; } = new();
 

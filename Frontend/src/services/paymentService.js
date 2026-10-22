@@ -84,3 +84,19 @@ export const redeemPoints = async (payload) => {
   const response = await axios.post(`${API_URL}/redeem-points`, payload);
   return response.data;
 };
+
+/**
+ * Check citizen eligibility for points redemption based on continuous waste pickups
+ * @param {string} citizenId
+ * @param {number} [year]
+ * @param {number} [month]
+ * @returns {Promise<Object>} { citizenId, isEligible, consecutivePickupsCount, requiredConsecutivePickups, ecoPoints, hasEnoughPoints, message, recentCompletedMonths }
+ */
+export const getRedemptionEligibility = async (citizenId, year, month) => {
+  const params = {};
+  if (year) params.year = year;
+  if (month) params.month = month;
+  const response = await axios.get(`${API_URL}/redemption-eligibility/${citizenId}`, { params });
+  return response.data;
+};
+

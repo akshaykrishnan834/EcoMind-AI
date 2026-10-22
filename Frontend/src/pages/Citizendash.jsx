@@ -522,7 +522,7 @@ const CitizenDashboard = () => {
                           title="Click to view Eco-Points & redeem monthly discount"
                         >
                           <Gift className="w-3.5 h-3.5 text-amber-300" />
-                          <span>Available Points: <strong className="text-white text-sm font-black">{citizenData?.ecoPoints ?? 17}</strong></span>
+                          <span>Available Points: <strong className="text-white text-sm font-black">{citizenData?.ecoPoints ?? 0}</strong></span>
                         </span>
 
                         <span className={`px-3 py-1 font-extrabold rounded-xl flex items-center gap-1.5 ${isVerified

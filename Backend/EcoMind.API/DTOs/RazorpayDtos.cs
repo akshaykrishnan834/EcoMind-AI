@@ -59,5 +59,21 @@ namespace EcoMind.API.DTOs
         public double DiscountAmount { get; set; } = 10.0;
         public double NetAmount { get; set; } = 40.0;
         public Models.Payment? Payment { get; set; }
+        public int ConsecutivePickupsCount { get; set; } = 0;
+        public int RequiredConsecutivePickups { get; set; } = 2;
+        public bool IsContinuousPickupEligible { get; set; } = false;
+    }
+
+    public class RedemptionEligibilityDto
+    {
+        public string CitizenId { get; set; } = string.Empty;
+        public bool IsEligible { get; set; } = false;
+        public int ConsecutivePickupsCount { get; set; } = 0;
+        public int RequiredConsecutivePickups { get; set; } = 2;
+        public int EcoPoints { get; set; } = 0;
+        public int RequiredPoints { get; set; } = 10;
+        public bool HasEnoughPoints { get; set; } = false;
+        public string Message { get; set; } = string.Empty;
+        public List<string> RecentCompletedMonths { get; set; } = new();
     }
 }
