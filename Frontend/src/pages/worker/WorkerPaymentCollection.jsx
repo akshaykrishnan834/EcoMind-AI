@@ -177,7 +177,7 @@ const WorkerPaymentCollection = ({ wardId = 'Ward 1', workerProfile = {} }) => {
   const pendingCitizens = useMemo(() => {
     return citizens.filter((c) => {
       const payment = getCitizenPayment(c);
-      const isPaid = payment && payment.status === 'Paid';
+      const isPaid = payment && payment.status === 'Paid' && (payment.paymentMethod !== 'Pay Through Worker' || payment.workerApproved !== false);
       if (isPaid) return false;
 
       if (searchQuery.trim()) {
@@ -252,7 +252,7 @@ const WorkerPaymentCollection = ({ wardId = 'Ward 1', workerProfile = {} }) => {
   const monthOnlineTotal = monthOnlineCount * 50;
 
   const totalPaidCountThisMonth = Object.values(paymentsMap).filter(
-    (p) => p && p.status === 'Paid'
+    (p) => p && p.status === 'Paid' && (p.paymentMethod !== 'Pay Through Worker' || p.workerApproved !== false)
   ).length;
   const pendingCountThisMonth = Math.max(0, citizens.length - totalPaidCountThisMonth);
 
@@ -583,8 +583,9 @@ const WorkerPaymentCollection = ({ wardId = 'Ward 1', workerProfile = {} }) => {
                     {displayList.map((citizen) => {
                       const citizenKey = citizen.id || citizen.citizenId || citizen.email;
                       const payment = getCitizenPayment(citizen);
-                      const isPaid = payment && payment.status === 'Paid';
-                      const isOnline = payment && payment.paymentMethod === 'Online';
+                      const isPaid = payment && payment.status === 'Paid' && (payment.paymentMethod !== 'Pay Through Worker' || payment.workerApproved !== false);
+                      const isOnline = payment && payment.paymentMethod === 'Online' && isPaid;
+                      const isWorkerRequested = payment && payment.paymentMethod === 'Pay Through Worker' && !isPaid;
                       const isProcessing = processingId === citizenKey;
 
                       return (
@@ -630,10 +631,10 @@ const WorkerPaymentCollection = ({ wardId = 'Ward 1', workerProfile = {} }) => {
                           <td className="py-3.5 px-4 font-extrabold">
                             {isPaid ? (
                               <span className="text-emerald-700">
-                                ₹50.00 <span className="text-[10px] text-emerald-600 font-semibold">(Paid)</span>
+                                ₹{payment?.amount || 50}.00 <span className="text-[10px] text-emerald-600 font-semibold">(Paid)</span>
                               </span>
                             ) : (
-                              <span className="text-gray-900 font-extrabold">₹50.00</span>
+                              <span className="text-gray-900 font-extrabold">₹{payment?.amount || 50}.00</span>
                             )}
                           </td>
 
@@ -643,6 +644,11 @@ const WorkerPaymentCollection = ({ wardId = 'Ward 1', workerProfile = {} }) => {
                               <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                 Paid
+                              </span>
+                            ) : isWorkerRequested ? (
+                              <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                                <Clock className="w-3.5 h-3.5 text-amber-700" />
+                                Pending Approval
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
@@ -658,6 +664,11 @@ const WorkerPaymentCollection = ({ wardId = 'Ward 1', workerProfile = {} }) => {
                               <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 shadow-2xs">
                                 <Smartphone className="w-3.5 h-3.5 text-blue-600" />
                                 Online
+                              </span>
+                            ) : isWorkerRequested ? (
+                              <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-300">
+                                <IndianRupee className="w-3.5 h-3.5 text-amber-700" />
+                                Pay Through Worker (Requested)
                               </span>
                             ) : payment?.paymentMethod === 'Pay Through Worker' ? (
                               <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -701,17 +712,26 @@ const WorkerPaymentCollection = ({ wardId = 'Ward 1', workerProfile = {} }) => {
                                 type="button"
                                 disabled={isProcessing}
                                 onClick={() => handleCollectCash(citizen)}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0a4d2c] hover:bg-[#063820] text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-white font-extrabold text-xs rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50 ${
+                                  isWorkerRequested
+                                    ? 'bg-emerald-700 hover:bg-emerald-800 ring-2 ring-emerald-400/50'
+                                    : 'bg-[#0a4d2c] hover:bg-[#063820]'
+                                }`}
                               >
                                 {isProcessing ? (
                                   <>
                                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                                     <span>Verifying...</span>
                                   </>
+                                ) : isWorkerRequested ? (
+                                  <>
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                                    <span>Approve & Collect ₹{payment?.amount || 50} Cash</span>
+                                  </>
                                 ) : (
                                   <>
                                     <IndianRupee className="w-3.5 h-3.5 text-emerald-300" />
-                                    <span>Collect ₹50 Cash</span>
+                                    <span>Collect ₹{payment?.amount || 50} Cash</span>
                                   </>
                                 )}
                               </button>

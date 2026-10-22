@@ -90,9 +90,33 @@ namespace EcoMind.API.Controllers
         }
 
         /// <summary>
-        /// Process cash payment through Haritha Karma Sena worker
+        /// Citizen requests to pay through Haritha Karma Sena worker (Doorstep Cash)
+        /// Status remains Pending Cash Verification until worker approves
+        /// </summary>
+        [HttpPost("request-worker-payment")]
+        public async Task<IActionResult> RequestWorkerPayment([FromBody] ProcessWorkerPaymentDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.CitizenId))
+            {
+                return BadRequest(new { message = "Invalid worker payment request." });
+            }
+
+            try
+            {
+                var result = await _paymentService.RequestWorkerPaymentAsync(dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Process / Approve cash payment by Haritha Karma Sena worker
         /// </summary>
         [HttpPost("pay-worker")]
+        [HttpPost("approve-worker-payment")]
         public async Task<IActionResult> ProcessWorkerPayment([FromBody] ProcessWorkerPaymentDto dto)
         {
             if (dto == null || string.IsNullOrWhiteSpace(dto.CitizenId))

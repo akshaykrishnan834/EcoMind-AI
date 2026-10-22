@@ -88,7 +88,19 @@ namespace EcoMind.API.Services
                 }
             }
 
-            return await _paymentRepository.GetByCitizenIdAsync(citizenId);
+            var payments = await _paymentRepository.GetByCitizenIdAsync(citizenId);
+            foreach (var p in payments)
+            {
+                // If citizen selected Pay Through Worker but worker has not approved, status should be Pending Cash Verification
+                if (p.PaymentMethod == "Pay Through Worker" && !p.WorkerApproved && p.Status == "Paid")
+                {
+                    p.Status = "Pending Cash Verification";
+                    p.PaidAt = null;
+                    p.TransactionId = null;
+                    await _paymentRepository.UpdateAsync(p);
+                }
+            }
+            return payments;
         }
 
         public async Task<Payment?> GetCurrentMonthPaymentAsync(string citizenId)
@@ -342,7 +354,7 @@ namespace EcoMind.API.Services
             return payment;
         }
 
-        public async Task<Payment> ProcessWorkerPaymentAsync(ProcessWorkerPaymentDto dto)
+        public async Task<Payment> RequestWorkerPaymentAsync(ProcessWorkerPaymentDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.CitizenId))
             {
@@ -367,13 +379,73 @@ namespace EcoMind.API.Services
                 await _paymentRepository.CreateAsync(payment);
             }
 
+            if (dto.ApplyEcoDiscount && payment.DiscountAmount <= 0)
+            {
+                payment.DiscountAmount = 10.0;
+                payment.PointsRedeemed = 10;
+                payment.Amount = 40.0;
+            }
+
+            // Citizen requested to pay cash via worker; remains pending verification until worker collects & approves
+            payment.Status = "Pending Cash Verification";
+            payment.PaymentMethod = "Pay Through Worker";
+            payment.WorkerApproved = false;
+            payment.PaidAt = null;
+            payment.TransactionId = null;
+
+            await _paymentRepository.UpdateAsync(payment);
+            return payment;
+        }
+
+        public async Task<Payment> ApproveWorkerPaymentAsync(ProcessWorkerPaymentDto dto, string? workerId = null)
+        {
+            if (string.IsNullOrWhiteSpace(dto.CitizenId))
+            {
+                throw new ArgumentException("Citizen ID is required.");
+            }
+
+            var payment = await _paymentRepository.GetByCitizenAndPeriodAsync(dto.CitizenId, dto.Year, dto.Month);
+            if (payment == null)
+            {
+                payment = new Payment
+                {
+                    PaymentId = $"PAY-{dto.Year}{dto.Month:D2}-{dto.CitizenId}",
+                    CitizenId = dto.CitizenId,
+                    Year = dto.Year,
+                    Month = dto.Month,
+                    BaseAmount = 50.0,
+                    DiscountAmount = 0.0,
+                    PointsRedeemed = 0,
+                    Amount = 50.0,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _paymentRepository.CreateAsync(payment);
+            }
+
+            if (dto.ApplyEcoDiscount && payment.DiscountAmount <= 0)
+            {
+                payment.DiscountAmount = 10.0;
+                payment.PointsRedeemed = 10;
+                payment.Amount = 40.0;
+            }
+
             payment.Status = "Paid";
             payment.PaymentMethod = "Pay Through Worker";
+            payment.WorkerApproved = true;
+            if (!string.IsNullOrEmpty(workerId))
+            {
+                payment.ApprovedByWorkerId = workerId;
+            }
             payment.TransactionId = $"WORKER-{DateTime.UtcNow.Ticks}";
             payment.PaidAt = DateTime.UtcNow;
 
             await _paymentRepository.UpdateAsync(payment);
             return payment;
+        }
+
+        public async Task<Payment> ProcessWorkerPaymentAsync(ProcessWorkerPaymentDto dto)
+        {
+            return await ApproveWorkerPaymentAsync(dto);
         }
 
         public async Task<RedeemPointsResponseDto> RedeemPointsAsync(RedeemPointsDto dto)

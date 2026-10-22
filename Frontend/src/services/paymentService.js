@@ -56,6 +56,28 @@ export const verifyRazorpayPayment = async (payload) => {
 };
 
 /**
+ * Request cash payment through Haritha Karma Sena field worker (Citizen action)
+ * Sets status to Pending Cash Verification until worker approval
+ * @param {Object} payload - { citizenId, month, year, applyEcoDiscount }
+ * @returns {Promise<Object>} Updated payment object
+ */
+export const requestWorkerPayment = async (payload) => {
+  const response = await axios.post(`${API_URL}/request-worker-payment`, payload);
+  return response.data;
+};
+
+/**
+ * Approve & collect cash payment by Haritha Karma Sena field worker (Worker action)
+ * Marks status as Paid and generates worker transaction receipt
+ * @param {Object} payload - { citizenId, month, year, applyEcoDiscount, workerId }
+ * @returns {Promise<Object>} Updated payment object
+ */
+export const approveWorkerPayment = async (payload) => {
+  const response = await axios.post(`${API_URL}/pay-worker`, payload);
+  return response.data;
+};
+
+/**
  * Process cash payment through Haritha Karma Sena field worker
  * @param {Object} payload - { citizenId, month, year, applyEcoDiscount }
  * @returns {Promise<Object>} Updated payment object

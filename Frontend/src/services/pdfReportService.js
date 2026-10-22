@@ -95,7 +95,8 @@ export const buildCardData = (citizenData, requests = [], payments = []) => {
       const isCompleted = sched?.isCompleted;
       const isScheduled = sched?.isScheduled || sched?.isToday;
       const isDue = sched?.isDue || sched?.isReasonSubmitted;
-      const isPaidFee = payRecord && (payRecord.status || '').toLowerCase() === 'paid';
+      const isPaidFee = payRecord && (payRecord.status || '').toLowerCase() === 'paid' && (payRecord.paymentMethod !== 'Pay Through Worker' || payRecord.workerApproved !== false);
+      const isWorkerPendingFee = payRecord && payRecord.paymentMethod === 'Pay Through Worker' && !isPaidFee;
       const isPastMonth = year < currentYearNow || (year === currentYearNow && m.monthNum < currentMonthNow);
       const isCurrentMonth = year === currentYearNow && m.monthNum === currentMonthNow;
 
@@ -110,7 +111,7 @@ export const buildCardData = (citizenData, requests = [], payments = []) => {
 
       const rtNo = req?.requestId ? req.requestId.replace(/^REQ-?/, '') : '-';
       const fee = '₹50';
-      const paymentStatus = isPaidFee ? 'Paid ₹50' : isPastMonth ? 'Pending Due ₹50' : 'Unpaid ₹50';
+      const paymentStatus = isPaidFee ? 'Paid ₹50' : isWorkerPendingFee ? 'Pending Worker Approval ₹50' : isPastMonth ? 'Pending Due ₹50' : 'Unpaid ₹50';
 
       const verified = isCompleted
         ? 'Verified by Worker'

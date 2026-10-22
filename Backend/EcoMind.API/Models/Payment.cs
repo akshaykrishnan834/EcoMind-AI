@@ -40,6 +40,10 @@ namespace EcoMind.API.Models
 
         public string? RazorpaySignature { get; set; }
 
+        public bool WorkerApproved { get; set; } = false;
+
+        public string? ApprovedByWorkerId { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

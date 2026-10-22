@@ -116,12 +116,13 @@ const AdminPayments = () => {
 
     if (payment) {
       amount = payment.amount || 50.0;
-      if (payment.status === 'Paid') {
+      const isApproved = payment.paymentMethod !== 'Pay Through Worker' || payment.workerApproved !== false;
+      if (payment.status === 'Paid' && isApproved) {
         status = 'Paid';
         paymentMethod = payment.paymentMethod || 'Online';
         transactionId = payment.transactionId || payment.razorpayPaymentId || '—';
         paidAt = payment.paidAt;
-      } else if (payment.status === 'Pending' || payment.paymentMethod === 'Pay Through Worker') {
+      } else if (payment.status === 'Pending' || payment.status === 'Pending Cash Verification' || payment.paymentMethod === 'Pay Through Worker') {
         status = 'Pending Cash Verification';
         paymentMethod = 'Pay Through Worker';
         transactionId = payment.transactionId || '—';

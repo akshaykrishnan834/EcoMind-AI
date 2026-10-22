@@ -30,6 +30,7 @@ import {
   createRazorpayOrder,
   verifyRazorpayPayment,
   processWorkerPayment,
+  requestWorkerPayment,
   redeemPoints,
   getRedemptionEligibility
 } from '../services/paymentService';
@@ -154,12 +155,28 @@ const MonthlyPaymentSection = ({ citizenData }) => {
     paymentMethod: null
   };
 
-  const isCurrentPaid = (currentPayment.status || '').toLowerCase() === 'paid';
+  const isPaymentPaid = (p) => {
+    if (!p) return false;
+    const statusLower = (p.status || '').toLowerCase();
+    if (statusLower !== 'paid') return false;
+    // For Pay Through Worker, must be explicitly approved by worker
+    if (p.paymentMethod === 'Pay Through Worker' && p.workerApproved === false) return false;
+    return true;
+  };
+
+  const isPaymentWorkerPending = (p) => {
+    if (!p) return false;
+    if (p.paymentMethod !== 'Pay Through Worker') return false;
+    return !p.workerApproved || (p.status || '').toLowerCase() !== 'paid';
+  };
+
+  const isCurrentPaid = isPaymentPaid(currentPayment);
+  const isCurrentWorkerPending = isPaymentWorkerPending(currentPayment);
 
   // Identify previous unpaid months (Pending Dues)
   const pendingDues = payments.filter(p => {
     const isPast = p.year < currentYearNum || (p.year === currentYearNum && p.month < currentMonthNum);
-    return isPast && (p.status || '').toLowerCase() !== 'paid';
+    return isPast && !isPaymentPaid(p);
   });
 
   const handleOpenPayModal = (paymentTarget) => {
@@ -368,7 +385,7 @@ const MonthlyPaymentSection = ({ citizenData }) => {
 
       } else {
         // Option 2: Pay Through Worker
-        await processWorkerPayment({
+        await requestWorkerPayment({
           citizenId,
           month: selectedPaymentForModal.month,
           year: selectedPaymentForModal.year,
@@ -376,7 +393,7 @@ const MonthlyPaymentSection = ({ citizenData }) => {
         });
 
         const discountNote = hasDiscount ? ' (20% Discount Applied: Handover ₹40 cash)' : ' (Handover ₹50 cash)';
-        setSuccessMessage(`Handover confirmed! Haritha Karma Sena fee for ${targetMonthName} ${selectedPaymentForModal.year} marked as Paid.${discountNote}`);
+        setSuccessMessage(`Cash payment request placed! Please handover cash to the Haritha Karma Sena worker during collection.${discountNote} Payment will be marked as successful after worker approval.`);
         setIsModalOpen(false);
         setSelectedPaymentForModal(null);
         await loadPayments();
@@ -807,13 +824,31 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleOpenPayModal(p)}
-                    className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <CreditCard className="w-4 h-4 text-white" />
-                    <span>Pay Due (₹{p.amount || 50})</span>
-                  </button>
+                  {isPaymentWorkerPending(p) ? (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="p-2 bg-amber-50 rounded-xl border border-amber-200 text-center">
+                        <span className="text-[11px] font-extrabold text-amber-900 flex items-center justify-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-amber-700 animate-pulse" />
+                          Pending Worker Approval
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleOpenPayModal(p)}
+                        className="w-full py-2 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <CreditCard className="w-4 h-4 text-emerald-300" />
+                        <span>Pay Online Instead</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleOpenPayModal(p)}
+                      className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <CreditCard className="w-4 h-4 text-white" />
+                      <span>Pay Due (₹{p.amount || 50})</span>
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -840,10 +875,26 @@ const MonthlyPaymentSection = ({ citizenData }) => {
             <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border flex items-center gap-1.5 ${
               isCurrentPaid
                 ? 'bg-emerald-100 border-emerald-400 text-[#0a4d2c]'
+                : isCurrentWorkerPending
+                ? 'bg-amber-100 border-amber-400 text-amber-900'
                 : 'bg-amber-100 border-amber-400 text-amber-900'
             }`}>
-              {isCurrentPaid ? <Check className="w-4 h-4 text-[#0a4d2c] stroke-[3]" /> : <Clock className="w-4 h-4 text-amber-700" />}
-              <span>{isCurrentPaid ? 'Paid' : 'Unpaid'}</span>
+              {isCurrentPaid ? (
+                <>
+                  <Check className="w-4 h-4 text-[#0a4d2c] stroke-[3]" />
+                  <span>Paid</span>
+                </>
+              ) : isCurrentWorkerPending ? (
+                <>
+                  <Clock className="w-4 h-4 text-amber-700 animate-pulse" />
+                  <span>Pending Worker Approval</span>
+                </>
+              ) : (
+                <>
+                  <Clock className="w-4 h-4 text-amber-700" />
+                  <span>Unpaid</span>
+                </>
+              )}
             </span>
           </div>
         </div>
@@ -970,6 +1021,25 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                   </button>
                 </div>
               </div>
+            ) : isCurrentWorkerPending ? (
+              <div className="space-y-2 text-right">
+                <div className="px-5 py-3 bg-amber-100 border border-amber-300 text-amber-950 rounded-2xl font-black text-xs shadow-xs flex items-center justify-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-700 animate-pulse" />
+                  <span>Pending Worker Approval • ₹{currentPayment.amount || 50}</span>
+                </div>
+                <p className="text-[11px] text-amber-800 font-semibold text-right max-w-xs">
+                  Handover cash to worker during collection. Receipt will be generated once verified.
+                </p>
+                <div className="flex items-center justify-end">
+                  <button
+                    onClick={() => handleOpenPayModal(currentPayment)}
+                    className="px-3.5 py-1.5 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-[11px] rounded-xl transition-all cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Switch to Pay Online</span>
+                  </button>
+                </div>
+              </div>
             ) : (
               <button
                 onClick={() => handleOpenPayModal(currentPayment)}
@@ -1017,7 +1087,8 @@ const MonthlyPaymentSection = ({ citizenData }) => {
             <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
               {payments.map((p) => {
                 const monthName = MONTH_NAMES[p.month - 1] || `Month ${p.month}`;
-                const isPaid = (p.status || '').toLowerCase() === 'paid';
+                const isPaid = isPaymentPaid(p);
+                const isWorkerPending = isPaymentWorkerPending(p);
                 const isPast = p.year < currentYearNum || (p.year === currentYearNum && p.month < currentMonthNum);
                 const hasDiscount = (p.discountAmount && p.discountAmount > 0) || (p.pointsRedeemed && p.pointsRedeemed > 0) || p.amount === 40;
 
@@ -1047,6 +1118,11 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                           <Check className="w-3 h-3 text-[#0a4d2c] stroke-[3]" />
                           Paid ✓
                         </span>
+                      ) : isWorkerPending ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-900 font-bold text-[11px] rounded-full border border-amber-300">
+                          <Clock className="w-3 h-3 text-amber-700 animate-pulse" />
+                          Pending Worker Approval
+                        </span>
                       ) : isPast ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-800 font-bold text-[11px] rounded-full border border-rose-300">
                           <AlertCircle className="w-3 h-3 text-rose-600" />
@@ -1060,13 +1136,13 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                       )}
                     </td>
                     <td className="py-3 px-4 font-bold text-gray-800">
-                      {isPaid ? (p.paymentMethod || 'Online') : '-'}
+                      {isPaid ? (p.paymentMethod || 'Online') : isWorkerPending ? 'Pay Through Worker' : '-'}
                     </td>
                     <td className="py-3 px-4 text-gray-600 font-mono text-[11px]">
-                      {p.paidAt ? new Date(p.paidAt).toLocaleDateString('en-GB') : '-'}
+                      {isPaid && p.paidAt ? new Date(p.paidAt).toLocaleDateString('en-GB') : isWorkerPending ? 'Pending Approval' : '-'}
                     </td>
-                    <td className="py-3 px-4 font-mono text-[10px] text-gray-600 truncate max-w-[120px]" title={p.razorpayPaymentId || p.transactionId || ''}>
-                      {p.razorpayPaymentId || p.transactionId || '-'}
+                    <td className="py-3 px-4 font-mono text-[10px] text-gray-600 truncate max-w-[120px]" title={isPaid ? (p.razorpayPaymentId || p.transactionId || '') : ''}>
+                      {isPaid ? (p.razorpayPaymentId || p.transactionId || '-') : '-'}
                     </td>
                     <td className="py-3 px-4 text-center">
                       {isPaid ? (
@@ -1077,6 +1153,19 @@ const MonthlyPaymentSection = ({ citizenData }) => {
                           <Receipt className="w-3 h-3" />
                           <span>Receipt</span>
                         </button>
+                      ) : isWorkerPending ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className="px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 font-bold text-[10px] rounded-md">
+                            Handover Cash
+                          </span>
+                          <button
+                            onClick={() => handleOpenPayModal(p)}
+                            title="Switch to Pay Online"
+                            className="px-2 py-1 bg-[#0a4d2c] hover:bg-emerald-900 text-white font-extrabold text-[10px] rounded-md transition-all cursor-pointer shadow-2xs"
+                          >
+                            Pay Online
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => handleOpenPayModal(p)}
