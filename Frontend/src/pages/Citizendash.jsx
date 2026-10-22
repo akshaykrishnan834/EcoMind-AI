@@ -135,7 +135,8 @@ const CitizenDashboard = () => {
 
     const fetchLiveWorkerStatus = async () => {
       try {
-        const live = await getLiveWorkerByWard(citizenWard);
+        const cId = citizenData?.citizenId || citizenData?.id || citizenData?._id || userObj.citizenId;
+        const live = await getLiveWorkerByWard(citizenWard, cId);
         if (isMounted) {
           setLiveWorker(live);
         }
@@ -382,15 +383,28 @@ const CitizenDashboard = () => {
     }
   ];
 
-  // On-Demand Gating: Active pickup required for live tracking (Option 2)
+  // On-Demand Gating: Active pickup required for live tracking
   const hasActivePickup = Boolean(
     (ongoingWork && !isRequestCompleted && (ongoingWork.rawStatus || '').toLowerCase() !== 'cancelled') ||
     realRequests.some(r => isUncompleted(r))
   );
 
-  const activeRequestForTracking = hasActivePickup
-    ? (ongoingWork || realRequests.find(r => isUncompleted(r)))
-    : null;
+  const activeRequestForTracking = ongoingWork || currentMonthRequest || realRequests[0] || null;
+
+  // Determine if citizen's pickup is scheduled for today
+  const targetSchedDate = ongoingWork?.scheduledDate || currentMonthRequest?.scheduledDate || currentMonthRequest?.collectionDate;
+  const isPickupToday = Boolean(
+    hasActivePickup &&
+    targetSchedDate &&
+    (() => {
+      const d = new Date(targetSchedDate);
+      if (isNaN(d.getTime())) return false;
+      const today = new Date();
+      return d.getFullYear() === today.getFullYear() &&
+             d.getMonth() === today.getMonth() &&
+             d.getDate() === today.getDate();
+    })()
+  );
 
   return (
     <div className="h-screen w-full max-w-full flex flex-col overflow-hidden bg-[#f6faf7] dark:bg-[#09110d] font-sans print:h-auto print:w-auto print:overflow-visible print:bg-white">
@@ -547,14 +561,14 @@ const CitizenDashboard = () => {
                           type="button"
                           onClick={() => setActiveTab('Live Worker Tracker')}
                           className={`px-4 py-3 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer relative ${
-                            liveWorker?.isOnDuty
+                            isPickupToday && liveWorker?.isOnDuty
                               ? 'bg-emerald-400 hover:bg-emerald-300 text-emerald-950 font-black'
                               : 'bg-emerald-950/60 hover:bg-emerald-950/80 text-emerald-200'
                           }`}
                         >
                           <Navigation className="w-4 h-4" />
-                          <span>Live Worker</span>
-                          {liveWorker?.isOnDuty && (
+                          <span>{isPickupToday ? 'Live Worker' : 'Track Worker'}</span>
+                          {isPickupToday && liveWorker?.isOnDuty && (
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-950 animate-ping absolute -top-1 -right-1" />
                           )}
                         </button>
@@ -623,36 +637,67 @@ const CitizenDashboard = () => {
                 {/* HARITHA KARMA SENA WORKER LIVE ON-DUTY ALERT BANNER */}
                 {liveWorker?.isOnDuty && (
                   hasActivePickup ? (
-                    <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-2 border-emerald-300 animate-fadeIn">
-                      <div className="flex items-center gap-4">
-                        <div className="relative p-3 bg-white/20 backdrop-blur-xs rounded-2xl text-white shadow-md shrink-0">
-                          <Truck className="w-6 h-6 animate-bounce" />
-                          <span className="w-3 h-3 rounded-full bg-emerald-300 border-2 border-white absolute -top-1 -right-1 animate-ping" />
-                        </div>
-                        <div>
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-wider mb-1.5">
-                            <Navigation className="w-3.5 h-3.5 text-emerald-200" /> Haritha Karma Sena On Duty
+                    isPickupToday ? (
+                      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-2 border-emerald-300 animate-fadeIn">
+                        <div className="flex items-center gap-4">
+                          <div className="relative p-3 bg-white/20 backdrop-blur-xs rounded-2xl text-white shadow-md shrink-0">
+                            <Truck className="w-6 h-6 animate-bounce" />
+                            <span className="w-3 h-3 rounded-full bg-emerald-300 border-2 border-white absolute -top-1 -right-1 animate-ping" />
                           </div>
-                          <h3 className="text-base sm:text-lg font-black tracking-tight">
-                            {liveWorker.workerName || 'Worker'} is actively collecting in {wardId || 'your ward'}!
-                          </h3>
-                          <p className="text-xs sm:text-sm text-emerald-100 font-medium mt-0.5">
-                            Your pickup request is active. Track live vehicle approach and arrival in real-time.
-                          </p>
+                          <div>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-wider mb-1.5">
+                              <Navigation className="w-3.5 h-3.5 text-emerald-200" /> Today's Scheduled Pickup
+                            </div>
+                            <h3 className="text-base sm:text-lg font-black tracking-tight">
+                              {liveWorker.workerName || 'Worker'} is actively collecting in {wardId || 'your ward'}!
+                            </h3>
+                            <p className="text-xs sm:text-sm text-emerald-100 font-medium mt-0.5">
+                              Your pickup is scheduled for today. Track live vehicle approach and arrival in real-time.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2 self-start sm:self-center">
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('Live Worker Tracker')}
+                            className="px-5 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer"
+                          >
+                            <Navigation className="w-4 h-4 text-[#0a4d2c]" />
+                            <span>Track Live on Map</span>
+                            <ArrowRight className="w-4 h-4 text-[#0a4d2c]" />
+                          </button>
                         </div>
                       </div>
-                      <div className="shrink-0 flex items-center gap-2 self-start sm:self-center">
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('Live Worker Tracker')}
-                          className="px-5 py-3 bg-white hover:bg-emerald-50 text-[#0a4d2c] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer"
-                        >
-                          <Navigation className="w-4 h-4 text-[#0a4d2c]" />
-                          <span>Track Live on Map</span>
-                          <ArrowRight className="w-4 h-4 text-[#0a4d2c]" />
-                        </button>
+                    ) : (
+                      <div className="bg-white dark:bg-[#121e17] border border-emerald-200 dark:border-emerald-900/40 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fadeIn">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl text-[#0a4d2c] dark:text-emerald-400 shrink-0">
+                            <Calendar className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1.5">
+                              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Upcoming Scheduled Pickup
+                            </div>
+                            <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                              Collection scheduled for {ongoingWork?.scheduledDate || 'your assigned date'}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                              Haritha Karma Sena is on duty in {wardId}. Live vehicle tracking will activate on your scheduled pickup date.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2 self-start sm:self-center">
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('Live Worker Tracker')}
+                            className="px-5 py-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-[#0a4d2c] dark:text-emerald-300 font-extrabold text-xs uppercase tracking-wider rounded-xl transition flex items-center gap-2 cursor-pointer"
+                          >
+                            <Calendar className="w-4 h-4" />
+                            <span>View Scheduled Date</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )
                   ) : (
                     <div className="bg-emerald-50 dark:bg-[#122419] border border-emerald-200/90 dark:border-emerald-800/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-emerald-950 dark:text-emerald-100 shadow-2xs animate-fadeIn">
                       <div className="flex items-center gap-3.5">
@@ -1098,10 +1143,14 @@ const CitizenDashboard = () => {
                           <button
                             type="button"
                             onClick={() => setActiveTab('Live Worker Tracker')}
-                            className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                            className={`px-3.5 py-2.5 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                              isPickupToday
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                : 'bg-emerald-50 hover:bg-emerald-100 dark:bg-[#1a3325] dark:hover:bg-[#224431] text-[#0a4d2c] dark:text-emerald-300'
+                            }`}
                           >
-                            <Navigation className="w-3.5 h-3.5 text-emerald-100" />
-                            <span>Track Live</span>
+                            <Navigation className="w-3.5 h-3.5" />
+                            <span>{isPickupToday ? 'Track Live' : 'View Tracking'}</span>
                           </button>
                         )}
                         {activePickupStatus.isDue && (

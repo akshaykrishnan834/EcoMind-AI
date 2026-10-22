@@ -1,4 +1,4 @@
-﻿namespace EcoMind.API.Interfaces
+namespace EcoMind.API.Interfaces
 {
     public interface IAIService
     {

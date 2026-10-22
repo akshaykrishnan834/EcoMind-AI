@@ -62,9 +62,12 @@ namespace EcoMind.API.Controllers
         }
 
         [HttpGet("ward/{wardId}/live")]
-        public async Task<IActionResult> GetLiveWorkerByWard(string wardId)
+        public async Task<IActionResult> GetLiveWorkerByWard(
+            string wardId,
+            [FromQuery] string? citizenId = null,
+            [FromQuery] string? requestId = null)
         {
-            var worker = await _workerService.GetLiveWorkerByWardAsync(wardId);
+            var worker = await _workerService.GetLiveWorkerByWardAsync(wardId, citizenId, requestId);
             return Ok(worker);
         }
     }

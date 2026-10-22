@@ -13,6 +13,6 @@ namespace EcoMind.API.Interfaces
         
         Task<string> UpdateDutyStatusAsync(UpdateWorkerDutyDto dto);
 
-        Task<Worker?> GetLiveWorkerByWardAsync(string wardId);
+        Task<LiveWorkerTrackingDto?> GetLiveWorkerByWardAsync(string wardId, string? citizenId = null, string? requestId = null);
     }
 }

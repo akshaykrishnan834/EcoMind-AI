@@ -59,19 +59,24 @@ export const updateDutyStatus = async ({ email, workerId, wardId, isOnDuty, lati
 /**
  * Fetches the active/assigned live worker for a given ward.
  */
-export const getLiveWorkerByWard = async (wardId) => {
+export const getLiveWorkerByWard = async (wardId, citizenId = null, requestId = null) => {
   if (!wardId) return null;
 
   const cleanWardKey = `ecomind_live_worker_${wardId.toLowerCase().replace(/\s+/g, '_')}`;
 
   // Try API first
   try {
-    const response = await axios.get(`${API_URL}/ward/${encodeURIComponent(wardId)}/live`);
+    const params = new URLSearchParams();
+    if (citizenId) params.append('citizenId', citizenId);
+    if (requestId) params.append('requestId', requestId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+
+    const response = await axios.get(`${API_URL}/ward/${encodeURIComponent(wardId)}/live${queryString}`);
     if (response.data) {
-      if (!response.data.isOnDuty) {
+      if (!response.data.isOnDuty || response.data.isTrackingAllowed === false) {
         return {
           ...response.data,
-          isOnDuty: false,
+          isOnDuty: response.data.isTrackingAllowed === false ? false : Boolean(response.data.isOnDuty),
           latitude: null,
           longitude: null,
           currentLatitude: null,

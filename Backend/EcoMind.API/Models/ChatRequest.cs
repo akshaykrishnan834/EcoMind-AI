@@ -1,4 +1,4 @@
-﻿namespace EcoMind.API.Models
+namespace EcoMind.API.Models
 {
     public class ChatRequest
     {

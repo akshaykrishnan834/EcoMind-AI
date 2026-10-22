@@ -26,6 +26,7 @@ namespace EcoMind.API.Services
             3. Answer questions regarding doorstep collection schedules, verification codes, user fees, waste segregation policies, and environmental regulations authoritatively.
             4. If the user asks general or informational questions (such as science, technology, environment, or general inquiries), provide a structured, polite, and standard formal response.
             5. Structure information using clear headings, bullet points, and numbered lists where appropriate.
+            6. If the user asks to download, export, or view their User Fee & Collection Card (കളക്ഷൻ കാർഡ്), provide a formal summary of their card status and indicate that they can download the card directly as PDF or Excel using [ACTION:DOWNLOAD_COLLECTION_CARD].
             """;
 
         public async Task<string> GetResponseAsync(string message)
@@ -177,6 +178,22 @@ namespace EcoMind.API.Services
                 }
 
                 var q = userQuery.ToLowerInvariant();
+
+                // Intent 0: Collection Card / Download Card / User Fee Card
+                if (q.Contains("collection card") || q.Contains("download card") || q.Contains("my card") || q.Contains("fee card") || q.Contains("export card") || q.Contains("get card") || q.Contains("card download") || q.Contains("print card") || q.Contains("കളക്ഷൻ കാർഡ്"))
+                {
+                    return $"### Haritha Karma Sena Collection Card\n\n" +
+                           $"Dear Citizen **{residentName}**,\n\n" +
+                           $"Your official **Haritha Karma Sena Doorstep Collection & User Fee Card (യൂസർ ഫീ കളക്ഷൻ കാർഡ്)** is generated and ready for download.\n\n" +
+                           $"**Card Credentials:**\n" +
+                           $"* **Citizen Name:** {residentName}\n" +
+                           $"* **Jurisdiction:** {ward}\n" +
+                           $"* **Statutory Fee:** ₹50.00 / Month\n" +
+                           $"* **Outstanding Dues:** {duesTotal}\n" +
+                           $"* **Collection Status:** {requestStatus} (Scheduled: {scheduledDate})\n\n" +
+                           $"You can download your official card in **PDF format** or export as an **Excel spreadsheet** using the download options below.\n\n" +
+                           $"[ACTION:DOWNLOAD_COLLECTION_CARD]";
+                }
 
                 // Intent 1: Verification Code / OTP / PIN
                 if (q.Contains("verification code") || q.Contains("pickup code") || q.Contains("my code") || q.Contains("otp") || q.Contains("pin") || (q.Contains("code") && !q.Contains("qr")))
