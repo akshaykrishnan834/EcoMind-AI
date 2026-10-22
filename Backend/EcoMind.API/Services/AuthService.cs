@@ -181,7 +181,7 @@ namespace EcoMind.API.Services
                 Console.WriteLine($"[EcoMind DEV FALLBACK OTP] YOUR OTP CODE IS: {otpCode}");
                 Console.WriteLine($"==================================================");
 
-                return "OTP sent successfully to your email.";
+                return $"OTP generated, but email delivery failed ({ex.Message}). Check SMTP configuration.";
             }
         }
 

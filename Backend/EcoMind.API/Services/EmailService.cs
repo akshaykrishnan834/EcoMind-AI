@@ -43,20 +43,21 @@ namespace EcoMind.API.Services
 
             using var client = new SmtpClient();
 
-            // Set strict 5-second timeout to prevent UI hanging
-            client.Timeout = 5000;
+            // Set 15-second timeout suitable for cloud hosting environments
+            client.Timeout = 15000;
 
-            // Accept SSL certificates safely in development
+            // Accept SSL certificates safely
             client.ServerCertificateValidationCallback = (s, c, h, e) => true;
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 
-            // Connect using STARTTLS for Gmail on port 587
-            await client.ConnectAsync(
-                string.IsNullOrWhiteSpace(_emailSettings.Host) ? "smtp.gmail.com" : _emailSettings.Host.Trim(),
-                _emailSettings.Port == 0 ? 587 : _emailSettings.Port,
-                SecureSocketOptions.StartTls,
-                cts.Token);
+            int port = _emailSettings.Port == 0 ? 587 : _emailSettings.Port;
+            string host = string.IsNullOrWhiteSpace(_emailSettings.Host) ? "smtp.gmail.com" : _emailSettings.Host.Trim();
+
+            // Auto-detect SSL/TLS: SslOnConnect for port 465, StartTls for 587/25
+            var socketOptions = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTlsWhenAvailable;
+
+            await client.ConnectAsync(host, port, socketOptions, cts.Token);
 
             // Authenticate with Gmail Email & App Password
             await client.AuthenticateAsync(_emailSettings.Email.Trim(), appPassword, cts.Token);
