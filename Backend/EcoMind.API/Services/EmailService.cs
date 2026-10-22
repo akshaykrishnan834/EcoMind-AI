@@ -51,28 +51,57 @@ namespace EcoMind.API.Services
             // Accept SSL certificates safely in development and hosted environments
             client.ServerCertificateValidationCallback = (s, c, h, e) => true;
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-
             int port = _emailSettings.Port == 0 ? 587 : _emailSettings.Port;
             string host = string.IsNullOrWhiteSpace(_emailSettings.Host) ? "smtp.gmail.com" : _emailSettings.Host.Trim();
 
-            // Select SSL/TLS option based on port: Port 465 uses direct SSL, 587/25 use STARTTLS
-            var socketOptions = port == 465 
-                ? SecureSocketOptions.SslOnConnect 
-                : (port == 587 ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
+            // Candidate connections: try configured port first, then fallback port (essential for cloud platforms like Render)
+            var connectionAttempts = new List<(int Port, SecureSocketOptions Options)>
+            {
+                (port, port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls)
+            };
 
-            try
+            if (port == 587)
             {
-                await client.ConnectAsync(host, port, socketOptions, cts.Token);
-                await client.AuthenticateAsync(_emailSettings.Email.Trim(), appPassword, cts.Token);
-                await client.SendAsync(message, cts.Token);
-                await client.DisconnectAsync(true, cts.Token);
-                _logger.LogInformation("Email successfully dispatched via SMTP server {Host}:{Port}.", host, port);
+                connectionAttempts.Add((465, SecureSocketOptions.SslOnConnect));
             }
-            catch (Exception ex)
+            else if (port == 465)
             {
-                _logger.LogError(ex, "SMTP error while attempting to dispatch email via {Host}:{Port}. Error: {Message}", host, port, ex.Message);
-                throw;
+                connectionAttempts.Add((587, SecureSocketOptions.StartTls));
+            }
+
+            bool sent = false;
+            Exception? lastEx = null;
+
+            foreach (var attempt in connectionAttempts)
+            {
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                    await client.ConnectAsync(host, attempt.Port, attempt.Options, cts.Token);
+                    await client.AuthenticateAsync(_emailSettings.Email.Trim(), appPassword, cts.Token);
+                    await client.SendAsync(message, cts.Token);
+                    await client.DisconnectAsync(true, cts.Token);
+                    _logger.LogInformation("Email successfully dispatched via SMTP {Host}:{Port}.", host, attempt.Port);
+                    sent = true;
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    lastEx = ex;
+                    _logger.LogWarning("SMTP attempt via {Host}:{Port} failed: {Message}", host, attempt.Port, ex.Message);
+                    try { if (client.IsConnected) await client.DisconnectAsync(true); } catch { }
+
+                    // If credentials failed authentication (535), do not retry another port with same wrong credentials
+                    if (ex.Message.Contains("535") || ex.Message.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (!sent)
+            {
+                throw lastEx ?? new InvalidOperationException("Failed to connect to SMTP server.");
             }
         }
 

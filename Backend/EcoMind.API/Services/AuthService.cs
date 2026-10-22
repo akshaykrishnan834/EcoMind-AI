@@ -182,7 +182,7 @@ namespace EcoMind.API.Services
                 _logger.LogError(ex, "Failed to send password reset OTP email. Error: {ErrorMessage}", ex.Message);
                 // Invalidate unsent OTP so it cannot be guessed
                 OtpStore.TryRemove(email, out _);
-                return "Failed to send OTP email. Please ensure the email service is properly configured on the server.";
+                return $"Failed to send OTP email: {ex.Message}";
             }
         }
 
