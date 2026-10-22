@@ -10,10 +10,12 @@ namespace EcoMind.API.Services
     public class EmailService : IEmailService
     {
         private readonly EmailSettings _emailSettings;
+        private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IOptions<EmailSettings> emailSettings)
+        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger)
         {
             _emailSettings = emailSettings.Value;
+            _logger = logger;
         }
 
         public async Task SendEmailAsync(string toEmail, string subject, string bodyHtml)
@@ -26,8 +28,8 @@ namespace EcoMind.API.Services
             string appPassword = (_emailSettings.Password ?? "").Trim().Replace(" ", "");
             if (string.IsNullOrWhiteSpace(appPassword) || string.IsNullOrWhiteSpace(_emailSettings.Email))
             {
-                Console.WriteLine("[EcoMind Email] No Gmail App Password configured in appsettings.json. Skipping network SMTP attempt.");
-                throw new InvalidOperationException("No SMTP password configured.");
+                _logger.LogWarning("Email sending skipped: SMTP credentials are not configured in environment or appsettings.");
+                throw new InvalidOperationException("SMTP credentials are not configured on the server.");
             }
 
             var message = new MimeMessage();
@@ -46,7 +48,7 @@ namespace EcoMind.API.Services
             // Set 15-second timeout suitable for cloud hosting environments
             client.Timeout = 15000;
 
-            // Accept SSL certificates safely
+            // Accept SSL certificates safely in development and hosted environments
             client.ServerCertificateValidationCallback = (s, c, h, e) => true;
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
@@ -54,16 +56,24 @@ namespace EcoMind.API.Services
             int port = _emailSettings.Port == 0 ? 587 : _emailSettings.Port;
             string host = string.IsNullOrWhiteSpace(_emailSettings.Host) ? "smtp.gmail.com" : _emailSettings.Host.Trim();
 
-            // Auto-detect SSL/TLS: SslOnConnect for port 465, StartTls for 587/25
-            var socketOptions = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTlsWhenAvailable;
+            // Select SSL/TLS option based on port: Port 465 uses direct SSL, 587/25 use STARTTLS
+            var socketOptions = port == 465 
+                ? SecureSocketOptions.SslOnConnect 
+                : (port == 587 ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
 
-            await client.ConnectAsync(host, port, socketOptions, cts.Token);
-
-            // Authenticate with Gmail Email & App Password
-            await client.AuthenticateAsync(_emailSettings.Email.Trim(), appPassword, cts.Token);
-
-            await client.SendAsync(message, cts.Token);
-            await client.DisconnectAsync(true, cts.Token);
+            try
+            {
+                await client.ConnectAsync(host, port, socketOptions, cts.Token);
+                await client.AuthenticateAsync(_emailSettings.Email.Trim(), appPassword, cts.Token);
+                await client.SendAsync(message, cts.Token);
+                await client.DisconnectAsync(true, cts.Token);
+                _logger.LogInformation("Email successfully dispatched via SMTP server {Host}:{Port}.", host, port);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "SMTP error while attempting to dispatch email via {Host}:{Port}. Error: {Message}", host, port, ex.Message);
+                throw;
+            }
         }
 
         public async Task SendOtpEmailAsync(string toEmail, string otpCode)

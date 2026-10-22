@@ -20,7 +20,5 @@ namespace EcoMind.API.Interfaces
         Task<bool> CheckEmailExistsAsync(string email);
 
         Task<bool> CheckPhoneExistsAsync(string phone);
-
-        string? GetDevOtp(string email);
     }
 }

@@ -99,7 +99,6 @@ export const ForgotPasswordModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [devOtp, setDevOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -113,7 +112,6 @@ export const ForgotPasswordModal = ({ isOpen, onClose }) => {
     setStep(1);
     setEmail('');
     setOtp('');
-    setDevOtp('');
     setNewPassword('');
     setConfirmPassword('');
     setError('');
@@ -140,9 +138,6 @@ export const ForgotPasswordModal = ({ isOpen, onClose }) => {
 
     try {
       const res = await import('../services/authService').then(m => m.forgotPassword(email.trim()));
-      if (res?.devOtpCode) {
-        setDevOtp(res.devOtpCode);
-      }
       setSuccessMsg(res.message || 'OTP code sent to your Gmail inbox!');
       setStep(2);
     } catch (err) {
@@ -301,19 +296,6 @@ export const ForgotPasswordModal = ({ isOpen, onClose }) => {
               Enter the 6-digit OTP code sent to <strong className="text-emerald-900">{email}</strong>. Please check your Gmail inbox and spam folder.
             </p>
 
-            {devOtp && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-[#0a4d2c] space-y-1">
-                <div className="flex items-center justify-between font-bold">
-                  <span>Testing OTP Code:</span>
-                  <span className="font-mono font-extrabold text-sm tracking-widest bg-white px-2.5 py-0.5 rounded border border-emerald-300 shadow-2xs text-[#0a4d2c]">
-                    {devOtp}
-                  </span>
-                </div>
-                <p className="text-[10px] text-emerald-800">
-                  (Use the 6-digit code above to complete testing if your Gmail blocks SMTP passwords.)
-                </p>
-              </div>
-            )}
 
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">

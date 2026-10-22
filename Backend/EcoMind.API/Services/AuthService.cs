@@ -10,6 +10,7 @@ namespace EcoMind.API.Services
         private readonly IUserRepository _userRepository;
         private readonly ICitizenRepository _citizenRepository;
         private readonly IEmailService _emailService;
+        private readonly ILogger<AuthService> _logger;
 
         // In-Memory store for password reset OTP codes (Email -> (OtpCode, ExpiresAt))
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string OtpCode, DateTime ExpiresAt)> OtpStore = new(StringComparer.OrdinalIgnoreCase);
@@ -17,11 +18,13 @@ namespace EcoMind.API.Services
         public AuthService(
             IUserRepository userRepository,
             ICitizenRepository citizenRepository,
-            IEmailService emailService)
+            IEmailService emailService,
+            ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
             _citizenRepository = citizenRepository;
             _emailService = emailService;
+            _logger = logger;
         }
 
         public async Task<string> RegisterAsync(RegisterDto registerDto)
@@ -171,33 +174,16 @@ namespace EcoMind.API.Services
             {
                 // Send email via Gmail SMTP
                 await _emailService.SendOtpEmailAsync(email, otpCode);
-                Console.WriteLine($"[EcoMind Gmail SMTP SUCCESS] Sent OTP {otpCode} to {email}");
+                _logger.LogInformation("Password reset OTP email dispatched successfully.");
                 return "OTP sent successfully to your email.";
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[EcoMind Gmail SMTP ERROR] Failed for {email}. Error: {ex.Message}");
-                Console.WriteLine($"==================================================");
-                Console.WriteLine($"[EcoMind DEV FALLBACK OTP] YOUR OTP CODE IS: {otpCode}");
-                Console.WriteLine($"==================================================");
-
-                return $"OTP generated, but email delivery failed ({ex.Message}). Check SMTP configuration.";
+                _logger.LogError(ex, "Failed to send password reset OTP email. Error: {ErrorMessage}", ex.Message);
+                // Invalidate unsent OTP so it cannot be guessed
+                OtpStore.TryRemove(email, out _);
+                return "Failed to send OTP email. Please ensure the email service is properly configured on the server.";
             }
-        }
-
-        public string? GetDevOtp(string email)
-        {
-            if (string.IsNullOrWhiteSpace(email)) return null;
-
-            if (OtpStore.TryGetValue(email.Trim(), out var tuple))
-            {
-                if (tuple.ExpiresAt > DateTime.UtcNow)
-                {
-                    return tuple.OtpCode;
-                }
-            }
-
-            return null;
         }
 
         // ============================================================

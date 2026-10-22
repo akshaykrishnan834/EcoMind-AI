@@ -65,17 +65,17 @@ namespace EcoMind.API.Controllers
         {
             var result = await _authService.SendForgotPasswordOtpAsync(dto);
 
-            if (!result.StartsWith("OTP sent") && !result.StartsWith("OTP generated"))
+            if (result == "OTP sent successfully to your email.")
+            {
+                return Ok(new { message = result });
+            }
+
+            if (result == "No account registered with this email address." || result == "Email address is required.")
             {
                 return BadRequest(new { message = result });
             }
 
-            string? devOtp = _authService.GetDevOtp(dto.Email);
-
-            return Ok(new { 
-                message = result,
-                devOtpCode = devOtp
-            });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = result });
         }
 
         [HttpPost("verify-otp")]
