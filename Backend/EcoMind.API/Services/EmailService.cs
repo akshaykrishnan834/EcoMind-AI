@@ -25,6 +25,14 @@ namespace EcoMind.API.Services
                 throw new ArgumentException("Recipient email address is required.");
             }
 
+            // 1. If an HTTP API Key (Brevo or Resend) is configured, send via HTTPS (Port 443).
+            // This is required on cloud hosting like Render Free Tier which blocks all outbound SMTP ports (25, 465, 587).
+            if (!string.IsNullOrWhiteSpace(_emailSettings.ApiKey))
+            {
+                await SendEmailViaHttpApiAsync(toEmail, subject, bodyHtml);
+                return;
+            }
+
             string appPassword = (_emailSettings.Password ?? "").Trim().Replace(" ", "");
             if (string.IsNullOrWhiteSpace(appPassword) || string.IsNullOrWhiteSpace(_emailSettings.Email))
             {
@@ -94,7 +102,67 @@ namespace EcoMind.API.Services
 
             if (!sent)
             {
+                if (lastEx is OperationCanceledException)
+                {
+                    throw new InvalidOperationException("Render Free Tier blocks outbound SMTP traffic (ports 25, 465, 587). Please configure EmailSettings__ApiKey (Brevo) in Render environment variables.");
+                }
+
                 throw lastEx ?? new InvalidOperationException("Failed to connect to SMTP server.");
+            }
+        }
+
+        private async Task SendEmailViaHttpApiAsync(string toEmail, string subject, string bodyHtml)
+        {
+            var apiKey = _emailSettings.ApiKey.Trim();
+            var senderEmail = string.IsNullOrWhiteSpace(_emailSettings.Email) ? "unknownperson37575@gmail.com" : _emailSettings.Email.Trim();
+
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(15);
+
+            if (apiKey.StartsWith("re_", StringComparison.OrdinalIgnoreCase))
+            {
+                // Resend HTTP API (https://api.resend.com/emails)
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+                var payload = new
+                {
+                    from = $"EcoMind AI <{senderEmail}>",
+                    to = new[] { toEmail.Trim() },
+                    subject = subject,
+                    html = bodyHtml
+                };
+
+                var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+                var response = await httpClient.PostAsync("https://api.resend.com/emails", content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var err = await response.Content.ReadAsStringAsync();
+                    throw new InvalidOperationException($"Resend API error ({response.StatusCode}): {err}");
+                }
+                _logger.LogInformation("Email successfully dispatched via Resend HTTP API.");
+            }
+            else
+            {
+                // Brevo (Sendinblue) HTTP API (https://api.brevo.com/v3/smtp/email)
+                httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
+                httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+                var payload = new
+                {
+                    sender = new { name = "EcoMind AI", email = senderEmail },
+                    to = new[] { new { email = toEmail.Trim() } },
+                    subject = subject,
+                    htmlContent = bodyHtml
+                };
+
+                var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+                var response = await httpClient.PostAsync("https://api.brevo.com/v3/smtp/email", content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var err = await response.Content.ReadAsStringAsync();
+                    throw new InvalidOperationException($"Brevo API error ({response.StatusCode}): {err}");
+                }
+                _logger.LogInformation("Email successfully dispatched via Brevo HTTP API.");
             }
         }
 
