@@ -31,7 +31,8 @@ import {
   XCircle,
   CalendarDays,
   Timer,
-  ShieldCheck
+  ShieldCheck,
+  Unlock
 } from 'lucide-react';
 import {
   getAllPickupRequests,
@@ -889,14 +890,27 @@ const AdminPickups = () => {
                             </div>
                           )}
                           {req.adminApprovalStatus === 'Approved' && !isCompleted && (
-                            <span className="text-[10px] font-extrabold text-teal-700 dark:text-teal-400 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-teal-600" /> Reschedule Unlocked
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="text-[10px] font-extrabold text-teal-700 dark:text-teal-400 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-teal-600" /> Reschedule Unlocked
+                              </span>
+                            </div>
                           )}
                           {req.adminApprovalStatus === 'Rejected' && !isCompleted && (
-                            <span className="text-[10px] font-extrabold text-rose-700 dark:text-rose-400 flex items-center gap-1">
-                              <XCircle className="w-3 h-3 text-rose-600" /> Pickup Locked
-                            </span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] font-extrabold text-rose-700 dark:text-rose-400 flex items-center gap-1">
+                                <XCircle className="w-3 h-3 text-rose-600" /> Pickup Locked
+                              </span>
+                              <button
+                                onClick={() => handleAdminApproval(req.requestId, 'Approve')}
+                                disabled={actionLoadingId === req.requestId}
+                                className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-black flex items-center gap-1 cursor-pointer disabled:opacity-50 transition-colors shadow-2xs"
+                                title="Unlock this pickup and allow worker to reschedule"
+                              >
+                                <Unlock className="w-2.5 h-2.5" />
+                                <span>{actionLoadingId === req.requestId ? 'Unlocking...' : 'Unlock'}</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       </td>

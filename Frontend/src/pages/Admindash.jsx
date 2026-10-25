@@ -14,6 +14,7 @@ import AdminPickups from './admin/AdminPickups';
 import AdminCollectionSchedule from './admin/AdminCollectionSchedule';
 import AdminPayments from './admin/AdminPayments';
 import AdminReports from './admin/AdminReports';
+import FullAnalysisReport from './admin/FullAnalysisReport';
 import Footer from '../components/Footer';
 import {
     Building2,
@@ -518,6 +519,15 @@ const Admin = () => {
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-3 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveTab('Full Analysis Report')}
+                                                className="px-4 py-2.5 bg-gradient-to-r from-emerald-300 via-teal-300 to-emerald-400 hover:from-emerald-200 hover:to-teal-300 text-gray-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer hover:shadow-emerald-400/30 hover:scale-105 border border-emerald-200/60"
+                                                title="Generate unified administrative analysis across all modules"
+                                            >
+                                                <FileText className="w-4 h-4 text-[#0a4d2c]" />
+                                                <span>Generate Full Analysis Report</span>
+                                            </button>
                                             <button
                                                 type="button"
                                                 onClick={loadAllDashboardData}
@@ -1475,10 +1485,16 @@ const Admin = () => {
                         )}
 
                         {(activeTab === 'Reports' || activeTab === 'Operational Reports') && (
-                            <AdminReports />
+                            <AdminReports onOpenFullAnalysis={() => setActiveTab('Full Analysis Report')} />
+                        )}
+
+                        {(activeTab === 'Full Analysis Report' || activeTab === 'Full Analysis') && (
+                            <FullAnalysisReport onBack={() => setActiveTab('Dashboard')} />
                         )}
 
                         {activeTab !== 'Dashboard' &&
+                            activeTab !== 'Full Analysis Report' &&
+                            activeTab !== 'Full Analysis' &&
                             activeTab !== 'Pickup Requests' &&
                             activeTab !== 'Pickup Management' &&
                             activeTab !== 'Waste Pickups' &&

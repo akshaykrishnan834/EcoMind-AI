@@ -31,9 +31,10 @@ import { getAllPickupRequests } from '../../services/pickupRequestService';
 import { getAllCitizens } from '../../services/citizenService';
 import { getAllWorkers } from '../../services/workerService';
 import { getCitizenPayments } from '../../services/paymentService';
+import FullAnalysisReport from './FullAnalysisReport';
 
-const AdminReports = () => {
-  const [activeReport, setActiveReport] = useState('monthly-pickups'); // 'monthly-pickups' | 'payments' | 'ward-wise' | 'worker-performance' | 'citizen-participation'
+const AdminReports = ({ onOpenFullAnalysis }) => {
+  const [activeReport, setActiveReport] = useState('full-analysis'); // 'full-analysis' | 'monthly-pickups' | 'payments' | 'ward-wise' | 'worker-performance' | 'citizen-participation'
 
   // Data states
   const [requests, setRequests] = useState([]);
@@ -683,9 +684,10 @@ const AdminReports = () => {
           </div>
         </div>
 
-        {/* 5 Report Category Tabs */}
+        {/* Report Category Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pt-3 border-t border-gray-100 custom-scrollbar">
           {[
+            { id: 'full-analysis', label: 'Full Analysis Report (All Modules)', icon: Sparkles, featured: true },
             { id: 'monthly-pickups', label: 'Monthly Pickup Report', icon: Truck },
             { id: 'payments', label: 'Payment Report', icon: IndianRupee },
             { id: 'ward-wise', label: 'Ward-Wise Collection Report', icon: Building2 },
@@ -702,10 +704,12 @@ const AdminReports = () => {
                 className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 border ${
                   isActive
                     ? 'bg-[#0a4d2c] text-white border-[#0a4d2c] shadow-sm'
+                    : tab.featured
+                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100 font-black'
                     : 'bg-white text-gray-700 border-gray-200 hover:bg-emerald-50 hover:text-[#0a4d2c]'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-300' : 'text-emerald-700'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-300' : tab.featured ? 'text-emerald-600' : 'text-emerald-700'}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -722,6 +726,13 @@ const AdminReports = () => {
 
       {!loading && (
         <>
+          {/* ========================================================================= */}
+          {/* REPORT 0: FULL ANALYSIS REPORT (ALL MODULES COMBINED) */}
+          {/* ========================================================================= */}
+          {activeReport === 'full-analysis' && (
+            <FullAnalysisReport onBack={() => setActiveReport('monthly-pickups')} />
+          )}
+
           {/* ========================================================================= */}
           {/* REPORT 1: MONTHLY PICKUP REPORT */}
           {/* ========================================================================= */}
